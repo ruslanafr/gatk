@@ -152,7 +152,7 @@ public final class GenotypeGVCFs extends VariantWalker {
 
         annotationEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(variantAnnotationArgumentCollection, dbsnp.dbsnp, Collections.emptyList());
 
-        merger = new ReferenceConfidenceVariantContextMerger();
+        merger = new ReferenceConfidenceVariantContextMerger(annotationEngine);
 
         setupVCFWriter(inputVCFHeader, samples);
     }

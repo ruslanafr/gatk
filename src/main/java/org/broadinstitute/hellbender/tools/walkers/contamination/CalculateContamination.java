@@ -112,7 +112,7 @@ public class CalculateContamination extends CommandLineProgram {
 
                 // too few hets and too many hom alts indicates LoH
                 if ((hetRatioDifference < -LOH_RATIO_DIFFERENCE_THRESHOLD && hetRatioZ < -LOH_Z_SCORE_THRESHOLD)
-                        && (homRatioDifference > LOH_RATIO_DIFFERENCE_THRESHOLD && homRatioZ > LOH_Z_SCORE_THRESHOLD)) {
+                        || (homRatioDifference > LOH_RATIO_DIFFERENCE_THRESHOLD && homRatioZ > LOH_Z_SCORE_THRESHOLD)) {
                     logger.info(String.format("Discarding region with %d hets %d hom alts versus %.2f expected hets and " +
                             "%.2f expected hom alts due to possible loss of heterozygosity", (int) stats.getHetCount(), (int) stats.getHomAltCount(), stats.getExpectedHetCount(), stats.getExpectedHomAltCount()));
                 } else {

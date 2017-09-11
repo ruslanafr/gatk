@@ -65,7 +65,7 @@ public class CalculateContamination extends CommandLineProgram {
 
     public static final double LOH_RATIO_DIFFERENCE_THRESHOLD = 0.2;
     private static final double LOH_Z_SCORE_THRESHOLD = 3.0;
-    private static final double HET_CONTAMINATION_CONVERGENCE_THRESHOLD = 0.01;
+    private static final double CONTAMINATION_CONVERGENCE_THRESHOLD = 0.0001;
     private static final int MAX_ITERATIONS = 10;
     private static final int MIN_ITERATIONS = 2;
 
@@ -129,12 +129,13 @@ public class CalculateContamination extends CommandLineProgram {
 
             final double newHomAltContamination = genomeStats.contaminationFromHomAlts();
             logger.info(String.format("In iteration %d we estimate a contamination of %.4f based on hets and %.4f based on hom alts.", iteration, hetContamination, homAltContamination));
-            final boolean converged = Math.abs(homAltContamination - newHomAltContamination) < HET_CONTAMINATION_CONVERGENCE_THRESHOLD;
+            final boolean converged = Math.abs(homAltContamination - newHomAltContamination) < CONTAMINATION_CONVERGENCE_THRESHOLD;
+            homAltContamination = newHomAltContamination;
             if (converged && iteration >= MIN_ITERATIONS) {
                 ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), homAltContamination, genomeStats.standardErrorOfContaminationFromHomAlts())), outputTable);
                 break;
             }
-            homAltContamination = newHomAltContamination;
+
         }
 
 
@@ -150,7 +151,7 @@ public class CalculateContamination extends CommandLineProgram {
     private static List<List<PileupSummary>> splitSites(final List<PileupSummary> sites) {
         final List<List<PileupSummary>> result = new ArrayList<>();
 
-        final TargetCollection<PileupSummary> tc = new HashedListTargetCollection(sites);
+        final TargetCollection<PileupSummary> tc = new HashedListTargetCollection<PileupSummary>(sites);
 
         int currentIndex = 0;
         while (currentIndex < tc.targetCount()) {

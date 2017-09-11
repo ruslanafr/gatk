@@ -7,48 +7,38 @@ import java.util.EnumMap;
 
 // statistics relevant to computing contamination and blacklisting possible LoH regions
 class ContaminationStats {
-    public double getHomAltCount() {
-        return homAltCount;
-    }
 
-    public double getHetCount() {
-        return hetCount;
-    }
 
     private double homAltCount;
     private double hetCount;
-
-    public double getExpectedHomAltCount() {
-        return expectedHomAltCount;
-    }
-
-    public double getExpectedHetCount() {
-        return expectedHetCount;
-    }
-
     private double expectedHomAltCount;
     private double expectedHetCount;
-
-    public double getStdOfHomAltCount() {
-        return Math.sqrt(varianceOfHomAltCount);
-    }
-
-    public double getStdOfHetCount() {
-        return Math.sqrt(varianceOfHetCount);
-    }
-
     private double varianceOfHomAltCount;
     private double varianceOfHetCount;
-
     private double readCountInHomAltSites;
     private double refCountInHomAltSites;
     private double otherAltCountInHomAltSites;
-
-    private double refCountInHetSites;
-    private double altCountInHetSites;
-
     private double expectedRefInHomAltPerUnitContamination;
     private double expectedRefExcessInHetPerUnitContamination;
+
+    public double getHomAltCount() {
+        return homAltCount;
+    }
+    public double getHetCount() {
+        return hetCount;
+    }
+    public double getExpectedHomAltCount() {
+        return expectedHomAltCount;
+    }
+    public double getExpectedHetCount() {
+        return expectedHetCount;
+    }
+    public double getStdOfHomAltCount() {
+        return Math.sqrt(varianceOfHomAltCount);
+    }
+    public double getStdOfHetCount() {
+        return Math.sqrt(varianceOfHetCount);
+    }
 
     public void increment(final EnumMap<CalculateContamination.BiallelicGenotypes, Double> posteriors, final PileupSummary ps) {
         final double homAltResponsibility = posteriors.get(CalculateContamination.BiallelicGenotypes.HOM_ALT);
@@ -68,9 +58,6 @@ class ContaminationStats {
         refCountInHomAltSites += homAltResponsibility * ps.getRefCount();
         otherAltCountInHomAltSites += homAltResponsibility * ps.getOtherAltCount();
 
-        refCountInHetSites += hetResponsibility * ps.getRefCount();
-        altCountInHetSites += hetResponsibility * ps.getAltCount();
-
         expectedRefInHomAltPerUnitContamination += homAltResponsibility * ps.getTotalCount() * ps.getRefFrequency();
         expectedRefExcessInHetPerUnitContamination += hetResponsibility * ps.getTotalCount() * ( ps.getRefFrequency() - ps.getAlleleFrequency());
     }
@@ -88,9 +75,6 @@ class ContaminationStats {
         this.refCountInHomAltSites += other.refCountInHomAltSites;
         this.otherAltCountInHomAltSites += other.otherAltCountInHomAltSites;
 
-        this.refCountInHetSites += other.refCountInHetSites;
-        this.altCountInHetSites += other.altCountInHetSites;
-
         this.expectedRefInHomAltPerUnitContamination += other.expectedRefInHomAltPerUnitContamination;
         this.expectedRefExcessInHetPerUnitContamination += other.expectedRefExcessInHetPerUnitContamination;
     }
@@ -104,16 +88,6 @@ class ContaminationStats {
 
     public double standardErrorOfContaminationFromHomAlts() {
         return Math.sqrt(contaminationFromHomAlts() / expectedRefInHomAltPerUnitContamination);
-    }
-
-    public double contaminationFromHets() {
-        final double refExcessInHetSites = refCountInHetSites - altCountInHetSites;
-        return Math.max(refExcessInHetSites / expectedRefExcessInHetPerUnitContamination, 0);
-    }
-
-    public boolean isLossOfHeterozygosity() {
-        return false;
-        //TODO: this is a stub
     }
 
     public double ratioOfActualToExpectedHets() {

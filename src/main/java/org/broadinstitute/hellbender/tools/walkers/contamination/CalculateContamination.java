@@ -60,9 +60,6 @@ public class CalculateContamination extends CommandLineProgram {
 
     private static final double INITIAL_CONTAMINATION_GUESS = 0.1;
 
-    // our contamination based on hom alts might be too high if we mistakenly count hets as hom alts
-    private static final double CONTAMINATION_AT_WHICH_TO_SUSPECT_HOM_ALT_ESTIMATE = 0.15;
-
     public static final double LOH_RATIO_DIFFERENCE_THRESHOLD = 0.2;
     private static final double LOH_Z_SCORE_THRESHOLD = 3.0;
     private static final double CONTAMINATION_CONVERGENCE_THRESHOLD = 0.0001;
@@ -91,15 +88,13 @@ public class CalculateContamination extends CommandLineProgram {
     public Object doWork() {
         final List<PileupSummary> pileupSummaries = PileupSummary.readPileupSummaries(inputPileupSummariesTable);
         List<List<PileupSummary>> neighborhoods = splitSites(pileupSummaries);
-        double hetContamination = INITIAL_CONTAMINATION_GUESS;
-        double homAltContamination = INITIAL_CONTAMINATION_GUESS;
+        double contamination = INITIAL_CONTAMINATION_GUESS;
         int iteration = 0;
 
         while (++iteration < MAX_ITERATIONS) {  // loop over contamination convergence
-            final double contamination = homAltContamination < CONTAMINATION_AT_WHICH_TO_SUSPECT_HOM_ALT_ESTIMATE ? homAltContamination
-                    : Math.max(hetContamination, CONTAMINATION_AT_WHICH_TO_SUSPECT_HOM_ALT_ESTIMATE);
+            final double c = contamination;
             final List<ContaminationStats> neighborhoodStats = neighborhoods.stream()
-                    .map(nbhd -> ContaminationStats.getStats(nbhd, contamination))
+                    .map(nbhd -> ContaminationStats.getStats(nbhd, c))
                     .collect(Collectors.toList());
 
             final double medianHetCountRatio = MEDIAN.evaluate(neighborhoodStats.stream().mapToDouble(ContaminationStats::ratioOfActualToExpectedHets).toArray());
@@ -115,9 +110,9 @@ public class CalculateContamination extends CommandLineProgram {
                 final double homRatioDifference = stats.ratioOfActualToExpectedHomAlts() - medianHomAltCountRatio;
                 final double homRatioZ = homRatioDifference / stats.getStdOfHomAltCount();
 
-                // too few hets or too many hom alts indicates LoH
-                if (hetRatioDifference < -LOH_RATIO_DIFFERENCE_THRESHOLD && hetRatioZ < -LOH_Z_SCORE_THRESHOLD
-                        || homRatioDifference > LOH_RATIO_DIFFERENCE_THRESHOLD && homRatioZ > LOH_Z_SCORE_THRESHOLD) {
+                // too few hets and too many hom alts indicates LoH
+                if ((hetRatioDifference < -LOH_RATIO_DIFFERENCE_THRESHOLD && hetRatioZ < -LOH_Z_SCORE_THRESHOLD)
+                        && (homRatioDifference > LOH_RATIO_DIFFERENCE_THRESHOLD && homRatioZ > LOH_Z_SCORE_THRESHOLD)) {
                     logger.info(String.format("Discarding region with %d hets %d hom alts versus %.2f expected hets and " +
                             "%.2f expected hom alts due to possible loss of heterozygosity", (int) stats.getHetCount(), (int) stats.getHomAltCount(), stats.getExpectedHetCount(), stats.getExpectedHomAltCount()));
                 } else {
@@ -125,14 +120,12 @@ public class CalculateContamination extends CommandLineProgram {
                 }
             }
 
-            hetContamination = genomeStats.contaminationFromHets();
-
-            final double newHomAltContamination = genomeStats.contaminationFromHomAlts();
-            logger.info(String.format("In iteration %d we estimate a contamination of %.4f based on hets and %.4f based on hom alts.", iteration, hetContamination, homAltContamination));
-            final boolean converged = Math.abs(homAltContamination - newHomAltContamination) < CONTAMINATION_CONVERGENCE_THRESHOLD;
-            homAltContamination = newHomAltContamination;
+            final double newContamination = genomeStats.contaminationFromHomAlts();
+            logger.info(String.format("In iteration %d we estimate a contamination of %.4f.", iteration, contamination));
+            final boolean converged = Math.abs(contamination - newContamination) < CONTAMINATION_CONVERGENCE_THRESHOLD;
+            contamination = newContamination;
             if (converged && iteration >= MIN_ITERATIONS) {
-                ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), homAltContamination, genomeStats.standardErrorOfContaminationFromHomAlts())), outputTable);
+                ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), contamination, genomeStats.standardErrorOfContaminationFromHomAlts())), outputTable);
                 break;
             }
 

@@ -15,7 +15,7 @@ public class CalculateContaminationIntegrationTest extends CommandLineProgramTes
     @Test
     public void test() {
         final String contig = "chr1";
-        final int spacing = 100000;
+        final int spacing = 100_000;
         final double contamination = 0.07;
         final double alleleFrequency = 0.2;
         final double refContamination = contamination * (1 - alleleFrequency);

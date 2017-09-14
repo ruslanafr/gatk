@@ -54,7 +54,6 @@ public class CalculateContamination extends CommandLineProgram {
 
     private static final double CONTAMINATION_CONVERGENCE_THRESHOLD = 0.0001;
     private static final int MAX_ITERATIONS = 10;
-    private static final int MIN_ITERATIONS = 2;
 
     private static final double LOH_LOG_POSTERIOR_THRESHOLD = Math.log(0.1);
 

@@ -32,9 +32,9 @@ class ContaminationStats {
     }
 
 
-    public void increment(final EnumMap<CalculateContamination.BiallelicGenotypes, Double> posteriors, final PileupSummary ps) {
-        final double homAltResponsibility = posteriors.get(CalculateContamination.BiallelicGenotypes.HOM_ALT);
-        final double hetResponsibility = posteriors.get(CalculateContamination.BiallelicGenotypes.HET);
+    public void increment(final BiallelicGenotypes.Posterior posteriors, final PileupSummary ps) {
+        final double homAltResponsibility = posteriors.get(BiallelicGenotypes.HOM_ALT);
+        final double hetResponsibility = posteriors.get(BiallelicGenotypes.HET);
 
         homAltCount += homAltResponsibility;
         hetCount += hetResponsibility;
@@ -80,35 +80,7 @@ class ContaminationStats {
 
     public static ContaminationStats getStats(final Collection<PileupSummary> pileupSummaries, final double contamination) {
         final ContaminationStats result = new ContaminationStats();
-        pileupSummaries.forEach(ps -> result.increment(genotypePosteriors(ps, contamination), ps));
-        return result;
-    }
-
-    // contamination is a current rough estimate of contamination
-    private static EnumMap<CalculateContamination.BiallelicGenotypes, Double> genotypePosteriors(final PileupSummary ps, final double contamination) {
-        final double alleleFrequency = ps.getAlleleFrequency();
-        final double homRefPrior = MathUtils.square(1 - alleleFrequency);
-        final double hetPrior = 2 * alleleFrequency * (1 - alleleFrequency);
-        final double homAltPrior = MathUtils.square(alleleFrequency);
-
-        final int totalCount = ps.getTotalCount();
-        final int altCount = ps.getAltCount();
-
-        final double homRefLikelihood = MathUtils.uniformBinomialProbability(totalCount, altCount, 0, contamination);
-        final double homAltLikelihood = MathUtils.uniformBinomialProbability(totalCount, altCount, 1 - contamination, 1);
-        final double hetLikelihood = MathUtils.uniformBinomialProbability(totalCount, altCount, ContaminationHMM.MIN_HET_AF - contamination / 2, ContaminationHMM.MAX_HET_AF + contamination / 2);
-
-        final double[] unnormalized = new double[CalculateContamination.BiallelicGenotypes.values().length];
-        unnormalized[CalculateContamination.BiallelicGenotypes.HOM_REF.ordinal()] = homRefLikelihood * homRefPrior;
-        unnormalized[CalculateContamination.BiallelicGenotypes.HET.ordinal()] = hetLikelihood * hetPrior;
-        unnormalized[CalculateContamination.BiallelicGenotypes.HOM_ALT.ordinal()] = homAltLikelihood * homAltPrior;
-        final double[] normalized = MathUtils.normalizeFromRealSpace(unnormalized, true);
-
-        final EnumMap<CalculateContamination.BiallelicGenotypes, Double> result = new EnumMap<CalculateContamination.BiallelicGenotypes, Double>(CalculateContamination.BiallelicGenotypes.class);
-        result.put(CalculateContamination.BiallelicGenotypes.HOM_REF, normalized[0]);
-        result.put(CalculateContamination.BiallelicGenotypes.HET, normalized[1]);
-        result.put(CalculateContamination.BiallelicGenotypes.HOM_ALT, normalized[2]);
-
+        pileupSummaries.forEach(ps -> result.increment(BiallelicGenotypes.getPosteriors(ps, contamination), ps));
         return result;
     }
 }

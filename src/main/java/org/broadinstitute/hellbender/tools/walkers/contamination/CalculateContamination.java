@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.contamination;
 
+import org.apache.commons.math3.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -8,6 +9,7 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.mutect.FilterMutectCalls;
 import org.broadinstitute.hellbender.utils.hmm.ForwardBackwardAlgorithm;
 
@@ -59,27 +61,44 @@ public class CalculateContamination extends CommandLineProgram {
 
     @Argument(fullName = StandardArgumentDefinitions.INPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.INPUT_SHORT_NAME,
-            doc="The input table", optional = false)
+            doc="The input table")
     private File inputPileupSummariesTable;
 
     @Argument(fullName= StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName=StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
-            doc="The output table", optional = false)
+            doc="The output table")
     private final File outputTable = null;
-
-    public enum BiallelicGenotypes {
-        HOM_REF, HET, HOM_ALT
-    }
 
     @Override
     public Object doWork() {
-        final List<PileupSummary> pileupSummaries = PileupSummary.readPileupSummaries(inputPileupSummariesTable);
-        double contamination = INITIAL_CONTAMINATION_GUESS;
+        final List<PileupSummary> pileupSummaries = PileupSummary.readPileupSummaries(inputPileupSummariesTable)
 
+        final Pair<int[], double[]> nonLoHIndicesAndHomAltProbabilities =
+                findNonLossOfHeterozygosityIndicesAndTheirHomAltProbabilities(pileupSummaries);
+
+        final List<PileupSummary> nonLoHSites = Arrays.stream(nonLoHIndicesAndHomAltProbabilities)
+                .mapToObj(pileupSummaries::get).collect(Collectors.toList());
+
+        final ContaminationStats nonLohStats = ContaminationStats.getStats(nonLoHSites);
+
+        ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), contamination, nonLohStats.standardErrorOfContaminationEstimate())), outputTable);
+
+
+        return "SUCCESS";
+    }
+
+    /**
+     * Use an HMM to determine which sites are definitely not loss of heterozygosity and what their probabilities of being hom alt are
+     * @param pileupSummaries a List of pileup summary sites, some of which might exhibit loss of heterozygosity
+     */
+    private Pair<int[], List<BiallelicGenotypes.Posterior>> findNonLossOfHeterozygosityIndicesAndTheirHomAltProbabilities(List<PileupSummary> pileupSummaries) {
+        logger.info("Looking for non loss of heterozygosity sites in the input pileups.");
+        double contamination = INITIAL_CONTAMINATION_GUESS;
         int iteration = 0;
         boolean converged = false;
 
         while (!converged && iteration++ < MAX_ITERATIONS) {  // loop over contamination convergence
+            logger.info("Beginning iteration " + iteration + ".");
             final ContaminationHMM hmm = new ContaminationHMM(contamination);
             final ForwardBackwardAlgorithm.Result<PileupSummary, PileupSummary, Boolean> fbResult =
                     ForwardBackwardAlgorithm.apply(pileupSummaries, pileupSummaries, hmm);
@@ -91,10 +110,11 @@ public class CalculateContamination extends CommandLineProgram {
                     .mapToObj(pileupSummaries::get)
                     .collect(Collectors.toList());
 
-            final List<PileupSummary> nonLohData = IntStream.range(0, pileupSummaries.size())
-                    .filter(n -> lohPosteriors[n] <= LOH_LOG_POSTERIOR_THRESHOLD)
-                    .mapToObj(pileupSummaries::get)
-                    .collect(Collectors.toList());
+            final int[] nonLohIndices = IntStream.range(0, pileupSummaries.size())
+                    .filter(n -> lohPosteriors[n] <= LOH_LOG_POSTERIOR_THRESHOLD).toArray();
+
+            final List<PileupSummary> nonLohData = Arrays.stream(nonLohIndices)
+                    .mapToObj(pileupSummaries::get).collect(Collectors.toList());
 
             final ContaminationStats lohStats = ContaminationStats.getStats(lohData, contamination);
             final ContaminationStats nonLohStats = ContaminationStats.getStats(nonLohData, contamination);
@@ -108,12 +128,14 @@ public class CalculateContamination extends CommandLineProgram {
             final double newContamination = nonLohStats.contaminationEstimate();
             converged = Math.abs(contamination - newContamination) < CONTAMINATION_CONVERGENCE_THRESHOLD;
             contamination = newContamination;
-            if (converged) {
-                ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), contamination, nonLohStats.standardErrorOfContaminationEstimate())), outputTable);
+            if (converged || iteration == MAX_ITERATIONS) {
+                final List<BiallelicGenotypes.Posterior> genotypePosteriors = nonLohData.stream()
+                        .map(ps -> BiallelicGenotypes.getPosteriors(ps, newContamination))
+                        .collect(Collectors.toList());
+                return Pair.create(nonLohIndices, genotypePosteriors);
             }
         }
-
-        return "SUCCESS";
+        throw new GATKException.ShouldNeverReachHereException("This method should have returned within the above loop.");
     }
 
     private void logStats(ContaminationStats stats) {

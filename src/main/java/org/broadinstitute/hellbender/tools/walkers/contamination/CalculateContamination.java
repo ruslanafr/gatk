@@ -1,6 +1,5 @@
 package org.broadinstitute.hellbender.tools.walkers.contamination;
 
-import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -9,11 +8,8 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
-import org.broadinstitute.hellbender.tools.exome.HashedListTargetCollection;
-import org.broadinstitute.hellbender.tools.exome.TargetCollection;
-import org.broadinstitute.hellbender.utils.IndexRange;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.tools.walkers.mutect.FilterMutectCalls;
+import org.broadinstitute.hellbender.utils.hmm.ForwardBackwardAlgorithm;
 
 import java.io.File;
 import java.util.*;
@@ -54,17 +50,13 @@ public class CalculateContamination extends CommandLineProgram {
 
     private static final Logger logger = LogManager.getLogger(CalculateContamination.class);
 
-    // we consider allele fractions in a small range around 0.5 to be heterozygous.  Beyond that range is LoH.
-    public static final double MIN_HET_AF = 0.4;
-    public static final double MAX_HET_AF = 0.6;
-
     private static final double INITIAL_CONTAMINATION_GUESS = 0.1;
 
-    public static final double LOH_RATIO_DIFFERENCE_THRESHOLD = 0.2;
-    private static final double LOH_Z_SCORE_THRESHOLD = 3.0;
     private static final double CONTAMINATION_CONVERGENCE_THRESHOLD = 0.0001;
     private static final int MAX_ITERATIONS = 10;
     private static final int MIN_ITERATIONS = 2;
+
+    private static final double LOH_LOG_POSTERIOR_THRESHOLD = Math.log(0.1);
 
     @Argument(fullName = StandardArgumentDefinitions.INPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.INPUT_SHORT_NAME,
@@ -76,10 +68,6 @@ public class CalculateContamination extends CommandLineProgram {
             doc="The output table", optional = false)
     private final File outputTable = null;
 
-    private static final int CNV_SCALE = 10_000_000;
-
-    private static final Median MEDIAN = new Median();
-
     public enum BiallelicGenotypes {
         HOM_REF, HET, HOM_ALT
     }
@@ -87,75 +75,51 @@ public class CalculateContamination extends CommandLineProgram {
     @Override
     public Object doWork() {
         final List<PileupSummary> pileupSummaries = PileupSummary.readPileupSummaries(inputPileupSummariesTable);
-        List<List<PileupSummary>> neighborhoods = splitSites(pileupSummaries);
         double contamination = INITIAL_CONTAMINATION_GUESS;
-        int iteration = 0;
 
-        while (++iteration < MAX_ITERATIONS) {  // loop over contamination convergence
-            final double c = contamination;
-            final List<ContaminationStats> neighborhoodStats = neighborhoods.stream()
-                    .map(nbhd -> ContaminationStats.getStats(nbhd, c))
+        int iteration = 0;
+        boolean converged = false;
+
+        while (!converged && iteration++ < MAX_ITERATIONS) {  // loop over contamination convergence
+            final ContaminationHMM hmm = new ContaminationHMM(contamination);
+            final ForwardBackwardAlgorithm.Result<PileupSummary, PileupSummary, Boolean> fbResult =
+                    ForwardBackwardAlgorithm.apply(pileupSummaries, pileupSummaries, hmm);
+            final double[] lohPosteriors = IntStream.range(0, pileupSummaries.size())
+                    .mapToDouble(n -> fbResult.logProbability(n, Boolean.TRUE)).toArray();
+
+            final List<PileupSummary> lohData = IntStream.range(0, pileupSummaries.size())
+                    .filter(n -> lohPosteriors[n] > LOH_LOG_POSTERIOR_THRESHOLD)
+                    .mapToObj(pileupSummaries::get)
                     .collect(Collectors.toList());
 
-            final double medianHetCountRatio = MEDIAN.evaluate(neighborhoodStats.stream().mapToDouble(ContaminationStats::ratioOfActualToExpectedHets).toArray());
-            final double medianHomAltCountRatio = MEDIAN.evaluate(neighborhoodStats.stream().mapToDouble(ContaminationStats::ratioOfActualToExpectedHomAlts).toArray());
+            final List<PileupSummary> nonLohData = IntStream.range(0, pileupSummaries.size())
+                    .filter(n -> lohPosteriors[n] <= LOH_LOG_POSTERIOR_THRESHOLD)
+                    .mapToObj(pileupSummaries::get)
+                    .collect(Collectors.toList());
 
-            // total stats over all neighborhoods that we don't flag for loss of heterozygosity
-            final ContaminationStats genomeStats = new ContaminationStats();
+            final ContaminationStats lohStats = ContaminationStats.getStats(lohData, contamination);
+            final ContaminationStats nonLohStats = ContaminationStats.getStats(nonLohData, contamination);
 
-            for (final ContaminationStats stats : neighborhoodStats) {
-                final double hetRatioDifference = stats.ratioOfActualToExpectedHets() - medianHetCountRatio;
-                final double hetRatioZ = hetRatioDifference / stats.getStdOfHetCount();
+            logger.info("Removing " + lohData.size() + " sites due to possible loss of heterozygosity.");
+            logStats(lohStats);
 
-                final double homRatioDifference = stats.ratioOfActualToExpectedHomAlts() - medianHomAltCountRatio;
-                final double homRatioZ = homRatioDifference / stats.getStdOfHomAltCount();
+            logger.info("This leaves " + nonLohData.size() + " non-LoH sites.");
+            logStats(nonLohStats);
 
-                // too few hets and too many hom alts indicates LoH
-                if ((hetRatioDifference < -LOH_RATIO_DIFFERENCE_THRESHOLD && hetRatioZ < -LOH_Z_SCORE_THRESHOLD)
-                        || (homRatioDifference > LOH_RATIO_DIFFERENCE_THRESHOLD && homRatioZ > LOH_Z_SCORE_THRESHOLD)) {
-                    logger.info(String.format("Discarding region with %d hets %d hom alts versus %.2f expected hets and " +
-                            "%.2f expected hom alts due to possible loss of heterozygosity", (int) stats.getHetCount(), (int) stats.getHomAltCount(), stats.getExpectedHetCount(), stats.getExpectedHomAltCount()));
-                } else {
-                    genomeStats.increment(stats);
-                }
-            }
-
-            final double newContamination = genomeStats.contaminationFromHomAlts();
-            logger.info(String.format("In iteration %d we estimate a contamination of %.4f.", iteration, contamination));
-            final boolean converged = Math.abs(contamination - newContamination) < CONTAMINATION_CONVERGENCE_THRESHOLD;
+            final double newContamination = nonLohStats.contaminationEstimate();
+            converged = Math.abs(contamination - newContamination) < CONTAMINATION_CONVERGENCE_THRESHOLD;
             contamination = newContamination;
-            if (converged && iteration >= MIN_ITERATIONS) {
-                ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), contamination, genomeStats.standardErrorOfContaminationFromHomAlts())), outputTable);
-                break;
+            if (converged) {
+                ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), contamination, nonLohStats.standardErrorOfContaminationEstimate())), outputTable);
             }
-
         }
-
-
-
-
-
 
         return "SUCCESS";
     }
 
-
-    // split list of sites into CNV-scale-sized sublists in order to flag individual sublists for loss of heterozygosity
-    private static List<List<PileupSummary>> splitSites(final List<PileupSummary> sites) {
-        final List<List<PileupSummary>> result = new ArrayList<>();
-
-        final TargetCollection<PileupSummary> tc = new HashedListTargetCollection<PileupSummary>(sites);
-
-        int currentIndex = 0;
-        while (currentIndex < tc.targetCount()) {
-            final PileupSummary currentSite = tc.target(currentIndex);
-            final SimpleInterval nearbyRegion = new SimpleInterval(currentSite.getContig(), currentSite.getStart(), currentSite.getEnd() + CNV_SCALE);
-            final IndexRange nearbyIndices = tc.indexRange(nearbyRegion);
-            final List<PileupSummary> nearbySites = IntStream.range(nearbyIndices.from, nearbyIndices.to).mapToObj(tc::target).collect(Collectors.toList());
-            result.add(nearbySites);
-            currentIndex = nearbyIndices.to;
-        }
-
-        return result;
+    private void logStats(ContaminationStats stats) {
+        logger.info(String.format("These sites have %.2f hets and %.2f hom alts compared to %.2f and %.2f expected.",
+                stats.getHetCount(), stats.getHomAltCount(), stats.getExpectedHetCount(), stats.getExpectedHomAltCount()));
+        logger.info(String.format("The contamination estimate from these sites is %.4f.", stats.contaminationEstimate()));
     }
 }

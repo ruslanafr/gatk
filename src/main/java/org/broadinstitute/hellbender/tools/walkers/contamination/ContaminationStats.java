@@ -8,13 +8,10 @@ import java.util.EnumMap;
 // statistics relevant to computing contamination and blacklisting possible LoH regions
 class ContaminationStats {
 
-
     private double homAltCount;
     private double hetCount;
     private double expectedHomAltCount;
     private double expectedHetCount;
-    private double varianceOfHomAltCount;
-    private double varianceOfHetCount;
     private double readCountInHomAltSites;
     private double refCountInHomAltSites;
     private double otherAltCountInHomAltSites;
@@ -33,12 +30,7 @@ class ContaminationStats {
     public double getExpectedHetCount() {
         return expectedHetCount;
     }
-    public double getStdOfHomAltCount() {
-        return Math.sqrt(varianceOfHomAltCount);
-    }
-    public double getStdOfHetCount() {
-        return Math.sqrt(varianceOfHetCount);
-    }
+
 
     public void increment(final EnumMap<CalculateContamination.BiallelicGenotypes, Double> posteriors, final PileupSummary ps) {
         final double homAltResponsibility = posteriors.get(CalculateContamination.BiallelicGenotypes.HOM_ALT);
@@ -51,8 +43,6 @@ class ContaminationStats {
         final double hetPrior = 2 * ps.getAlleleFrequency() * ( 1 - ps.getAlleleFrequency());
         expectedHomAltCount += homAltPrior;
         expectedHetCount += hetPrior;
-        varianceOfHomAltCount += homAltPrior * (1 - homAltPrior);
-        varianceOfHetCount += hetPrior * (1 - hetPrior);
 
         readCountInHomAltSites += homAltResponsibility * ps.getTotalCount();
         refCountInHomAltSites += homAltResponsibility * ps.getRefCount();
@@ -68,8 +58,6 @@ class ContaminationStats {
 
         this.expectedHomAltCount = other.expectedHomAltCount;
         this.expectedHetCount += other.expectedHetCount;
-        this.varianceOfHomAltCount += other.varianceOfHomAltCount;
-        this.varianceOfHetCount += other.varianceOfHetCount;
 
         this.readCountInHomAltSites += other.readCountInHomAltSites;
         this.refCountInHomAltSites += other.refCountInHomAltSites;
@@ -79,23 +67,15 @@ class ContaminationStats {
         this.expectedRefExcessInHetPerUnitContamination += other.expectedRefExcessInHetPerUnitContamination;
     }
 
-    public double contaminationFromHomAlts() {
+    public double contaminationEstimate() {
         // if ref is A, alt is C, then # of ref reads due to error is roughly (# of G read + # of T reads)/2
         final double refInHomAltDueToError = otherAltCountInHomAltSites / 2;
         final double refCountInHomAltDueToContamination = Math.max(refCountInHomAltSites - refInHomAltDueToError, 0);
         return refCountInHomAltDueToContamination / expectedRefInHomAltPerUnitContamination;
     }
 
-    public double standardErrorOfContaminationFromHomAlts() {
-        return Math.sqrt(contaminationFromHomAlts() / expectedRefInHomAltPerUnitContamination);
-    }
-
-    public double ratioOfActualToExpectedHets() {
-        return hetCount / expectedHetCount;
-    }
-
-    public double ratioOfActualToExpectedHomAlts() {
-        return homAltCount / expectedHomAltCount;
+    public double standardErrorOfContaminationEstimate() {
+        return Math.sqrt(contaminationEstimate() / expectedRefInHomAltPerUnitContamination);
     }
 
     public static ContaminationStats getStats(final Collection<PileupSummary> pileupSummaries, final double contamination) {
@@ -116,7 +96,7 @@ class ContaminationStats {
 
         final double homRefLikelihood = MathUtils.uniformBinomialProbability(totalCount, altCount, 0, contamination);
         final double homAltLikelihood = MathUtils.uniformBinomialProbability(totalCount, altCount, 1 - contamination, 1);
-        final double hetLikelihood = MathUtils.uniformBinomialProbability(totalCount, altCount, CalculateContamination.MIN_HET_AF - contamination / 2, CalculateContamination.MAX_HET_AF + contamination / 2);
+        final double hetLikelihood = MathUtils.uniformBinomialProbability(totalCount, altCount, ContaminationHMM.MIN_HET_AF - contamination / 2, ContaminationHMM.MAX_HET_AF + contamination / 2);
 
         final double[] unnormalized = new double[CalculateContamination.BiallelicGenotypes.values().length];
         unnormalized[CalculateContamination.BiallelicGenotypes.HOM_REF.ordinal()] = homRefLikelihood * homRefPrior;

@@ -11,6 +11,7 @@ import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.mutect.FilterMutectCalls;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.hmm.ForwardBackwardAlgorithm;
 
 import java.io.File;
@@ -50,6 +51,8 @@ import java.util.stream.IntStream;
 @DocumentedFeature
 public class CalculateContamination extends CommandLineProgram {
 
+    public static final String MATCHED_PILEUP_SUMMARIES_TABLE_NAME = "matched";
+
     private static final Logger logger = LogManager.getLogger(CalculateContamination.class);
 
     private static final double INITIAL_CONTAMINATION_GUESS = 0.1;
@@ -61,8 +64,14 @@ public class CalculateContamination extends CommandLineProgram {
 
     @Argument(fullName = StandardArgumentDefinitions.INPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.INPUT_SHORT_NAME,
-            doc="The input table")
-    private File inputPileupSummariesTable;
+            doc="The input table from the sample in question.")
+    private File inputTable;
+
+    @Argument(fullName = MATCHED_PILEUP_SUMMARIES_TABLE_NAME,
+            shortName = MATCHED_PILEUP_SUMMARIES_TABLE_NAME,
+            doc="An optional input table from a matched sample, presumably with less CNV and less contamination.",
+            optional = true)
+    private File matchedTable = null;
 
     @Argument(fullName= StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName=StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
@@ -71,18 +80,29 @@ public class CalculateContamination extends CommandLineProgram {
 
     @Override
     public Object doWork() {
-        final List<PileupSummary> pileupSummaries = PileupSummary.readPileupSummaries(inputPileupSummariesTable)
+        final List<PileupSummary> pileupSummaries = PileupSummary.readPileupSummaries(inputTable);
+        final Optional<List<PileupSummary>> matchedSummaries = matchedTable == null ? Optional.empty() :
+                Optional.of(PileupSummary.readPileupSummaries(matchedTable));
 
-        final Pair<int[], double[]> nonLoHIndicesAndHomAltProbabilities =
-                findNonLossOfHeterozygosityIndicesAndTheirHomAltProbabilities(pileupSummaries);
+        if (matchedSummaries.isPresent()) {
+            final List<PileupSummary> matched = matchedSummaries.get();
+            Utils.validateArg(pileupSummaries.size() == matched.size(), "Matched pileup table is not the same length as sample pileup table");
+            final boolean sameSites = IntStream.range(0, pileupSummaries.size())
+                    .allMatch(n -> pileupSummaries.get(n).getStart() == matched.get(n).getStart()
+                            && pileupSummaries.get(n).getContig().equals(matched.get(n).getContig()));
+            Utils.validateArg(sameSites, "Matched pileup table has different sites from sample table.");
+        }
 
-        final List<PileupSummary> nonLoHSites = Arrays.stream(nonLoHIndicesAndHomAltProbabilities)
+        // get non-LoH sites and genotypes from the matched normal if available
+        final Pair<int[], List<BiallelicGenotypes.Posterior>> nonLoHIndicesAndPosteriors =
+                findNonLoHIndicesAndPosteriors(matchedSummaries.orElseGet(() -> pileupSummaries));
+
+        final List<PileupSummary> nonLoHSites = Arrays.stream(nonLoHIndicesAndPosteriors.getFirst())
                 .mapToObj(pileupSummaries::get).collect(Collectors.toList());
 
-        final ContaminationStats nonLohStats = ContaminationStats.getStats(nonLoHSites);
+        final ContaminationStats nonLohStats = ContaminationStats.getStats(nonLoHSites, nonLoHIndicesAndPosteriors.getSecond());
 
-        ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), contamination, nonLohStats.standardErrorOfContaminationEstimate())), outputTable);
-
+        ContaminationRecord.writeContaminationTable(Arrays.asList(new ContaminationRecord(ContaminationRecord.Level.WHOLE_BAM.toString(), nonLohStats.contaminationEstimate(), nonLohStats.standardErrorOfContaminationEstimate())), outputTable);
 
         return "SUCCESS";
     }
@@ -91,7 +111,7 @@ public class CalculateContamination extends CommandLineProgram {
      * Use an HMM to determine which sites are definitely not loss of heterozygosity and what their probabilities of being hom alt are
      * @param pileupSummaries a List of pileup summary sites, some of which might exhibit loss of heterozygosity
      */
-    private Pair<int[], List<BiallelicGenotypes.Posterior>> findNonLossOfHeterozygosityIndicesAndTheirHomAltProbabilities(List<PileupSummary> pileupSummaries) {
+    private Pair<int[], List<BiallelicGenotypes.Posterior>> findNonLoHIndicesAndPosteriors(List<PileupSummary> pileupSummaries) {
         logger.info("Looking for non loss of heterozygosity sites in the input pileups.");
         double contamination = INITIAL_CONTAMINATION_GUESS;
         int iteration = 0;

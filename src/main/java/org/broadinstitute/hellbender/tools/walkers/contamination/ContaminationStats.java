@@ -1,9 +1,12 @@
 package org.broadinstitute.hellbender.tools.walkers.contamination;
 
 import org.broadinstitute.hellbender.utils.MathUtils;
+import org.broadinstitute.hellbender.utils.Utils;
 
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.List;
+import java.util.stream.IntStream;
 
 // statistics relevant to computing contamination and blacklisting possible LoH regions
 class ContaminationStats {
@@ -81,6 +84,13 @@ class ContaminationStats {
     public static ContaminationStats getStats(final Collection<PileupSummary> pileupSummaries, final double contamination) {
         final ContaminationStats result = new ContaminationStats();
         pileupSummaries.forEach(ps -> result.increment(BiallelicGenotypes.getPosteriors(ps, contamination), ps));
+        return result;
+    }
+
+    public static ContaminationStats getStats(final List<PileupSummary> pileupSummaries, List<BiallelicGenotypes.Posterior> posteriors) {
+        Utils.validateArg(pileupSummaries.size() == posteriors.size(), "Must have one posterior per pileup summary.");
+        final ContaminationStats result = new ContaminationStats();
+        IntStream.range(0, pileupSummaries.size()).forEach(n -> result.increment(posteriors.get(n), pileupSummaries.get(n)));
         return result;
     }
 }

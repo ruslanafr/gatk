@@ -8,6 +8,7 @@ public enum BiallelicGenotypes {
     HOM_REF, HET, HOM_ALT;
 
     public static class Posterior extends EnumMap<BiallelicGenotypes, Double> {
+        static final long serialVersionUID = 42522732L;
         public Posterior(final double homRefProb, final double hetProb, final double homAltProb) {
             super(BiallelicGenotypes.class);
             put(HOM_REF, homRefProb);

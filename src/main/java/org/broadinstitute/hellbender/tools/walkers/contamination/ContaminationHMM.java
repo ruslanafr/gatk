@@ -13,8 +13,8 @@ import java.util.List;
  */
 public class ContaminationHMM implements HMM<PileupSummary, PileupSummary, Boolean> {
     // we consider allele fractions in a small range around 0.5 to be heterozygous.  Beyond that range is LoH.
-    public static final double MIN_HET_AF = 0.4;
-    public static final double MAX_HET_AF = 0.6;
+    public static final double MIN_HET_AF = 0.3;
+    public static final double MAX_HET_AF = 0.7;
     private static final double priorFractionOfGenomeWithLoH = 0.01;
     private static final double averageLoHSize = 5_000_000;
     private static final double averageNonLoHSize = 50_000_000;

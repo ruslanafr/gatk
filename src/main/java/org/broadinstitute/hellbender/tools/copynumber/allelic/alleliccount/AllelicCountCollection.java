@@ -20,10 +20,10 @@ import java.util.stream.Collectors;
  * @author Mehrtash Babadi &lt;mehrtash@broadinstitute.org&gt;
  */
 public class AllelicCountCollection {
-    private final List<AllelicCount> counts;
+    private final List<AllelicCount> allelicCounts;
 
     public AllelicCountCollection() {
-        counts = new ArrayList<>();
+        allelicCounts = new ArrayList<>();
     }
 
     /**
@@ -37,24 +37,28 @@ public class AllelicCountCollection {
         IOUtils.canReadFile(inputFile);
 
         try (final AllelicCountReader reader = new AllelicCountReader(inputFile)) {
-            counts = reader.stream().collect(Collectors.toList());
+            allelicCounts = reader.stream().collect(Collectors.toList());
         } catch (final IOException | UncheckedIOException e) {
             throw new UserException.CouldNotReadInputFile(inputFile, e);
         }
+    }
+
+    public AllelicCountCollection(final List<AllelicCount> allelicCounts) {
+        this.allelicCounts = Utils.nonNull(allelicCounts);
     }
 
     /**
      * Adds a new {@link AllelicCount}.
      */
     public void add(final AllelicCount allelicCount) {
-        counts.add(Utils.nonNull(allelicCount));
+        allelicCounts.add(Utils.nonNull(allelicCount));
     }
 
     /**
      * Returns an unmodifiable view of the list of {@link AllelicCount}s.
      */
-    public List<AllelicCount> getCounts() {
-        return Collections.unmodifiableList(counts);
+    public List<AllelicCount> getAllelicCounts() {
+        return Collections.unmodifiableList(allelicCounts);
     }
 
     /**
@@ -65,7 +69,7 @@ public class AllelicCountCollection {
      */
     public void write(final File outputFile) {
         try (final AllelicCountWriter writer = new AllelicCountWriter(outputFile)) {
-            writer.writeAllRecords(counts);
+            writer.writeAllRecords(allelicCounts);
         } catch (final IOException e) {
             throw new UserException.CouldNotCreateOutputFile(outputFile, e);
         }
@@ -81,11 +85,11 @@ public class AllelicCountCollection {
         }
 
         final AllelicCountCollection allelicCountCollection = (AllelicCountCollection) o;
-        return counts.equals(allelicCountCollection.counts);
+        return allelicCounts.equals(allelicCountCollection.allelicCounts);
     }
 
     @Override
     public int hashCode() {
-        return counts.hashCode();
+        return allelicCounts.hashCode();
     }
 }

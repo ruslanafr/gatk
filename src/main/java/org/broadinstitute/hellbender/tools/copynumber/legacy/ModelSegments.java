@@ -46,65 +46,73 @@ public final class ModelSegments extends SparkCommandLineProgram {
     private static final long serialVersionUID = 1L;
 
     //filename tags for output
-    private static final String SEGMENTS_FILE_SUFFIX = ".seg";
-    private static final String COPY_RATIO_SEGMENTS_FILE_SUFFIX = ".cr" + SEGMENTS_FILE_SUFFIX;
-    private static final String ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX = ".af" + SEGMENTS_FILE_SUFFIX;
-    private static final String UNION_SEGMENTS_FILE_SUFFIX = ".union" + SEGMENTS_FILE_SUFFIX;
-    private static final String BEGIN_FIT_FILE_TAG = ".model-begin";
-    private static final String FINAL_FIT_FILE_TAG = ".model-final";
-    private static final String CR_PARAMETER_FILE_SUFFIX = ".cr.param";
-    private static final String AF_PARAMETER_FILE_SUFFIX = ".af.param";
+    protected static final String FILTERED_ALLELIC_COUNTS_FILE_SUFFIX = ".filtered.ac.tsv";
+    protected static final String HET_ALLELIC_COUNTS_FILE_SUFFIX = ".hets.ac.tsv";
+    protected static final String SEGMENTS_FILE_SUFFIX = ".seg";
+    protected static final String COPY_RATIO_SEGMENTS_FILE_SUFFIX = ".cr" + SEGMENTS_FILE_SUFFIX;
+    protected static final String ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX = ".af" + SEGMENTS_FILE_SUFFIX;
+    protected static final String UNION_SEGMENTS_FILE_SUFFIX = ".union" + SEGMENTS_FILE_SUFFIX;
+    protected static final String BEGIN_FIT_FILE_TAG = ".model-begin";
+    protected static final String FINAL_FIT_FILE_TAG = ".model-final";
+    protected static final String CR_PARAMETER_FILE_SUFFIX = ".cr.param";
+    protected static final String AF_PARAMETER_FILE_SUFFIX = ".af.param";
 
-    private static final String OUTPUT_PREFIX_LONG_NAME = "outputPrefix";
-    private static final String OUTPUT_PREFIX_SHORT_NAME = "pre";
+    protected static final String OUTPUT_PREFIX_LONG_NAME = "outputPrefix";
+    protected static final String OUTPUT_PREFIX_SHORT_NAME = "pre";
 
-    private static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_LONG_NAME = "maxNumSegmentsPerChromosome";
-    private static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_SHORT_NAME = "maxNumSegsPerChr";
+    protected static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_LONG_NAME = "maxNumSegmentsPerChromosome";
+    protected static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_SHORT_NAME = "maxNumSegsPerChr";
 
-    private static final String KERNEL_VARIANCE_COPY_RATIO_LONG_NAME = "kernelVarianceCopyRatio";
-    private static final String KERNEL_VARIANCE_COPY_RATIO_SHORT_NAME = "kernVarCR";
+    protected static final String MINIMUM_TOTAL_ALLELE_COUNT_LONG_NAME = "minTotalAlleleCount";
+    protected static final String MINIMUM_TOTAL_ALLELE_COUNT_SHORT_NAME = "minAC";
 
-    private static final String KERNEL_VARIANCE_ALLELE_FRACTION_LONG_NAME = "kernelVarianceAlleleFraction";
-    private static final String KERNEL_VARIANCE_ALLELE_FRACTION_SHORT_NAME = "kernVarAF";
+    protected static final String P_VALUE_HET_GENOTYPING_LONG_NAME = "pValueHetGenotyping";
+    protected static final String P_VALUE_HET_GENOTYPING_SHORT_NAME = "pValueHet";
 
-    private static final String KERNEL_APPROXIMATION_DIMENSION_LONG_NAME = "kernelApproximationDimension";
-    private static final String KERNEL_APPROXIMATION_DIMENSION_SHORT_NAME = "kernApproxDim";
+    protected static final String KERNEL_VARIANCE_COPY_RATIO_LONG_NAME = "kernelVarianceCopyRatio";
+    protected static final String KERNEL_VARIANCE_COPY_RATIO_SHORT_NAME = "kernVarCR";
 
-    private static final String WINDOW_SIZES_LONG_NAME = "windowSizes";
-    private static final String WINDOW_SIZES_SHORT_NAME = "winSizes";
+    protected static final String KERNEL_VARIANCE_ALLELE_FRACTION_LONG_NAME = "kernelVarianceAlleleFraction";
+    protected static final String KERNEL_VARIANCE_ALLELE_FRACTION_SHORT_NAME = "kernVarAF";
 
-    private static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_COPY_RATIO_LONG_NAME = "numChangepointsPenaltyFactorCopyRatio";
-    private static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_COPY_RATIO_SHORT_NAME = "numChangeptsPenCR";
+    protected static final String KERNEL_APPROXIMATION_DIMENSION_LONG_NAME = "kernelApproximationDimension";
+    protected static final String KERNEL_APPROXIMATION_DIMENSION_SHORT_NAME = "kernApproxDim";
 
-    private static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_LONG_NAME = "numChangepointsPenaltyFactorAlleleFraction";
-    private static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_SHORT_NAME = "numChangeptsPenAF";
+    protected static final String WINDOW_SIZES_LONG_NAME = "windowSizes";
+    protected static final String WINDOW_SIZES_SHORT_NAME = "winSizes";
 
-    private static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_LONG_NAME = "smallCopyRatioSegmentThreshold";
-    private static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_SHORT_NAME = "smallCRSegTh";
+    protected static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_COPY_RATIO_LONG_NAME = "numChangepointsPenaltyFactorCopyRatio";
+    protected static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_COPY_RATIO_SHORT_NAME = "numChangeptsPenCR";
 
-    private static final String NUM_SAMPLES_COPY_RATIO_LONG_NAME = "numSamplesCopyRatio";
-    private static final String NUM_SAMPLES_COPY_RATIO_SHORT_NAME = "numSampCR";
+    protected static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_LONG_NAME = "numChangepointsPenaltyFactorAlleleFraction";
+    protected static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_SHORT_NAME = "numChangeptsPenAF";
 
-    private static final String NUM_BURN_IN_COPY_RATIO_LONG_NAME = "numBurnInCopyRatio";
-    private static final String NUM_BURN_IN_COPY_RATIO_SHORT_NAME = "numBurnCR";
+    protected static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_LONG_NAME = "smallCopyRatioSegmentThreshold";
+    protected static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_SHORT_NAME = "smallCRSegTh";
 
-    private static final String NUM_SAMPLES_ALLELE_FRACTION_LONG_NAME = "numSamplesAlleleFraction";
-    private static final String NUM_SAMPLES_ALLELE_FRACTION_SHORT_NAME = "numSampAF";
+    protected static final String NUM_SAMPLES_COPY_RATIO_LONG_NAME = "numSamplesCopyRatio";
+    protected static final String NUM_SAMPLES_COPY_RATIO_SHORT_NAME = "numSampCR";
 
-    private static final String NUM_BURN_IN_ALLELE_FRACTION_LONG_NAME = "numBurnInAlleleFraction";
-    private static final String NUM_BURN_IN_ALLELE_FRACTION_SHORT_NAME = "numBurnAF";
+    protected static final String NUM_BURN_IN_COPY_RATIO_LONG_NAME = "numBurnInCopyRatio";
+    protected static final String NUM_BURN_IN_COPY_RATIO_SHORT_NAME = "numBurnCR";
 
-    private static final String INTERVAL_THRESHOLD_COPY_RATIO_LONG_NAME = "intervalThresholdCopyRatio";
-    private static final String INTERVAL_THRESHOLD_COPY_RATIO_SHORT_NAME = "simThCR";
+    protected static final String NUM_SAMPLES_ALLELE_FRACTION_LONG_NAME = "numSamplesAlleleFraction";
+    protected static final String NUM_SAMPLES_ALLELE_FRACTION_SHORT_NAME = "numSampAF";
 
-    private static final String INTERVAL_THRESHOLD_ALLELE_FRACTION_LONG_NAME = "intervalThresholdAlleleFraction";
-    private static final String INTERVAL_THRESHOLD_ALLELE_FRACTION_SHORT_NAME = "simThAF";
+    protected static final String NUM_BURN_IN_ALLELE_FRACTION_LONG_NAME = "numBurnInAlleleFraction";
+    protected static final String NUM_BURN_IN_ALLELE_FRACTION_SHORT_NAME = "numBurnAF";
 
-    private static final String MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_LONG_NAME = "maxNumIterationsSimSeg";
-    private static final String MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_SHORT_NAME = "maxIterSim";
+    protected static final String INTERVAL_THRESHOLD_COPY_RATIO_LONG_NAME = "intervalThresholdCopyRatio";
+    protected static final String INTERVAL_THRESHOLD_COPY_RATIO_SHORT_NAME = "simThCR";
 
-    private static final String NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_LONG_NAME = "numIterationsSimSegPerFit";
-    private static final String NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_SHORT_NAME = "numIterSimPerFit";
+    protected static final String INTERVAL_THRESHOLD_ALLELE_FRACTION_LONG_NAME = "intervalThresholdAlleleFraction";
+    protected static final String INTERVAL_THRESHOLD_ALLELE_FRACTION_SHORT_NAME = "simThAF";
+
+    protected static final String MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_LONG_NAME = "maxNumIterationsSimSeg";
+    protected static final String MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_SHORT_NAME = "maxIterSim";
+
+    protected static final String NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_LONG_NAME = "numIterationsSimSegPerFit";
+    protected static final String NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_SHORT_NAME = "numIterSimPerFit";
 
     @Argument(
             doc = "Input file containing denoised copy-ratio profile (output of DenoiseReadCounts).",
@@ -140,6 +148,25 @@ public final class ModelSegments extends SparkCommandLineProgram {
             minValue = 1
     )
     private int maxNumSegmentsPerChromosome = 100;
+
+    @Argument(
+            doc = "Minimum total count required to include site in allele-fraction segmentation.",
+            fullName = MINIMUM_TOTAL_ALLELE_COUNT_LONG_NAME,
+            shortName = MINIMUM_TOTAL_ALLELE_COUNT_SHORT_NAME,
+            optional = true,
+            minValue = 0
+    )
+    private int minTotalAlleleCount = 10;
+
+//    @Argument(
+//            doc = "P-value threshold to use for genotyping heterozygous sites to include in allele-fraction modeling.",
+//            fullName = P_VALUE_HET_GENOTYPING_LONG_NAME,
+//            shortName = P_VALUE_HET_GENOTYPING_SHORT_NAME,
+//            optional = true,
+//            minValue = 0,
+//            maxValue = 1
+//    )
+//    private double pValueThresholdHetGenotyping = 0.01;
 
     @Argument(
             doc = "Variance of Gaussian kernel for copy-ratio segmentation.  If zero, a linear kernel will be used.",
@@ -290,6 +317,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
     //initialize data/segment variables, some of which may be optional
     private ReadCountCollection denoisedCopyRatioProfile = null;
     private CopyRatioSegmentationResult copyRatioSegments = CopyRatioSegmentationResult.NO_SEGMENTS;
+    private AllelicCountCollection filteredAllelicCounts = null;
     private AllelicCountCollection allelicCounts = null;
     private AlleleFractionSegmentationResult alleleFractionSegments = AlleleFractionSegmentationResult.NO_SEGMENTS;
 
@@ -316,9 +344,10 @@ public final class ModelSegments extends SparkCommandLineProgram {
         }
         
         if (inputAllelicCountsFile != null) {
-            readAllelicCounts();
+            readAndFilterAllelicCounts();
             performAlleleFractionSegmentation();
             writeAlleleFractionSegments(sampleName);
+//            performHetGenotyping();
         } else {
             allelicCounts = new AllelicCountCollection();           //empty allele-fraction data
         }
@@ -326,7 +355,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
         //TODO legacy code is used for modelling here---replace with new models and python-based inference
         //make Genome from input copy ratio and allele counts; need to trivially convert new AllelicCount to legacy AllelicCount
         final Genome genome = new Genome(denoisedCopyRatioProfile,
-                allelicCounts.getCounts().stream().map(ac -> new AllelicCount(ac.getInterval(), ac.getRefReadCount(), ac.getAltReadCount())).collect(Collectors.toList()));
+                allelicCounts.getAllelicCounts().stream().map(ac -> new AllelicCount(ac.getInterval(), ac.getRefReadCount(), ac.getAltReadCount())).collect(Collectors.toList()));
 
         logger.info("Combining copy-ratio and allele-fraction segments...");
         final List<SimpleInterval> unionedSegments = SegmentUtils.unionSegments(
@@ -336,7 +365,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
         SegmentUtils.writeSegmentFileWithNumTargetsAndNumSNPs(unionedSegmentsFile, unionedSegments, genome);
         logSegmentsFileWrittenMessage(unionedSegmentsFile);
 
-        logger.info("Merging small copy-ratio segments...");
+        logger.info(String.format("Merging small copy-ratio segments (threshold = %d)...", smallCopyRatioSegmentThreshold));
         final SegmentedGenome segmentedGenomeWithSmallSegments = new SegmentedGenome(unionedSegments, genome);
         final SegmentedGenome segmentedGenome = segmentedGenomeWithSmallSegments.mergeSmallSegments(smallCopyRatioSegmentThreshold);
         logger.info("Number of segments after small-segment merging: " + segmentedGenome.getSegments().size());
@@ -358,14 +387,9 @@ public final class ModelSegments extends SparkCommandLineProgram {
         logger.info("SUCCESS: Allelic CNV run complete for sample " + sampleName + ".");
     }
 
-    private void readAllelicCounts() {
-        logger.info(String.format("Reading allelic-counts file (%s)...", inputAllelicCountsFile));
-        allelicCounts = new AllelicCountCollection(inputAllelicCountsFile);
-    }
-
     private void validateArguments() {
         Utils.nonNull(outputPrefix);
-        Utils.validateArg(inputDenoisedCopyRatioProfileFile == null && inputAllelicCountsFile == null,
+        Utils.validateArg(!(inputDenoisedCopyRatioProfileFile == null && inputAllelicCountsFile == null),
                 "Must provide at least a denoised copy-ratio profile file or an allelic-counts file.");
         if (inputDenoisedCopyRatioProfileFile != null) {
             IOUtils.canReadFile(inputDenoisedCopyRatioProfileFile);
@@ -400,10 +424,24 @@ public final class ModelSegments extends SparkCommandLineProgram {
         logSegmentsFileWrittenMessage(copyRatioSegmentsFile);
     }
 
+    private void readAndFilterAllelicCounts() {
+        logger.info(String.format("Reading allelic-counts file (%s)...", inputAllelicCountsFile));
+        final AllelicCountCollection unfilteredAllelicCounts = new AllelicCountCollection(inputAllelicCountsFile);
+        logger.info(String.format("Filtering allelic counts with total count less than %d...", minTotalAlleleCount));
+        filteredAllelicCounts = new AllelicCountCollection(unfilteredAllelicCounts.getAllelicCounts().stream()
+                .filter(ac -> ac.getRefReadCount() + ac.getAltReadCount() >= minTotalAlleleCount)
+                .collect(Collectors.toList()));
+        final File filteredAllelicCountsFile = new File(outputPrefix + FILTERED_ALLELIC_COUNTS_FILE_SUFFIX);
+        filteredAllelicCounts.write(filteredAllelicCountsFile);
+        logger.info(String.format("Retained %d / %d sites after filtering on total count...",
+                filteredAllelicCounts.getAllelicCounts().size(), unfilteredAllelicCounts.getAllelicCounts().size()));
+        logger.info(String.format("Filtered allelic counts written to %s.", filteredAllelicCountsFile));
+    }
+
     private void performAlleleFractionSegmentation() {
         logger.info("Starting allele-fraction segmentation...");
         final int maxNumChangepointsPerChromosome = maxNumSegmentsPerChromosome - 1;
-        alleleFractionSegments = new AlleleFractionKernelSegmenter(allelicCounts)
+        alleleFractionSegments = new AlleleFractionKernelSegmenter(filteredAllelicCounts)
                 .findSegmentation(maxNumChangepointsPerChromosome, kernelVarianceAlleleFraction, kernelApproximationDimension,
                         ImmutableSet.copyOf(windowSizes).asList(),
                         numChangepointsPenaltyFactorAlleleFraction, numChangepointsPenaltyFactorAlleleFraction);
@@ -414,6 +452,22 @@ public final class ModelSegments extends SparkCommandLineProgram {
         alleleFractionSegments.write(alleleFractionSegmentsFile, sampleName);
         logSegmentsFileWrittenMessage(alleleFractionSegmentsFile);
     }
+
+//    private void performHetGenotyping() {
+//        hetAllelicCounts = new AllelicCountCollection(
+//                filteredAllelicCounts.getAllelicCounts().stream().filter(ac -> ac.getAltReadCount() != 0 && ac.getRefReadCount() != 0 &&
+//                        new BinomialTest().binomialTest(
+//                                ac.getAltReadCount() + ac.getRefReadCount(),
+//                                Math.max(ac.getAltReadCount(), ac.getRefReadCount()),
+//                                0.5,
+//                                AlternativeHypothesis.TWO_SIDED) >= pValueThresholdHetGenotyping)
+//                        .collect(Collectors.toList()));
+//        final File hetAllelicCountsFile = new File(outputPrefix + HET_ALLELIC_COUNTS_FILE_SUFFIX);
+//        hetAllelicCounts.write(hetAllelicCountsFile);
+//        logger.info(String.format("Retained %d / %d sites after binomial testing for heterozygosity...",
+//                hetAllelicCounts.getAllelicCounts().size(), filteredAllelicCounts.getAllelicCounts().size()));
+//        logger.info(String.format("Allelic counts at heterozygous sites written to %s.", hetAllelicCountsFile));
+//    }
 
     private void performSimilarSegmentMergingStep(final ACNVModeller modeller) {
         logger.info("Merging similar segments...");

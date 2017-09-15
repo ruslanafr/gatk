@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentati
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.util.FastMath;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCount;
@@ -29,26 +30,29 @@ public final class AlleleFractionKernelSegmenter {
     private static final Function<Double, BiFunction<Double, Double, Double>> kernel =
             variance -> variance == 0.
                     ? (x, y) -> x * y
-                    : (x, y) -> Math.exp(-(x - y) * (x - y) / variance);
+                    : (x, y) -> FastMath.exp(-(x - y) * (x - y) / variance);
 
+    private final int numPointsTotal;
     private final Map<String, List<SimpleInterval>> intervalsPerChromosome;
     private final Map<String, List<Double>> alternateAlleleFractionsPerChromosome;    //in log2 space
 
     public AlleleFractionKernelSegmenter(final AllelicCountCollection allelicCounts) {
         Utils.nonNull(allelicCounts);
-        intervalsPerChromosome = allelicCounts.getCounts().stream().map(AllelicCount::getInterval)
+        numPointsTotal = allelicCounts.getAllelicCounts().size();
+        intervalsPerChromosome = allelicCounts.getAllelicCounts().stream()
+                .map(AllelicCount::getInterval)
                 .collect(Collectors.groupingBy(
                         SimpleInterval::getContig,
                         LinkedHashMap::new,
                         Collectors.mapping(Function.identity(), Collectors.toList())));
-        final double[] alternateAlleleFractions = allelicCounts.getCounts().stream()
+        final double[] alternateAlleleFractions = allelicCounts.getAllelicCounts().stream()
                 .mapToDouble(ac -> ac.getRefReadCount() + ac.getAltReadCount() == 0
                         ? 0.
-                        : ac.getAltReadCount() / (ac.getRefReadCount() + ac.getAltReadCount()))
+                        : (double) ac.getAltReadCount() / (ac.getRefReadCount() + ac.getAltReadCount()))
                 .toArray();
-        alternateAlleleFractionsPerChromosome = IntStream.range(0, allelicCounts.getCounts().size()).boxed()
+        alternateAlleleFractionsPerChromosome = IntStream.range(0, allelicCounts.getAllelicCounts().size()).boxed()
                 .map(i -> new ImmutablePair<>(
-                        allelicCounts.getCounts().get(i).getContig(),
+                        allelicCounts.getAllelicCounts().get(i).getContig(),
                         alternateAlleleFractions[i]))
                 .collect(Collectors.groupingBy(
                         Pair::getKey,
@@ -72,28 +76,31 @@ public final class AlleleFractionKernelSegmenter {
         ParamUtils.isPositiveOrZero(numChangepointsPenaltyLogLinearFactor,
                 "Log-linear factor for the penalty on the number of changepoints per chromosome must be non-negative.");
 
+        logger.info(String.format("Finding changepoints in %d data points and %d chromosomes...",
+                numPointsTotal, alternateAlleleFractionsPerChromosome.size()));
+
         //loop over chromosomes, find changepoints, and create allele-fraction segments
         final List<AlleleFractionSegmentationResult.AlleleFractionSegment> segments = new ArrayList<>();
         for (final String chromosome : alternateAlleleFractionsPerChromosome.keySet()) {
             logger.info(String.format("Finding changepoints in chromosome %s...", chromosome));
-            final List<Double> denoisedCopyRatiosInChromosome = alternateAlleleFractionsPerChromosome.get(chromosome);
+            final List<Double> alternateAlleleFractionsInChromosome = alternateAlleleFractionsPerChromosome.get(chromosome);
 
-            final List<Integer> changepoints = new KernelSegmenter<>(denoisedCopyRatiosInChromosome)
+            final List<Integer> changepoints = new KernelSegmenter<>(alternateAlleleFractionsInChromosome)
                 .findChangepoints(maxNumChangepointsPerChromosome, kernel.apply(kernelVariance), kernelApproximationDimension,
                         windowSizes, numChangepointsPenaltyLinearFactor, numChangepointsPenaltyLogLinearFactor, true);
 
-            if (!changepoints.contains(denoisedCopyRatiosInChromosome.size())) {
-                changepoints.add(denoisedCopyRatiosInChromosome.size() - 1);
+            if (!changepoints.contains(alternateAlleleFractionsInChromosome.size())) {
+                changepoints.add(alternateAlleleFractionsInChromosome.size() - 1);
             }
             int previousChangepoint = -1;
             for (final int changepoint : changepoints) {
                 final int start = intervalsPerChromosome.get(chromosome).get(previousChangepoint + 1).getStart();
                 final int end = intervalsPerChromosome.get(chromosome).get(changepoint).getEnd();
-                final List<Double> denoisedCopyRatiosInSegment = denoisedCopyRatiosInChromosome.subList(
+                final List<Double> alternateAlleleFractionsInSegment = alternateAlleleFractionsInChromosome.subList(
                         previousChangepoint + 1, changepoint + 1);
                 segments.add(new AlleleFractionSegmentationResult.AlleleFractionSegment(
                         new SimpleInterval(chromosome, start, end),
-                        denoisedCopyRatiosInSegment));
+                        alternateAlleleFractionsInSegment));
                 previousChangepoint = changepoint;
             }
         }

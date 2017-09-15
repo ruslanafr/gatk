@@ -11,6 +11,8 @@ import org.broadinstitute.hellbender.cmdline.programgroups.CopyNumberProgramGrou
 import org.broadinstitute.hellbender.engine.spark.SparkCommandLineProgram;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCountCollection;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionKernelSegmenter;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionSegmentationResult;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioKernelSegmenter;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentationResult;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
@@ -215,7 +217,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = SMALL_COPY_RATIO_SEGMENT_THRESHOLD_SHORT_NAME,
             optional = true
     )
-    protected int smallCopyRatioSegmentThreshold = 3;
+    private int smallCopyRatioSegmentThreshold = 3;
 
     @Argument(
             doc = "Total number of MCMC samples for copy-ratio model.",
@@ -223,7 +225,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = NUM_SAMPLES_COPY_RATIO_SHORT_NAME,
             optional = true
     )
-    protected int numSamplesCopyRatio = 100;
+    private int numSamplesCopyRatio = 100;
 
     @Argument(
             doc = "Number of burn-in samples to discard for copy-ratio model.",
@@ -231,7 +233,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = NUM_BURN_IN_COPY_RATIO_SHORT_NAME,
             optional = true
     )
-    protected int numBurnInCopyRatio = 50;
+    private int numBurnInCopyRatio = 50;
 
     @Argument(
             doc = "Total number of MCMC samples for allele-fraction model.",
@@ -239,7 +241,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = NUM_SAMPLES_ALLELE_FRACTION_SHORT_NAME,
             optional = true
     )
-    protected int numSamplesAlleleFraction = 100;
+    private int numSamplesAlleleFraction = 100;
 
     @Argument(
             doc = "Number of burn-in samples to discard for allele-fraction model.",
@@ -247,7 +249,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = NUM_BURN_IN_ALLELE_FRACTION_SHORT_NAME,
             optional = true
     )
-    protected int numBurnInAlleleFraction = 50;
+    private int numBurnInAlleleFraction = 50;
 
     @Argument(
             doc = "Number of 95% credible-interval widths to use for copy-ratio similar-segment merging.",
@@ -255,7 +257,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = INTERVAL_THRESHOLD_COPY_RATIO_SHORT_NAME,
             optional = true
     )
-    protected double intervalThresholdCopyRatio = 4.;
+    private double intervalThresholdCopyRatio = 4.;
 
     @Argument(
             doc = "Number of 95% credible-interval widths to use for allele-fraction similar-segment merging.",
@@ -263,7 +265,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = INTERVAL_THRESHOLD_ALLELE_FRACTION_SHORT_NAME,
             optional = true
     )
-    protected double intervalThresholdAlleleFraction = 2.;
+    private double intervalThresholdAlleleFraction = 2.;
 
     @Argument(
             doc = "Maximum number of iterations allowed for similar-segment merging.",
@@ -271,7 +273,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
             shortName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_SHORT_NAME,
             optional = true
     )
-    protected int maxNumSimilarSegmentMergingIterations = 10;
+    private int maxNumSimilarSegmentMergingIterations = 10;
 
     @Argument(
             doc = "Number of similar-segment--merging iterations per MCMC model refit. " +
@@ -301,19 +303,22 @@ public final class ModelSegments extends SparkCommandLineProgram {
         final String sampleName = outputPrefix.substring(outputPrefix.lastIndexOf("/") + 1);
 
         if (inputDenoisedCopyRatioProfileFile != null) {
-            readDenoisedCopyRatioProfile();
+            readDenoisedCopyRatioProfile();                         //TODO remove use of ReadCountCollection
             performCopyRatioSegmentation();
             writeCopyRatioSegments(sampleName);
         } else {
-            denoisedCopyRatioProfile = new ReadCountCollection(
+            denoisedCopyRatioProfile = new ReadCountCollection(     //empty copy-ratio data
                     Collections.emptyList(),
                     Collections.singletonList(sampleName),
                     new Array2DRowRealMatrix(0, 1));
         }
         
         if (inputAllelicCountsFile != null) {
-            logger.info(String.format("Reading allelic-counts file (%s)...", inputAllelicCountsFile));
-            allelicCounts = new AllelicCountCollection(inputAllelicCountsFile);
+            readAllelicCounts();
+            performAlleleFractionSegmentation();
+            writeAlleleFractionSegments(sampleName);
+        } else {
+            allelicCounts = new AllelicCountCollection();           //empty allele-fraction data
         }
 
         //TODO legacy code is used for modelling here---replace with new models and python-based inference
@@ -349,6 +354,11 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
         ctx.setLogLevel(originalLogLevel);
         logger.info("SUCCESS: Allelic CNV run complete for sample " + sampleName + ".");
+    }
+
+    private void readAllelicCounts() {
+        logger.info(String.format("Reading allelic-counts file (%s)...", inputAllelicCountsFile));
+        allelicCounts = new AllelicCountCollection(inputAllelicCountsFile);
     }
 
     private void validateArguments() {

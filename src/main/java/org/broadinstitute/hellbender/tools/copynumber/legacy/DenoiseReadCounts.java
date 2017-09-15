@@ -68,8 +68,8 @@ public final class DenoiseReadCounts extends CommandLineProgram {
 
     @Argument(
             doc = "Input HDF5 file containing the panel of normals (output of CreateReadCountPanelOfNormals).",
-            fullName = LegacyCopyNumberArgument.PANEL_OF_NORMALS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.PANEL_OF_NORMALS_FILE_SHORT_NAME,
+            fullName = LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_FULL_NAME,
+            shortName = LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME,
             optional = true
     )
     private File inputPanelOfNormalsFile;

@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Represents a legacy copy-ratio segmentation.
@@ -21,6 +22,8 @@ import java.util.List;
 public final class CopyRatioSegmentationResult {
     //TODO update column headers; we keep the old ones for now
     private static final TableColumnCollection COPY_RATIO_SEGMENT_FILE_TABLE_COLUMNS = SegmentTableColumn.MEAN_AND_NO_CALL_COLUMNS;
+
+    public static final CopyRatioSegmentationResult NO_SEGMENTS = new CopyRatioSegmentationResult(Collections.emptyList());
 
     private final List<CopyRatioSegment> segments;
 
@@ -74,6 +77,10 @@ public final class CopyRatioSegmentationResult {
     public CopyRatioSegmentationResult(final List<CopyRatioSegment> segments) {
         Utils.nonEmpty(segments);
         this.segments = Collections.unmodifiableList(segments);
+    }
+
+    public List<SimpleInterval> getIntervals() {
+        return segments.stream().map(s -> s.interval).collect(Collectors.toList());
     }
 
     public void write(final File file,

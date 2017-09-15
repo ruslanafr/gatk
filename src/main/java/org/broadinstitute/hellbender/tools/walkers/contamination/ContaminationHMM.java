@@ -5,6 +5,7 @@ import org.broadinstitute.hellbender.utils.hmm.HMM;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.DoubleBinaryOperator;
 
 /**
  * PileupSummary: observed data
@@ -15,6 +16,7 @@ public class ContaminationHMM implements HMM<PileupSummary, PileupSummary, Boole
     // we consider allele fractions in a small range around 0.5 to be heterozygous.  Beyond that range is LoH.
     public static final double MIN_HET_AF = 0.3;
     public static final double MAX_HET_AF = 0.7;
+    private static final double SNV_ERROR_RATE = 0.01;
     private static final double priorFractionOfGenomeWithLoH = 0.01;
     private static final double averageLoHSize = 5_000_000;
     private static final double averageNonLoHSize = 50_000_000;
@@ -45,17 +47,15 @@ public class ContaminationHMM implements HMM<PileupSummary, PileupSummary, Boole
 
         final int depth = ps.getTotalCount();
         final int altCount = ps.getAltCount();
-        final double hetMin = MIN_HET_AF - contamination / 2;
-        final double hetMax = MAX_HET_AF + contamination / 2;
 
-        final double homRefLikelihood = MathUtils.uniformBinomialProbability(depth, altCount, 0, contamination);
-        final double homAltLikelihood = MathUtils.uniformBinomialProbability(depth, altCount, 1 - contamination, 1);
-        final double hetLikelihood = isLoH ? MathUtils.uniformBinomialProbability(depth, altCount, contamination, hetMin) +
-                MathUtils.uniformBinomialProbability(depth, altCount, hetMax, 1 - contamination) :
-                MathUtils.uniformBinomialProbability(depth, altCount, hetMin, hetMax);
+        final DoubleBinaryOperator likelihood = (min, max) -> MathUtils.uniformBinomialProbability(depth, altCount, min, max);
+
+        final double homRefLikelihood = likelihood.applyAsDouble(0, SNV_ERROR_RATE + contamination);
+        final double homAltLikelihood = likelihood.applyAsDouble(1 - SNV_ERROR_RATE - contamination, 1);
+        final double hetLikelihood = !isLoH ? likelihood.applyAsDouble(MIN_HET_AF, MAX_HET_AF) :
+                0.5*likelihood.applyAsDouble(0, MIN_HET_AF) + 0.5*likelihood.applyAsDouble( MAX_HET_AF, 1);
 
         return Math.log(homRefPrior*homRefLikelihood + hetPrior*hetLikelihood + homAltPrior*homAltLikelihood);
-
     }
 
     private static double distance(final PileupSummary from, final PileupSummary to) {

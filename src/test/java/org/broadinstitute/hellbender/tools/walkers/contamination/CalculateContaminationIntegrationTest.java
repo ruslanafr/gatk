@@ -56,4 +56,21 @@ public class CalculateContaminationIntegrationTest extends CommandLineProgramTes
         Assert.assertEquals(calculatedContamination, contamination, 0.01);
     }
 
+    @Test
+    public void testRealData() {
+        final File psTable = new File("/Users/davidben/Desktop/spikein_0.05.table");
+        final File contaminationTable = createTempFile("contamination", ".table");
+        final double contamination = 0.05;
+
+        final String[] args = {
+                "-I", psTable.getAbsolutePath(),
+                "-O", contaminationTable.getAbsolutePath(),
+        };
+        runCommandLine(args);
+
+        final double calculatedContamination = ContaminationRecord.readContaminationTable(contaminationTable).get(0).getContamination();
+        Assert.assertEquals(calculatedContamination, contamination, 0.01);
+    }
+
+
 }

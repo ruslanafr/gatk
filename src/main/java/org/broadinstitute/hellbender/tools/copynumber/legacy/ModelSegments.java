@@ -43,18 +43,20 @@ import java.util.stream.Collectors;
 @DocumentedFeature
 @BetaFeature
 public final class ModelSegments extends SparkCommandLineProgram {
+    private static final long serialVersionUID = 1L;
+
     //filename tags for output
     private static final String SEGMENTS_FILE_SUFFIX = ".seg";
     private static final String COPY_RATIO_SEGMENTS_FILE_SUFFIX = ".cr" + SEGMENTS_FILE_SUFFIX;
     private static final String ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX = ".af" + SEGMENTS_FILE_SUFFIX;
     private static final String UNION_SEGMENTS_FILE_SUFFIX = ".union" + SEGMENTS_FILE_SUFFIX;
-    public static final String BEGIN_FIT_FILE_TAG = ".model-begin";
-    public static final String FINAL_FIT_FILE_TAG = ".model-final";
+    private static final String BEGIN_FIT_FILE_TAG = ".model-begin";
+    private static final String FINAL_FIT_FILE_TAG = ".model-final";
     private static final String CR_PARAMETER_FILE_SUFFIX = ".cr.param";
     private static final String AF_PARAMETER_FILE_SUFFIX = ".af.param";
 
-    protected static final String OUTPUT_PREFIX_LONG_NAME = "outputPrefix";
-    protected static final String OUTPUT_PREFIX_SHORT_NAME = "pre";
+    private static final String OUTPUT_PREFIX_LONG_NAME = "outputPrefix";
+    private static final String OUTPUT_PREFIX_SHORT_NAME = "pre";
 
     private static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_LONG_NAME = "maxNumSegmentsPerChromosome";
     private static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_SHORT_NAME = "maxNumSegsPerChr";
@@ -77,8 +79,8 @@ public final class ModelSegments extends SparkCommandLineProgram {
     private static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_LONG_NAME = "numChangepointsPenaltyFactorAlleleFraction";
     private static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_SHORT_NAME = "numChangeptsPenAF";
 
-    protected static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_LONG_NAME = "smallCopyRatioSegmentThreshold";
-    protected static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_SHORT_NAME = "smallCRSegTh";
+    private static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_LONG_NAME = "smallCopyRatioSegmentThreshold";
+    private static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_SHORT_NAME = "smallCRSegTh";
 
     private static final String NUM_SAMPLES_COPY_RATIO_LONG_NAME = "numSamplesCopyRatio";
     private static final String NUM_SAMPLES_COPY_RATIO_SHORT_NAME = "numSampCR";

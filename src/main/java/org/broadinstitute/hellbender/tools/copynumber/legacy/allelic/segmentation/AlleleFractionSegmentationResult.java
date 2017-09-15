@@ -78,7 +78,6 @@ public final class AlleleFractionSegmentationResult {
     }
 
     public AlleleFractionSegmentationResult(final List<AlleleFractionSegment> segments) {
-        Utils.nonEmpty(segments);
         this.segments = Collections.unmodifiableList(segments);
     }
 

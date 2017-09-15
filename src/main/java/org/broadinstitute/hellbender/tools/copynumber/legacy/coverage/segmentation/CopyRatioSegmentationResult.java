@@ -75,7 +75,6 @@ public final class CopyRatioSegmentationResult {
     }
 
     public CopyRatioSegmentationResult(final List<CopyRatioSegment> segments) {
-        Utils.nonEmpty(segments);
         this.segments = Collections.unmodifiableList(segments);
     }
 

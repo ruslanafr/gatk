@@ -20,7 +20,7 @@ plugins {
     id "com.github.ben-manes.versions" version "0.12.0" //used for identifying dependencies that need updating
     id 'com.palantir.git-version' version '0.5.1' //version helper
 }
-    
+
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import de.undercouch.gradle.tasks.download.Download
 import javax.tools.ToolProvider;
@@ -95,10 +95,12 @@ jacocoTestReport {
 
 //NOTE: we ignore contracts for now
 compileJava {
-  options.compilerArgs = ['-proc:none', '-Xlint:all','-Werror', '-Xdiags:verbose']
+  // removing -Werror temporarily
+  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Xdiags:verbose']
 }
 compileTestJava {
-  options.compilerArgs = ['-proc:none', '-Xlint:all','-Werror', '-Xdiags:verbose']
+    // removing -Werror temporarily
+  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Xdiags:verbose']
 }
 
 // Get the jdk files we need to run javaDoc. We need to use these during compile, testCompile,

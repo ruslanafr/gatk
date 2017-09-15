@@ -10,6 +10,7 @@ import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.VCFHeaderLine;
 import htsjdk.variant.vcf.VCFSimpleHeaderLine;
+import java.nio.file.Path;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLinePluginDescriptor;
@@ -673,6 +674,32 @@ public abstract class GATKTool extends CommandLineProgram {
                                 createOutputBamIndex,
                                 createOutputBamMD5
                         )
+        );
+    }
+
+    /*
+     * Create a common SAMFileWriter using the reference and read header for this tool.
+     *
+     * @param outputFile    - if this file has a .cram extension then a reference is required. Can not be null.
+     * @param preSorted     - if true then the records must already be sorted to match the header sort order
+     *
+     * @throws UserException if outputFile ends with ".cram" and no reference is provided
+     * @return SAMFileWriter
+     */
+    public final SAMFileGATKReadWriter createSAMWriter(final Path outputPath, final boolean preSorted) {
+        if (!hasReference() && IOUtils.isCramFile(outputPath)) {
+            throw new UserException.MissingReference("A reference file is required for writing CRAM files");
+        }
+
+        return new SAMFileGATKReadWriter(
+            ReadUtils.createCommonSAMWriter(
+                outputPath,
+                referenceArguments.getReferenceFile(),
+                getHeaderForSAMWriter(),
+                preSorted,
+                createOutputBamIndex,
+                createOutputBamMD5
+            )
         );
     }
 

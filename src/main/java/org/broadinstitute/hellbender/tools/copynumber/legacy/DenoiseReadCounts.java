@@ -159,7 +159,7 @@ public final class DenoiseReadCounts extends CommandLineProgram {
 
             //construct a result with denoised profile identical to standardized profile
             final SVDDenoisedCopyRatioResult standardizedResult = new SVDDenoisedCopyRatioResult(
-                    readCounts.getIntervals(), standardizedCopyRatioValues, standardizedCopyRatioValues);
+                    readCounts.getSampleName(), readCounts.getIntervals(), standardizedCopyRatioValues, standardizedCopyRatioValues);
             standardizedResult.write(standardizedCopyRatiosFile, denoisedCopyRatiosFile);
         }
 

@@ -51,9 +51,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
     protected static final String CR_PARAMETER_FILE_SUFFIX = ".cr.param";
     protected static final String AF_PARAMETER_FILE_SUFFIX = ".af.param";
 
-    protected static final String OUTPUT_PREFIX_LONG_NAME = "outputPrefix";
-    protected static final String OUTPUT_PREFIX_SHORT_NAME = "pre";
-
     protected static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_LONG_NAME = "maxNumSegmentsPerChromosome";
     protected static final String MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_SHORT_NAME = "maxNumSegsPerChr";
 
@@ -125,9 +122,8 @@ public final class ModelSegments extends SparkCommandLineProgram {
             doc = "Prefix for output files. Will also be used as the sample name in downstream plots." +
                     "(Note: if this is a file path or contains slashes (/), " +
                     "the string after the final slash will be used as the sample name in downstream plots.)",
-            fullName = OUTPUT_PREFIX_LONG_NAME,
-            shortName = OUTPUT_PREFIX_SHORT_NAME,
-            optional = false
+            fullName =  LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME,
+            shortName = LegacyCopyNumberArgument.OUTPUT_PREFIX_SHORT_NAME
     )
     private String outputPrefix;
 
@@ -317,16 +313,12 @@ public final class ModelSegments extends SparkCommandLineProgram {
             readDenoisedCopyRatios();                         //TODO remove use of ReadCountCollection
             performCopyRatioSegmentation();
             writeCopyRatioSegments(sampleName);
-        } else {
-            denoisedCopyRatios = new CopyRatioCollection();     //empty copy-ratio data
         }
         
         if (inputAllelicCountsFile != null) {
             readAndFilterAllelicCounts();
             performAlleleFractionSegmentation();
             writeAlleleFractionSegments(sampleName);
-        } else {
-            allelicCounts = new AllelicCountCollection();           //empty allele-fraction data
         }
 
 //        //TODO legacy code is used for modelling here---replace with new models and python-based inference

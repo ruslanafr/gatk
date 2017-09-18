@@ -34,7 +34,7 @@ public class ModelSegmentsIntegrationTest extends CommandLineProgramTest {
         final String[] arguments = {
                 "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08-gc-corrected.tn.tsv",
                 "-" + LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08.ac.tsv",
-                "-" + ModelSegments.OUTPUT_PREFIX_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08",
+                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08",
                 "-" + StandardArgumentDefinitions.VERBOSITY_NAME, "INFO"
         };
         runCommandLine(arguments);
@@ -45,7 +45,7 @@ public class ModelSegmentsIntegrationTest extends CommandLineProgramTest {
         final String[] arguments = {
                 "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08-gc-corrected.tn.tsv",
                 "-" + LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08.ac.tsv",
-                "-" + ModelSegments.OUTPUT_PREFIX_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08",
+                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08",
                 "-" + StandardArgumentDefinitions.VERBOSITY_NAME, "INFO"
         };
         runCommandLine(arguments);

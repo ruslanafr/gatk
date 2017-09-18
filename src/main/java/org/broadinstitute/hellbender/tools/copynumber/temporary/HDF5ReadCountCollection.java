@@ -11,9 +11,6 @@ import org.broadinstitute.hellbender.utils.Utils;
 import java.io.File;
 import java.util.List;
 
-/**
- * NOTE: There is code duplication in here, since some of the older code is going to be removed in the future.
- */
 public class HDF5ReadCountCollection {
     private static final String SAMPLE_NAME_PATH = "/sample_name/value";
     private static final String INTERVALS_GROUP_NAME = "/intervals";

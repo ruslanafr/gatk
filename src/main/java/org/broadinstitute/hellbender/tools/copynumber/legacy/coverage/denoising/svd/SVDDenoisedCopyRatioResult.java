@@ -15,13 +15,16 @@ import java.util.List;
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 public final class SVDDenoisedCopyRatioResult {
+    private final String sampleName;
     private final List<SimpleInterval> intervals;
     private final RealMatrix standardizedCopyRatioValues;
     private final RealMatrix denoisedCopyRatioValues;
 
-    public SVDDenoisedCopyRatioResult(final List<SimpleInterval> intervals,
+    public SVDDenoisedCopyRatioResult(final String sampleName,
+                                      final List<SimpleInterval> intervals,
                                       final RealMatrix standardizedCopyRatioValues,
                                       final RealMatrix denoisedCopyRatioValues) {
+        Utils.nonNull(sampleName);
         Utils.nonEmpty(intervals);
         Utils.nonNull(standardizedCopyRatioValues);
         Utils.nonNull(denoisedCopyRatioValues);
@@ -33,6 +36,7 @@ public final class SVDDenoisedCopyRatioResult {
                 "Number of intervals and columns in standardized copy-ratio values must match.");
         Utils.validateArg(intervals.size() == denoisedCopyRatioValues.getColumnDimension(),
                 "Number of intervals and columns in denoised copy-ratio values must match.");
+        this.sampleName = sampleName;
         this.intervals = intervals;
         this.standardizedCopyRatioValues = standardizedCopyRatioValues;
         this.denoisedCopyRatioValues = denoisedCopyRatioValues;
@@ -42,9 +46,9 @@ public final class SVDDenoisedCopyRatioResult {
                       final File denoisedCopyRatiosFile) {
         Utils.nonNull(standardizedCopyRatiosFile);
         Utils.nonNull(denoisedCopyRatiosFile);
-        final CopyRatioCollection standardizedCopyRatios = new CopyRatioCollection(intervals, standardizedCopyRatioValues);
+        final CopyRatioCollection standardizedCopyRatios = new CopyRatioCollection(sampleName, intervals, standardizedCopyRatioValues);
         standardizedCopyRatios.write(standardizedCopyRatiosFile);
-        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(intervals, denoisedCopyRatioValues);
+        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(sampleName, intervals, denoisedCopyRatioValues);
         denoisedCopyRatios.write(denoisedCopyRatiosFile);
     }
 }

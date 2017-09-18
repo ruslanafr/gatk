@@ -124,7 +124,7 @@ public final class SVDDenoisingUtils {
         logger.info("Sample denoised.");
 
         //construct the result
-        return new SVDDenoisedCopyRatioResult(readCounts.getIntervals(), standardizedCopyRatioValues, denoisedCopyRatioValues);
+        return new SVDDenoisedCopyRatioResult(readCounts.getSampleName(), readCounts.getIntervals(), standardizedCopyRatioValues, denoisedCopyRatioValues);
     }
 
     /**

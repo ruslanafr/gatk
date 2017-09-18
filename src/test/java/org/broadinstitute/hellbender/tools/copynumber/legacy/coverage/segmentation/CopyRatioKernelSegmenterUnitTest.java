@@ -28,6 +28,7 @@ public class CopyRatioKernelSegmenterUnitTest {
     @DataProvider(name = "dataCopyRatioKernelSegmenter")
     public Object[][] dataCopyRatioKernelSegmenter() {
         final int numPoints = 1000;
+        final String sampleName = "testSample";
 
         final Random rng = new Random(RANDOM_SEED);
         rng.setSeed(RANDOM_SEED);
@@ -42,7 +43,9 @@ public class CopyRatioKernelSegmenterUnitTest {
                         (i % 250) * 10 + 10))         //intervals for copy-ratio data points have length = 10
                 .collect(Collectors.toList());
 
-        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(
+        final CopyRatioCollection denoisedCopyRatios =
+                new CopyRatioCollection(
+                sampleName,
                 intervals,
                 new Array2DRowRealMatrix(dataGaussian.stream().mapToDouble(Double::doubleValue).toArray())
         );

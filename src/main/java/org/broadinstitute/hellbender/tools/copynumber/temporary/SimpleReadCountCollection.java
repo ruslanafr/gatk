@@ -25,11 +25,14 @@ import java.util.List;
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 public final class SimpleReadCountCollection {
+    private final String sampleName;
     private final List<SimpleInterval> intervals;
     private final RealMatrix readCounts;
 
-    private SimpleReadCountCollection(final List<SimpleInterval> intervals,
+    private SimpleReadCountCollection(final String sampleName,
+                                      final List<SimpleInterval> intervals,
                                       final RealMatrix readCounts) {
+        Utils.nonNull(sampleName);
         Utils.nonEmpty(intervals);
         Utils.nonNull(readCounts);
         Utils.validateArg(readCounts.getRowDimension() == 1, "Read-count matrix must contain only a single row.");
@@ -37,8 +40,13 @@ public final class SimpleReadCountCollection {
         Utils.validateArg(Arrays.stream(readCounts.getColumn(0)).noneMatch(c -> c < 0), "Read counts must all be non-negative integers.");
         Utils.validateArg(intervals.stream().distinct().count() == intervals.size(), "Intervals must all be unique.");
 
+        this.sampleName = sampleName;
         this.intervals = intervals;
         this.readCounts = readCounts;
+    }
+
+    public String getSampleName() {
+        return sampleName;
     }
 
     public List<SimpleInterval> getIntervals() {
@@ -55,7 +63,10 @@ public final class SimpleReadCountCollection {
 
     public static SimpleReadCountCollection read(final HDF5File file) {
         final HDF5ReadCountCollection hdf5ReadCountCollection = new HDF5ReadCountCollection(file);
-        return new SimpleReadCountCollection(hdf5ReadCountCollection.getIntervals(), hdf5ReadCountCollection.getReadCounts());
+        return new SimpleReadCountCollection(
+                hdf5ReadCountCollection.getSampleName(),
+                hdf5ReadCountCollection.getIntervals(),
+                hdf5ReadCountCollection.getReadCounts());
     }
 
     private static final class TSVReader {
@@ -83,13 +94,13 @@ public final class SimpleReadCountCollection {
             final List<Integer> readCounts = new ArrayList<>(numRows);
             try (final FileReader fileReader = new FileReader(file);
                  final CSVReader csvReader = new CSVReader(fileReader, SEPARATOR_CHAR)) {
-
                 String[] row;
                 while ((row = csvReader.readNext()) != null) {
                     if (!row[0].startsWith(COMMENT_STRING)) {  //skip comment lines
                         break;
                     }
                 }
+                final String sampleName = row != null ? row[TSVColumn.READ_COUNT.index] : null;
                 while ((row = csvReader.readNext()) != null) {
                     final SimpleInterval interval = new SimpleInterval(
                             row[TSVColumn.CONTIG.index],
@@ -100,7 +111,7 @@ public final class SimpleReadCountCollection {
                 }
                 final RealMatrix readCountsMatrix = new Array2DRowRealMatrix(1, readCounts.size());
                 readCountsMatrix.setRow(0, readCounts.stream().mapToDouble(Integer::doubleValue).toArray());
-                return new SimpleReadCountCollection(intervals, readCountsMatrix);
+                return new SimpleReadCountCollection(sampleName, intervals, readCountsMatrix);
             } catch (final IOException e) {
                 throw new UserException.CouldNotReadInputFile(file);
             }

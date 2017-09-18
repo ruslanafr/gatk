@@ -1,26 +1,26 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
+import org.broadinstitute.hellbender.utils.tsv.TableUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class CopyRatioCollection {
-    private final List<CopyRatio> copyRatios;
+    protected static final String SAMPLE_NAME_COMMENT_PREFIX = TableUtils.COMMENT_PREFIX + "SAMPLE_NAME=";
 
-    public CopyRatioCollection() {
-        copyRatios = new ArrayList<>();
-    }
+    private final String sampleName;
+    private final List<CopyRatio> copyRatios;
 
     /**
      * Constructor from file.
@@ -31,27 +31,31 @@ public class CopyRatioCollection {
         IOUtils.canReadFile(inputFile);
 
         try (final CopyRatioReader reader = new CopyRatioReader(inputFile)) {
+            sampleName = reader.getSampleName();
             copyRatios = reader.stream().collect(Collectors.toList());
         } catch (final IOException | UncheckedIOException e) {
             throw new UserException.CouldNotReadInputFile(inputFile, e);
         }
     }
 
-    public CopyRatioCollection(final List<CopyRatio> copyRatios) {
-        this.copyRatios = Utils.nonNull(copyRatios);
-    }
-
-    public CopyRatioCollection(final List<SimpleInterval> intervals,
+    public CopyRatioCollection(final String sampleName,
+                               final List<SimpleInterval> intervals,
                                final RealMatrix copyRatioValues) {
+        Utils.nonNull(sampleName);
         Utils.nonNull(intervals);
         Utils.nonNull(copyRatioValues);
         Utils.validateArg(copyRatioValues.getRowDimension() == 1,
                 "Copy-ratio values must contain only a single row.");
         Utils.validateArg(intervals.size() == copyRatioValues.getColumnDimension(),
                 "Number of intervals and columns in copy-ratio values must match.");
+        this.sampleName = sampleName;
         this.copyRatios = IntStream.range(0, intervals.size()).boxed()
                 .map(i -> new CopyRatio(intervals.get(i), copyRatioValues.getRow(0)[i]))
                 .collect(Collectors.toList());
+    }
+
+    public String getSampleName() {
+        return sampleName;
     }
 
     /**
@@ -75,6 +79,7 @@ public class CopyRatioCollection {
      */
     public void write(final File outputFile) {
         try (final CopyRatioWriter writer = new CopyRatioWriter(outputFile)) {
+            writer.writeSampleName(sampleName);
             writer.writeAllRecords(copyRatios);
         } catch (final IOException e) {
             throw new UserException.CouldNotCreateOutputFile(outputFile, e);

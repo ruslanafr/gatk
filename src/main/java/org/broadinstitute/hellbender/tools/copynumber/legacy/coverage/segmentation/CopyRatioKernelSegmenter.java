@@ -5,9 +5,9 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatio;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.utils.segmentation.KernelSegmenter;
-import org.broadinstitute.hellbender.tools.exome.ReadCountCollection;
-import org.broadinstitute.hellbender.tools.exome.Target;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
@@ -37,21 +37,21 @@ public final class CopyRatioKernelSegmenter {
     private final Map<String, List<Double>> denoisedCopyRatiosPerChromosome;    //in log2 space
 
     /**
-     * @param denoisedCopyRatioProfile  in log2 space
+     * @param denoisedCopyRatios  in log2 space
      */
-    public CopyRatioKernelSegmenter(final ReadCountCollection denoisedCopyRatioProfile) {
-        Utils.nonNull(denoisedCopyRatioProfile);
-        numPointsTotal = denoisedCopyRatioProfile.targets().size();
-        intervalsPerChromosome = denoisedCopyRatioProfile.targets().stream().map(Target::getInterval)
+    public CopyRatioKernelSegmenter(final CopyRatioCollection denoisedCopyRatios) {
+        Utils.nonNull(denoisedCopyRatios);
+        numPointsTotal = denoisedCopyRatios.getCopyRatios().size();
+        intervalsPerChromosome = denoisedCopyRatios.getCopyRatios().stream().map(CopyRatio::getInterval)
                 .collect(Collectors.groupingBy(
                         SimpleInterval::getContig,
                         LinkedHashMap::new,
                         Collectors.mapping(Function.identity(), Collectors.toList())));
-        final double[] denoisedCopyRatios = denoisedCopyRatioProfile.getColumn(0);
-        denoisedCopyRatiosPerChromosome = IntStream.range(0, denoisedCopyRatioProfile.targets().size()).boxed()
+        final double[] denoisedCopyRatioValues = denoisedCopyRatios.getCopyRatioValues();
+        denoisedCopyRatiosPerChromosome = IntStream.range(0, denoisedCopyRatios.getCopyRatios().size()).boxed()
                 .map(i -> new ImmutablePair<>(
-                        denoisedCopyRatioProfile.targets().get(i).getContig(),
-                        denoisedCopyRatios[i]))
+                        denoisedCopyRatios.getCopyRatios().get(i).getContig(),
+                        denoisedCopyRatioValues[i]))
                 .collect(Collectors.groupingBy(
                         Pair::getKey,
                         LinkedHashMap::new,

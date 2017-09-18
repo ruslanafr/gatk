@@ -223,8 +223,8 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
             logger.info(String.format("Writing panel interval fractional medians (%d)...", panelIntervalFractionalMedians.length));
             pon.writePanelIntervalFractionalMedians(panelIntervalFractionalMedians);
 
-            final int numPanelSamples = preprocessedStandardizedResult.preprocessedStandardizedProfile.getRowDimension();
-            final int numPanelIntervals = preprocessedStandardizedResult.preprocessedStandardizedProfile.getColumnDimension();
+            final int numPanelSamples = preprocessedStandardizedResult.preprocessedStandardizedValues.getRowDimension();
+            final int numPanelIntervals = preprocessedStandardizedResult.preprocessedStandardizedValues.getColumnDimension();
 
             //perform SVD, handling number of eigensamples requested vs. that available in filtered panel vs. that available from actual decomposition
             final int numEigensamples = Math.min(numEigensamplesRequested, numPanelSamples);
@@ -235,7 +235,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
             logger.info(String.format("Performing SVD (truncated at %d eigensamples) of standardized counts (transposed to %d x %d)...",
                     numEigensamples, numPanelIntervals, numPanelSamples));
             final SingularValueDecomposition<RowMatrix, Matrix> svd = SparkConverter.convertRealMatrixToSparkRowMatrix(
-                    ctx, preprocessedStandardizedResult.preprocessedStandardizedProfile.transpose(), NUM_SLICES_FOR_SPARK_MATRIX_CONVERSION)
+                    ctx, preprocessedStandardizedResult.preprocessedStandardizedValues.transpose(), NUM_SLICES_FOR_SPARK_MATRIX_CONVERSION)
                     .computeSVD(numEigensamples, true, EPSILON);
             final double[] singularValues = svd.s().toArray();    //should be in decreasing order (with corresponding matrices below)
             if (singularValues.length == 0) {

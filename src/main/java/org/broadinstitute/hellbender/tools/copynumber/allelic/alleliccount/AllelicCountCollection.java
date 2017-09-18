@@ -33,7 +33,6 @@ public class AllelicCountCollection {
      * @throws UserException.CouldNotReadInputFile if input file cannot be read
      */
     public AllelicCountCollection(final File inputFile) {
-        Utils.nonNull(inputFile);
         IOUtils.canReadFile(inputFile);
 
         try (final AllelicCountReader reader = new AllelicCountReader(inputFile)) {

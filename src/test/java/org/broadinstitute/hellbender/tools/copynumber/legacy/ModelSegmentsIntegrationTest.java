@@ -5,8 +5,6 @@ import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
 import org.junit.Test;
 
-import static org.testng.Assert.*;
-
 /**
  * Created by slee on 9/6/17.
  */
@@ -34,7 +32,7 @@ public class ModelSegmentsIntegrationTest extends CommandLineProgramTest {
     @Test
     public void testWESAllelic() {
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIO_PROFILE_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08-gc-corrected.tn.tsv",
+                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08-gc-corrected.tn.tsv",
                 "-" + LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08.ac.tsv",
                 "-" + ModelSegments.OUTPUT_PREFIX_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-01A-01D-1265-08",
                 "-" + StandardArgumentDefinitions.VERBOSITY_NAME, "INFO"
@@ -45,7 +43,7 @@ public class ModelSegmentsIntegrationTest extends CommandLineProgramTest {
     @Test
     public void testWESAllelicNormal() {
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIO_PROFILE_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08-gc-corrected.tn.tsv",
+                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08-gc-corrected.tn.tsv",
                 "-" + LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08.ac.tsv",
                 "-" + ModelSegments.OUTPUT_PREFIX_SHORT_NAME, "/home/slee/working/gatk/TCGA-05-4389-10A-01D-1265-08",
                 "-" + StandardArgumentDefinitions.VERBOSITY_NAME, "INFO"

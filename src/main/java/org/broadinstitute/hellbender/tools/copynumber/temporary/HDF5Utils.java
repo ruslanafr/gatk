@@ -56,7 +56,7 @@ public class HDF5Utils {
 
     public static <T extends SimpleInterval> void writeIntervals(final HDF5File file,
                                                                  final String path,
-                                                                 final List<SimpleInterval> intervals) {
+                                                                 final List<T> intervals) {
         final String[] contigNames = intervals.stream().map(SimpleInterval::getContig).distinct().toArray(String[]::new);
         file.makeStringArray(path + INTERVAL_CONTIG_NAMES_SUB_PATH, contigNames);
         final Map<String, Double> contigNamesToIndexMap = IntStream.range(0, contigNames.length).boxed()
@@ -120,7 +120,7 @@ public class HDF5Utils {
      *                      which requires subarrays to be copied.  However, since a single row is not allowed
      *                      to be split across multiple chunks, the number of columns must be less
      *                      than the maximum number of values in each chunk.  For example,
-     *                      {@code chunkDivisor} = 8 allows for 16777215 columns.
+     *                      {@code chunkDivisor} = 16 allows for 16777215 columns.
      */
     public static void writeChunkedDoubleMatrix(final HDF5File file,
                                                 final String path,

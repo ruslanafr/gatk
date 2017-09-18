@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.model;
 
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCount;
+import org.broadinstitute.hellbender.tools.exome.SegmentedGenome;
+import org.broadinstitute.hellbender.tools.exome.TargetCollection;
 import org.broadinstitute.hellbender.tools.pon.allelic.AllelicPanelOfNormals;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.mcmc.DataCollection;
@@ -34,15 +36,15 @@ public final class AlleleFractionData implements DataCollection {
         this.allelicPoN = allelicPoN;
         allelicCounts = new ArrayList<>();
         final List<SimpleInterval> segmentIntervals = segmentedGenome.getSegments();
-        final TargetCollection<AllelicCount> alleleCounts = segmentedGenome.getGenome().getSNPs();
+//        final TargetCollection<AllelicCount> alleleCounts = segmentedGenome.getGenome().getSNPs();
 
         int startSite = 0;
         for (final SimpleInterval segment : segmentIntervals) {
             startSitesPerSegment.add(startSite);
-            final List<AllelicCount> countsInSegment = alleleCounts.targets(segment);
-            numSitesPerSegment.add(countsInSegment.size());
-            startSite += countsInSegment.size();
-            allelicCounts.addAll(countsInSegment);
+//            final List<AllelicCount> countsInSegment = alleleCounts.targets(segment);
+//            numSitesPerSegment.add(countsInSegment.size());
+//            startSite += countsInSegment.size();
+//            allelicCounts.addAll(countsInSegment);
         }
 
         siteIndices = IntStream.range(0, allelicCounts.size()).boxed().collect(Collectors.toList());

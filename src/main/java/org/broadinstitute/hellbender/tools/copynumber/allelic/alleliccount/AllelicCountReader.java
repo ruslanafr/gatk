@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.Nucleotide;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.tsv.DataLine;
 import org.broadinstitute.hellbender.utils.tsv.TableReader;
 
@@ -24,6 +25,7 @@ final class AllelicCountReader extends TableReader<AllelicCount> {
 
     @Override
     protected AllelicCount createRecord(final DataLine dataLine) {
+        Utils.nonNull(dataLine);
         try {
             final String contig = dataLine.get(AllelicCountTableColumn.CONTIG);
             final int position = dataLine.getInt(AllelicCountTableColumn.POSITION);

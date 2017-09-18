@@ -423,45 +423,6 @@ public final class ReadCountCollectionUtils {
     }
 
     /**
-     *  Write a simple interval to number mapping as a HDF5 file.
-     *
-     *  When this file is read, all numbers will have been converted to double.  See {@link ReadCountCollectionUtils::parseHdf5AsDouble}
-     *
-     * @param outFile output file.  Cannot already exist.  Not {@code null}
-     * @param sampleName Name for the values per interval.  Not {@code null}
-     * @param byKeySorted Mapping of interval to number.  Not {@code null}
-     * @param <N> Class that extends Number.  Stored as a double.
-     */
-    public static <N extends Number> void writeReadCountsFromSimpleIntervalToHdf5(final File outFile, final String sampleName,
-                                                                                  final SortedMap<SimpleInterval, N> byKeySorted) {
-        Utils.nonNull(outFile, "Output file cannot be null.");
-        Utils.nonNull(sampleName, "Sample name cannot be null.");
-        Utils.nonNull(byKeySorted, "Targets cannot be null.");
-
-        final List<Target> newTargets = new ArrayList<>(byKeySorted.size());
-        final double[][] newTargetValues = new double[1][byKeySorted.size()];
-        final Iterator<Map.Entry<SimpleInterval, N>> iterator = byKeySorted.entrySet().iterator();
-        for (int i = 0; i < byKeySorted.entrySet().size(); i++) {
-            Map.Entry<SimpleInterval, N> entry = iterator.next();
-            newTargets.add(new Target(entry.getKey()));
-            newTargetValues[0][i] = entry.getValue().doubleValue();
-        }
-        HDF5ReadCountCollection.write(outFile, newTargets, newTargetValues, Collections.singletonList(sampleName));
-    }
-
-    /**
-     *
-     * @param file hdf5 file written by {@link ReadCountCollectionUtils::writeReadCountsFromSimpleIntervalToHdf5}
-     * @return ReadCountCollection with data stored as doubles.
-     */
-    public static ReadCountCollection parseHdf5AsDouble(final File file) {
-        try (final HDF5File hdf5ReadCountCollectionReader = new HDF5File(file, HDF5File.OpenMode.READ_ONLY)) {
-            final HDF5ReadCountCollection hdf5Read = new HDF5ReadCountCollection(hdf5ReadCountCollectionReader);
-            return new ReadCountCollection(hdf5Read.getTargets(), hdf5Read.getSampleNames(), hdf5Read.getReadCounts().transpose());
-        }
-    }
-
-    /**
      * Impute zero counts to the median of non-zero values in the enclosing target row.
      *
      * <p>The imputation is done in-place, thus the input matrix is well be modified as a result of this call.</p>

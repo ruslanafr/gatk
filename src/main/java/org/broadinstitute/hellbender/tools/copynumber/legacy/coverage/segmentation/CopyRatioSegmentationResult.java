@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation;
 
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.exome.SegmentTableColumn;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
@@ -20,8 +19,17 @@ import java.util.stream.Collectors;
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 public final class CopyRatioSegmentationResult {
-    //TODO update column headers; we keep the old ones for now
-    private static final TableColumnCollection COPY_RATIO_SEGMENT_FILE_TABLE_COLUMNS = SegmentTableColumn.MEAN_AND_NO_CALL_COLUMNS;
+    enum CopyRatioSegmentationTableColumn {
+        SAMPLE,
+        CONTIG,
+        START,
+        END,
+        NUM_POINTS,
+        MEAN_LOG2_COPY_RATIO;
+
+        static final TableColumnCollection COLUMNS = new TableColumnCollection(
+                SAMPLE, CONTIG, START, END, NUM_POINTS, MEAN_LOG2_COPY_RATIO);
+    }
 
     public static final CopyRatioSegmentationResult NO_SEGMENTS = new CopyRatioSegmentationResult(Collections.emptyList());
 
@@ -87,14 +95,14 @@ public final class CopyRatioSegmentationResult {
         Utils.nonNull(file);
         Utils.nonNull(sampleName);
         try (final TableWriter<CopyRatioSegment> writer =
-                     TableUtils.writer(file, COPY_RATIO_SEGMENT_FILE_TABLE_COLUMNS,
+                     TableUtils.writer(file, CopyRatioSegmentationTableColumn.COLUMNS,
                              (segment, dataLine) ->
                                      dataLine.append(sampleName)
                                              .append(segment.interval.getContig())
                                              .append(segment.interval.getStart())
                                              .append(segment.interval.getEnd())
                                              .append(segment.numDataPoints)
-                                             .append(Math.pow(2., segment.meanLog2CopyRatio)))) {
+                                             .append(segment.meanLog2CopyRatio))) {
             writer.writeAllRecords(segments);
         } catch (final IOException e) {
             throw new UserException.CouldNotCreateOutputFile(file, e);

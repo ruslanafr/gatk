@@ -1,7 +1,9 @@
 package org.broadinstitute.hellbender.tools.genome;
 
+import org.broadinstitute.hdf5.HDF5File;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
+import org.broadinstitute.hellbender.tools.copynumber.temporary.HDF5ReadCountCollection;
 import org.broadinstitute.hellbender.tools.exome.ReadCountCollection;
 import org.broadinstitute.hellbender.tools.exome.ReadCountCollectionUtils;
 import org.broadinstitute.hellbender.tools.exome.Target;
@@ -13,6 +15,7 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest {
@@ -198,19 +201,14 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         Assert.assertTrue(hdf5File.exists());
         Assert.assertTrue(hdf5File.length() > 0);
 
-        final ReadCountCollection rccHdf5 = ReadCountCollectionUtils.parseHdf5AsDouble(hdf5File);
+        final HDF5ReadCountCollection rccHdf5 = new HDF5ReadCountCollection(new HDF5File(hdf5File));
         final ReadCountCollection rccTsv = ReadCountCollectionUtils.parse(outputFile);
 
-        Assert.assertEquals(rccHdf5.counts(), rccTsv.counts());
-        Assert.assertEquals(rccHdf5.columnNames(), rccTsv.columnNames());
-        Assert.assertEquals(rccHdf5.targets(), rccTsv.targets());
-
-        // For some reason the interval of the target is not considered in Target.equals
-        Assert.assertTrue(IntStream.range(0, rccHdf5.targets().size())
-                .allMatch(i -> rccHdf5.targets().get(i).getInterval().equals(rccTsv.targets().get(i).getInterval()))
-        );
+        Assert.assertEquals(rccHdf5.getReadCounts(), rccTsv.counts().transpose());
+        Assert.assertEquals(rccHdf5.getSampleName(), rccTsv.columnNames().get(0));
+        Assert.assertEquals(rccHdf5.getIntervals(), rccTsv.targets().stream().map(Target::getInterval).collect(Collectors.toList()));
 
         // Make sure we are putting integer counts in the HDF5
-        Assert.assertEquals(MathUtils.sum(rccHdf5.getColumn(0)), 4.0);
+        Assert.assertEquals(MathUtils.sum(rccHdf5.getReadCounts().getRow(0)), 4.0);
     }
 }

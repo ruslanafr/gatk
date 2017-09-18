@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.BetaFeature;
@@ -9,10 +8,10 @@ import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.programgroups.CopyNumberProgramGroup;
 import org.broadinstitute.hellbender.engine.spark.SparkCommandLineProgram;
-import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCountCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionKernelSegmenter;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionSegmentationResult;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioKernelSegmenter;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentationResult;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
@@ -21,10 +20,8 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -110,11 +107,11 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
     @Argument(
             doc = "Input file containing denoised copy-ratio profile (output of DenoiseReadCounts).",
-            fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIO_PROFILE_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIO_PROFILE_FILE_SHORT_NAME,
+            fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
+            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,
             optional = true
     )
-    private File inputDenoisedCopyRatioProfileFile;
+    private File inputDenoisedCopyRatiosFile;
 
     @Argument(
             doc = "Input file containing allelic counts (output of CollectAllelicCounts).",
@@ -299,7 +296,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
     protected int numSimilarSegmentMergingIterationsPerFit = 0;
 
     //initialize data/segment variables, some of which may be optional
-    private ReadCountCollection denoisedCopyRatioProfile = null;
+    private CopyRatioCollection denoisedCopyRatios = null;
     private CopyRatioSegmentationResult copyRatioSegments = CopyRatioSegmentationResult.NO_SEGMENTS;
     private AllelicCountCollection filteredAllelicCounts = null;
     private AllelicCountCollection allelicCounts = null;
@@ -316,15 +313,12 @@ public final class ModelSegments extends SparkCommandLineProgram {
         //the string after the final slash in the output prefix (which may be an absolute file path) will be used as the sample name
         final String sampleName = outputPrefix.substring(outputPrefix.lastIndexOf("/") + 1);
 
-        if (inputDenoisedCopyRatioProfileFile != null) {
-            readDenoisedCopyRatioProfile();                         //TODO remove use of ReadCountCollection
+        if (inputDenoisedCopyRatiosFile != null) {
+            readDenoisedCopyRatios();                         //TODO remove use of ReadCountCollection
             performCopyRatioSegmentation();
             writeCopyRatioSegments(sampleName);
         } else {
-            denoisedCopyRatioProfile = new ReadCountCollection(     //empty copy-ratio data
-                    Collections.emptyList(),
-                    Collections.singletonList(sampleName),
-                    new Array2DRowRealMatrix(0, 1));
+            denoisedCopyRatios = new CopyRatioCollection();     //empty copy-ratio data
         }
         
         if (inputAllelicCountsFile != null) {
@@ -335,67 +329,62 @@ public final class ModelSegments extends SparkCommandLineProgram {
             allelicCounts = new AllelicCountCollection();           //empty allele-fraction data
         }
 
-        //TODO legacy code is used for modelling here---replace with new models and python-based inference
-        //make Genome from input copy ratio and allele counts; need to trivially convert new AllelicCount to legacy AllelicCount
-        final Genome genome = new Genome(denoisedCopyRatioProfile,
-                allelicCounts.getAllelicCounts().stream().map(ac -> new AllelicCount(ac.getInterval(), ac.getRefReadCount(), ac.getAltReadCount())).collect(Collectors.toList()));
-
-        logger.info("Combining copy-ratio and allele-fraction segments...");
-        final List<SimpleInterval> unionedSegments = SegmentUtils.unionSegments(
-                copyRatioSegments.getIntervals(), alleleFractionSegments.getIntervals(), genome);
-        logger.info("Number of segments after segment union: " + unionedSegments.size());
-        final File unionedSegmentsFile = new File(outputPrefix + UNION_SEGMENTS_FILE_SUFFIX);
-        SegmentUtils.writeSegmentFileWithNumTargetsAndNumSNPs(unionedSegmentsFile, unionedSegments, genome);
-        logSegmentsFileWrittenMessage(unionedSegmentsFile);
-
-        logger.info(String.format("Merging small copy-ratio segments (threshold = %d)...", smallCopyRatioSegmentThreshold));
-        final SegmentedGenome segmentedGenomeWithSmallSegments = new SegmentedGenome(unionedSegments, genome);
-        final SegmentedGenome segmentedGenome = segmentedGenomeWithSmallSegments.mergeSmallSegments(smallCopyRatioSegmentThreshold);
-        logger.info("Number of segments after small-segment merging: " + segmentedGenome.getSegments().size());
-
-        //initial MCMC model fitting performed by ACNVModeller constructor
-        final ACNVModeller modeller = new ACNVModeller(segmentedGenome,
-                numSamplesCopyRatio, numBurnInCopyRatio, numSamplesAlleleFraction, numBurnInAlleleFraction, ctx);
-
-        //write initial segments and parameters to file
-        writeACNVModeledSegmentAndParameterFiles(modeller, BEGIN_FIT_FILE_TAG);
-
-        //similar-segment merging (segment files are output for each merge iteration)
-        performSimilarSegmentMergingStep(modeller);
-
-        //write final segments and parameters to file
-        writeACNVModeledSegmentAndParameterFiles(modeller, FINAL_FIT_FILE_TAG);
-
-        ctx.setLogLevel(originalLogLevel);
-        logger.info("SUCCESS: Allelic CNV run complete for sample " + sampleName + ".");
+//        //TODO legacy code is used for modelling here---replace with new models and python-based inference
+//        //make Genome from input copy ratio and allele counts; need to trivially convert new AllelicCount to legacy AllelicCount
+//        final Genome genome = new Genome(denoisedCopyRatios,
+//                allelicCounts.getAllelicCounts().stream().map(ac -> new AllelicCount(ac.getInterval(), ac.getRefReadCount(), ac.getAltReadCount())).collect(Collectors.toList()));
+//
+//        logger.info("Combining copy-ratio and allele-fraction segments...");
+//        final List<SimpleInterval> unionedSegments = SegmentUtils.unionSegments(
+//                copyRatioSegments.getIntervals(), alleleFractionSegments.getIntervals(), genome);
+//        logger.info("Number of segments after segment union: " + unionedSegments.size());
+//        final File unionedSegmentsFile = new File(outputPrefix + UNION_SEGMENTS_FILE_SUFFIX);
+//        SegmentUtils.writeSegmentFileWithNumTargetsAndNumSNPs(unionedSegmentsFile, unionedSegments, genome);
+//        logSegmentsFileWrittenMessage(unionedSegmentsFile);
+//
+//        logger.info(String.format("Merging small copy-ratio segments (threshold = %d)...", smallCopyRatioSegmentThreshold));
+//        final SegmentedGenome segmentedGenomeWithSmallSegments = new SegmentedGenome(unionedSegments, genome);
+//        final SegmentedGenome segmentedGenome = segmentedGenomeWithSmallSegments.mergeSmallSegments(smallCopyRatioSegmentThreshold);
+//        logger.info("Number of segments after small-segment merging: " + segmentedGenome.getSegments().size());
+//
+//        //initial MCMC model fitting performed by ACNVModeller constructor
+//        final ACNVModeller modeller = new ACNVModeller(segmentedGenome,
+//                numSamplesCopyRatio, numBurnInCopyRatio, numSamplesAlleleFraction, numBurnInAlleleFraction, ctx);
+//
+//        //write initial segments and parameters to file
+//        writeACNVModeledSegmentAndParameterFiles(modeller, BEGIN_FIT_FILE_TAG);
+//
+//        //similar-segment merging (segment files are output for each merge iteration)
+//        performSimilarSegmentMergingStep(modeller);
+//
+//        //write final segments and parameters to file
+//        writeACNVModeledSegmentAndParameterFiles(modeller, FINAL_FIT_FILE_TAG);
+//
+//        ctx.setLogLevel(originalLogLevel);
+//        logger.info("SUCCESS: Allelic CNV run complete for sample " + sampleName + ".");
     }
 
     private void validateArguments() {
         Utils.nonNull(outputPrefix);
-        Utils.validateArg(!(inputDenoisedCopyRatioProfileFile == null && inputAllelicCountsFile == null),
+        Utils.validateArg(!(inputDenoisedCopyRatiosFile == null && inputAllelicCountsFile == null),
                 "Must provide at least a denoised copy-ratio profile file or an allelic-counts file.");
-        if (inputDenoisedCopyRatioProfileFile != null) {
-            IOUtils.canReadFile(inputDenoisedCopyRatioProfileFile);
+        if (inputDenoisedCopyRatiosFile != null) {
+            IOUtils.canReadFile(inputDenoisedCopyRatiosFile);
         }
         if (inputAllelicCountsFile != null) {
             IOUtils.canReadFile(inputAllelicCountsFile);
         }
     }
 
-    private void readDenoisedCopyRatioProfile() {
-        //TODO clean this up once updated ReadCountCollection is available, check sample names
-        logger.info(String.format("Reading denoised copy-ratio profile file (%s)...", inputDenoisedCopyRatioProfileFile));
-        try {
-            denoisedCopyRatioProfile = ReadCountCollectionUtils.parse(inputDenoisedCopyRatioProfileFile);
-        } catch (final IOException ex) {
-            throw new UserException.BadInput("Could not read denoised copy-ratio profile file.");
-        }
+    private void readDenoisedCopyRatios() {
+        logger.info(String.format("Reading denoised copy-ratio profile file (%s)...", inputDenoisedCopyRatiosFile));
+        denoisedCopyRatios = new CopyRatioCollection(inputDenoisedCopyRatiosFile);
     }
 
     private void performCopyRatioSegmentation() {
         logger.info("Starting copy-ratio segmentation...");
         final int maxNumChangepointsPerChromosome = maxNumSegmentsPerChromosome - 1;
-        copyRatioSegments = new CopyRatioKernelSegmenter(denoisedCopyRatioProfile)
+        copyRatioSegments = new CopyRatioKernelSegmenter(denoisedCopyRatios)
                 .findSegmentation(maxNumChangepointsPerChromosome, kernelVarianceCopyRatio, kernelApproximationDimension,
                         ImmutableSet.copyOf(windowSizes).asList(),
                         numChangepointsPenaltyFactorCopyRatio, numChangepointsPenaltyFactorCopyRatio);
@@ -436,40 +425,40 @@ public final class ModelSegments extends SparkCommandLineProgram {
         logSegmentsFileWrittenMessage(alleleFractionSegmentsFile);
     }
 
-    private void performSimilarSegmentMergingStep(final ACNVModeller modeller) {
-        logger.info("Merging similar segments...");
-        logger.info("Initial number of segments before similar-segment merging: " + modeller.getACNVModeledSegments().size());
-        //perform iterations of similar-segment merging until all similar segments are merged
-        for (int numIterations = 1; numIterations <= maxNumSimilarSegmentMergingIterations; numIterations++) {
-            logger.info("Similar-segment merging iteration: " + numIterations);
-            final int prevNumSegments = modeller.getACNVModeledSegments().size();
-            if (numSimilarSegmentMergingIterationsPerFit > 0 && numIterations % numSimilarSegmentMergingIterationsPerFit == 0) {
-                //refit model after this merge iteration
-                modeller.performSimilarSegmentMergingIteration(intervalThresholdCopyRatio, intervalThresholdAlleleFraction, true);
-            } else {
-                //do not refit model after this merge iteration (deciles will be unspecified)
-                modeller.performSimilarSegmentMergingIteration(intervalThresholdCopyRatio, intervalThresholdAlleleFraction, false);
-            }
-            if (modeller.getACNVModeledSegments().size() == prevNumSegments) {
-                break;
-            }
-        }
-        if (!modeller.isModelFit()) {
-            //make sure final model is completely fit (i.e., deciles are specified)
-            modeller.fitModel();
-        }
-        logger.info("Final number of segments after similar-segment merging: " + modeller.getACNVModeledSegments().size());
-    }
-
-    //write modeled segments and global parameters to file
-    private void writeACNVModeledSegmentAndParameterFiles(final ACNVModeller modeller, final String fileTag) {
-        final File modeledSegmentsFile = new File(outputPrefix + fileTag + SEGMENTS_FILE_SUFFIX);
-        modeller.writeACNVModeledSegmentFile(modeledSegmentsFile);
-        logSegmentsFileWrittenMessage(modeledSegmentsFile);
-        final File copyRatioParameterFile = new File(outputPrefix + fileTag + CR_PARAMETER_FILE_SUFFIX);
-        final File alleleFractionParameterFile = new File(outputPrefix + fileTag + AF_PARAMETER_FILE_SUFFIX);
-        modeller.writeACNVModelParameterFiles(copyRatioParameterFile, alleleFractionParameterFile);
-    }
+//    private void performSimilarSegmentMergingStep(final ACNVModeller modeller) {
+//        logger.info("Merging similar segments...");
+//        logger.info("Initial number of segments before similar-segment merging: " + modeller.getACNVModeledSegments().size());
+//        //perform iterations of similar-segment merging until all similar segments are merged
+//        for (int numIterations = 1; numIterations <= maxNumSimilarSegmentMergingIterations; numIterations++) {
+//            logger.info("Similar-segment merging iteration: " + numIterations);
+//            final int prevNumSegments = modeller.getACNVModeledSegments().size();
+//            if (numSimilarSegmentMergingIterationsPerFit > 0 && numIterations % numSimilarSegmentMergingIterationsPerFit == 0) {
+//                //refit model after this merge iteration
+//                modeller.performSimilarSegmentMergingIteration(intervalThresholdCopyRatio, intervalThresholdAlleleFraction, true);
+//            } else {
+//                //do not refit model after this merge iteration (deciles will be unspecified)
+//                modeller.performSimilarSegmentMergingIteration(intervalThresholdCopyRatio, intervalThresholdAlleleFraction, false);
+//            }
+//            if (modeller.getACNVModeledSegments().size() == prevNumSegments) {
+//                break;
+//            }
+//        }
+//        if (!modeller.isModelFit()) {
+//            //make sure final model is completely fit (i.e., deciles are specified)
+//            modeller.fitModel();
+//        }
+//        logger.info("Final number of segments after similar-segment merging: " + modeller.getACNVModeledSegments().size());
+//    }
+//
+//    //write modeled segments and global parameters to file
+//    private void writeACNVModeledSegmentAndParameterFiles(final ACNVModeller modeller, final String fileTag) {
+//        final File modeledSegmentsFile = new File(outputPrefix + fileTag + SEGMENTS_FILE_SUFFIX);
+//        modeller.writeACNVModeledSegmentFile(modeledSegmentsFile);
+//        logSegmentsFileWrittenMessage(modeledSegmentsFile);
+//        final File copyRatioParameterFile = new File(outputPrefix + fileTag + CR_PARAMETER_FILE_SUFFIX);
+//        final File alleleFractionParameterFile = new File(outputPrefix + fileTag + AF_PARAMETER_FILE_SUFFIX);
+//        modeller.writeACNVModelParameterFiles(copyRatioParameterFile, alleleFractionParameterFile);
+//    }
 
     private void logSegmentsFileWrittenMessage(final File file) {
         logger.info("Segments written to file " + file);

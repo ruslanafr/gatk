@@ -1,6 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd;
 
-import org.broadinstitute.hellbender.tools.exome.ReadCountCollection;
+import org.broadinstitute.hellbender.tools.copynumber.temporary.SimpleReadCountCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 
 import java.util.List;
@@ -69,7 +69,7 @@ public interface SVDReadCountPanelOfNormals {
      */
     double[][] getEigensampleVectors();
 
-    default SVDDenoisedCopyRatioResult denoise(final ReadCountCollection readCounts,
+    default SVDDenoisedCopyRatioResult denoise(final SimpleReadCountCollection readCounts,
                                                final int numEigensamples) {
         return SVDDenoisingUtils.denoise(this, readCounts, numEigensamples);
     }

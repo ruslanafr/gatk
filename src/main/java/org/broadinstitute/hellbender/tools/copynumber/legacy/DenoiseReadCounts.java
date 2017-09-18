@@ -17,13 +17,16 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd.SVDDenoisingUtils;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd.SVDReadCountPanelOfNormals;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
-import org.broadinstitute.hellbender.tools.exome.*;
+import org.broadinstitute.hellbender.tools.copynumber.temporary.SimpleReadCountCollection;
+import org.broadinstitute.hellbender.tools.exome.Target;
+import org.broadinstitute.hellbender.tools.exome.TargetAnnotation;
+import org.broadinstitute.hellbender.tools.exome.TargetArgumentCollection;
+import org.broadinstitute.hellbender.tools.exome.TargetCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -86,17 +89,17 @@ public final class DenoiseReadCounts extends CommandLineProgram {
 
     @Argument(
             doc = "Output file for standardized copy-ratio profile.  GC-bias correction will be performed if annotations for GC content are provided.",
-            fullName = LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIO_PROFILE_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIO_PROFILE_FILE_SHORT_NAME
+            fullName = LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_FULL_NAME,
+            shortName = LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME
     )
-    private File standardizedCopyRatioProfileFile;
+    private File standardizedCopyRatiosFile;
 
     @Argument(
             doc = "Output file for denoised copy-ratio profile.",
-            fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIO_PROFILE_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIO_PROFILE_FILE_SHORT_NAME
+            fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
+            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME
     )
-    private File denoisedCopyRatioProfileFile;
+    private File denoisedCopyRatiosFile;
 
     @Argument(
             doc = "Number of eigensamples to use for denoising.  " +
@@ -119,11 +122,7 @@ public final class DenoiseReadCounts extends CommandLineProgram {
 
         IOUtils.canReadFile(inputReadCountFile);
         logger.info(String.format("Reading read-count file (%s)...", inputReadCountFile));
-        //TODO clean this up once Targets are removed and updated ReadCountCollection is available
-        final ReadCountCollection readCounts = parseReadCountFile(inputReadCountFile);
-
-        //check that read-count collection contains single sample and integer counts
-        SVDDenoisingUtils.validateReadCounts(readCounts);
+        final SimpleReadCountCollection readCounts = parseReadCountFile(inputReadCountFile);
 
         if (inputPanelOfNormalsFile != null) {  //denoise using panel of normals
             IOUtils.canReadFile(inputPanelOfNormalsFile);
@@ -146,23 +145,22 @@ public final class DenoiseReadCounts extends CommandLineProgram {
                 final SVDDenoisedCopyRatioResult denoisedCopyRatioResult = panelOfNormals.denoise(readCounts, numEigensamples);
 
                 logger.info("Writing standardized and denoised copy-ratio profiles...");
-                denoisedCopyRatioResult.write(standardizedCopyRatioProfileFile, denoisedCopyRatioProfileFile);
+                denoisedCopyRatioResult.write(standardizedCopyRatiosFile, denoisedCopyRatiosFile);
             }
         } else {    //standardize and perform optional GC-bias correction
             //get GC content (null if not provided)
-            final List<SimpleInterval> intervals = readCounts.targets().stream().map(Target::getInterval).collect(Collectors.toList());
-            final double[] intervalGCContent = validateIntervalGCContent(logger, intervals, annotatedIntervalsFile);
+            final double[] intervalGCContent = validateIntervalGCContent(logger, readCounts.getIntervals(), annotatedIntervalsFile);
 
             if (intervalGCContent == null) {
                 logger.warn("Neither a panel of normals nor GC-content annotations were provided, so only standardization will be performed...");
             }
 
-            final RealMatrix standardizedProfile = SVDDenoisingUtils.preprocessAndStandardizeSample(readCounts.counts().transpose(), intervalGCContent);
+            final RealMatrix standardizedCopyRatioValues = SVDDenoisingUtils.preprocessAndStandardizeSample(readCounts.getReadCounts().transpose(), intervalGCContent);
 
             //construct a result with denoised profile identical to standardized profile
             final SVDDenoisedCopyRatioResult standardizedResult = new SVDDenoisedCopyRatioResult(
-                    readCounts.targets(), readCounts.columnNames(), standardizedProfile, standardizedProfile);
-            standardizedResult.write(standardizedCopyRatioProfileFile, denoisedCopyRatioProfileFile);
+                    readCounts.getIntervals(), standardizedCopyRatioValues, standardizedCopyRatioValues);
+            standardizedResult.write(standardizedCopyRatiosFile, denoisedCopyRatiosFile);
         }
 
         logger.info("Read counts successfully denoised.");
@@ -170,15 +168,11 @@ public final class DenoiseReadCounts extends CommandLineProgram {
         return "SUCCESS";
     }
 
-    private static ReadCountCollection parseReadCountFile(final File inputReadCountFile) {
+    private static SimpleReadCountCollection parseReadCountFile(final File inputReadCountFile) {
         try {
-            return ReadCountCollectionUtils.parseHdf5AsDouble(inputReadCountFile);
+            return SimpleReadCountCollection.read(new HDF5File(inputReadCountFile));
         } catch (final HDF5LibException e) {
-            try {
-                return ReadCountCollectionUtils.parse(inputReadCountFile);
-            } catch (final IOException ioe) {
-                throw new UserException.CouldNotReadInputFile(inputReadCountFile);
-            }
+            return SimpleReadCountCollection.read(inputReadCountFile);
         }
     }
 

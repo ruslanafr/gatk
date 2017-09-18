@@ -10,8 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.CreateReadCountPanelOfNormals;
-import org.broadinstitute.hellbender.tools.exome.ReadCountCollection;
-import org.broadinstitute.hellbender.tools.exome.Target;
+import org.broadinstitute.hellbender.tools.copynumber.temporary.SimpleReadCountCollection;
 import org.broadinstitute.hellbender.tools.exome.gcbias.GCCorrector;
 import org.broadinstitute.hellbender.utils.GATKProtectedMathUtils;
 import org.broadinstitute.hellbender.utils.MatrixSummaryUtils;
@@ -21,9 +20,7 @@ import org.broadinstitute.hellbender.utils.param.ParamUtils;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -40,30 +37,17 @@ public final class SVDDenoisingUtils {
 
     private SVDDenoisingUtils() {}
 
-    //TODO remove this method once ReadCountCollection is refactored to only store single sample, non-negative integer counts
-    public static void validateReadCounts(final ReadCountCollection readCountCollection) {
-        Utils.nonNull(readCountCollection);
-        Utils.nonEmpty(readCountCollection.targets());
-        if (readCountCollection.columnNames().size() != 1) {
-            throw new UserException.BadInput("Read-count file must contain counts for only a single sample.");
-        }
-        final double[] readCounts = readCountCollection.counts().getColumn(0);
-        if (!IntStream.range(0, readCounts.length).allMatch(i -> (readCounts[i] >= 0) && ((int) readCounts[i] == readCounts[i]))) {
-            throw new UserException.BadInput("Read-count file must contain non-negative integer counts.");
-        }
-    }
-
     static final class PreprocessedStandardizedResult {
-        final RealMatrix preprocessedStandardizedProfile;
+        final RealMatrix preprocessedStandardizedValues;
         final double[] panelIntervalFractionalMedians;
         final boolean[] filterSamples;
         final boolean[] filterIntervals;
 
-        private PreprocessedStandardizedResult(final RealMatrix preprocessedStandardizedProfile,
+        private PreprocessedStandardizedResult(final RealMatrix preprocessedStandardizedValues,
                                                final double[] panelIntervalFractionalMedians,
                                                final boolean[] filterSamples,
                                                final boolean[] filterIntervals) {
-            this.preprocessedStandardizedProfile = preprocessedStandardizedProfile;
+            this.preprocessedStandardizedValues = preprocessedStandardizedValues;
             this.panelIntervalFractionalMedians = panelIntervalFractionalMedians;
             this.filterSamples = filterSamples;
             this.filterIntervals = filterIntervals;
@@ -96,11 +80,11 @@ public final class SVDDenoisingUtils {
 
         //standardize in place
         logger.info("Standardizing read counts...");
-        divideBySampleMedianAndTransformToLog2(preprocessedStandardizedResult.preprocessedStandardizedProfile);
+        divideBySampleMedianAndTransformToLog2(preprocessedStandardizedResult.preprocessedStandardizedValues);
         logger.info("Subtracting median of sample medians...");
-        final double[] sampleLog2Medians = MatrixSummaryUtils.getRowMedians(preprocessedStandardizedResult.preprocessedStandardizedProfile);
+        final double[] sampleLog2Medians = MatrixSummaryUtils.getRowMedians(preprocessedStandardizedResult.preprocessedStandardizedValues);
         final double medianOfSampleMedians = new Median().evaluate(sampleLog2Medians);
-        preprocessedStandardizedResult.preprocessedStandardizedProfile
+        preprocessedStandardizedResult.preprocessedStandardizedValues
                 .walkInOptimizedOrder(new DefaultRealMatrixChangingVisitor() {
             @Override
             public double visit(int sampleIndex, int intervalIndex, double value) {
@@ -118,34 +102,29 @@ public final class SVDDenoisingUtils {
      * {@code numEigensamples} are used to denoise.
      */
     static SVDDenoisedCopyRatioResult denoise(final SVDReadCountPanelOfNormals panelOfNormals,
-                                              final ReadCountCollection readCounts,
+                                              final SimpleReadCountCollection readCounts,
                                               final int numEigensamples) {
         Utils.nonNull(panelOfNormals);
-        validateReadCounts(readCounts);
         ParamUtils.isPositive(numEigensamples, "Number of eigensamples to use for denoising must be positive.");
         Utils.validateArg(numEigensamples <= panelOfNormals.getNumEigensamples(),
                 "Number of eigensamples to use for denoising is greater than the number available in the panel of normals.");
 
         logger.info("Validating sample intervals against original intervals used to build panel of normals...");
-        Utils.validateArg(panelOfNormals.getOriginalIntervals().equals(readCounts.targets().stream().map(Target::getInterval).collect(Collectors.toList())),
+        Utils.validateArg(panelOfNormals.getOriginalIntervals().equals(readCounts.getIntervals()),
                 "Sample intervals must be identical to the original intervals used to build the panel of normals.");
 
         logger.info("Preprocessing and standardizing sample read counts...");
-        final RealMatrix standardizedProfile = preprocessAndStandardizeSample(panelOfNormals, readCounts.counts().transpose());
+        final RealMatrix standardizedCopyRatioValues = preprocessAndStandardizeSample(panelOfNormals, readCounts.getReadCounts().transpose());
 
         logger.info(String.format("Using %d out of %d eigensamples to denoise...", numEigensamples, panelOfNormals.getNumEigensamples()));
 
         logger.info("Subtracting projection onto space spanned by eigensamples...");
-        final RealMatrix denoisedProfile = subtractProjection(standardizedProfile, panelOfNormals.getEigensampleVectors(), numEigensamples);
+        final RealMatrix denoisedCopyRatioValues = subtractProjection(standardizedCopyRatioValues, panelOfNormals.getEigensampleVectors(), numEigensamples);
 
         logger.info("Sample denoised.");
 
         //construct the result
-        //TODO clean this up once Targets are removed
-        final Set<SimpleInterval> panelIntervals = new HashSet<>(panelOfNormals.getPanelIntervals());
-        final List<Target> intervals = readCounts.targets().stream().filter(t -> panelIntervals.contains(t.getInterval())).collect(Collectors.toList());
-
-        return new SVDDenoisedCopyRatioResult(intervals, readCounts.columnNames(), standardizedProfile, denoisedProfile);
+        return new SVDDenoisedCopyRatioResult(readCounts.getIntervals(), standardizedCopyRatioValues, denoisedCopyRatioValues);
     }
 
     /**
@@ -423,7 +402,7 @@ public final class SVDDenoisingUtils {
      * returns s - s U<sub>k</sub> U<sub>k</sub><sup>T</sup>,
      * where U<sub>k</sub> contains the first {@code numEigensamples}.
      */
-    private static RealMatrix subtractProjection(final RealMatrix standardizedProfile,
+    private static RealMatrix subtractProjection(final RealMatrix standardizedValues,
                                                  final double[][] eigensampleVectors,
                                                  final int numEigensamples) {
         final int numIntervals = eigensampleVectors.length;
@@ -437,12 +416,12 @@ public final class SVDDenoisingUtils {
                 : new Array2DRowRealMatrix(eigensampleVectors, false).getSubMatrix(0, numIntervals - 1, 0, numEigensamples - 1);
 
         logger.info("Computing projection...");
-        final RealMatrix projection = standardizedProfile
+        final RealMatrix projection = standardizedValues
                 .multiply(eigensampleTruncatedMatrix)
                 .multiply(eigensampleTruncatedMatrix.transpose());
 
         logger.info("Subtracting projection...");
-        return standardizedProfile.subtract(projection);
+        return standardizedValues.subtract(projection);
     }
 
     private static int countNumberPassingFilter(final boolean[] filter) {
@@ -453,10 +432,10 @@ public final class SVDDenoisingUtils {
         return numPassingFilter;
     }
 
-    private static void transformToFractionalCoverage(final RealMatrix m) {
+    private static void transformToFractionalCoverage(final RealMatrix matrix) {
         logger.info("Transforming read counts to fractional coverage...");
-        final double[] sampleSums = GATKProtectedMathUtils.rowSums(m);
-        m.walkInOptimizedOrder(new DefaultRealMatrixChangingVisitor() {
+        final double[] sampleSums = GATKProtectedMathUtils.rowSums(matrix);
+        matrix.walkInOptimizedOrder(new DefaultRealMatrixChangingVisitor() {
             @Override
             public double visit(int sampleIndex, int intervalIndex, double value) {
                 return value / sampleSums[sampleIndex];
@@ -464,18 +443,18 @@ public final class SVDDenoisingUtils {
         });
     }
 
-    private static void performOptionalGCBiasCorrection(final RealMatrix m, 
+    private static void performOptionalGCBiasCorrection(final RealMatrix matrix, 
                                                         final double[] intervalGCContent) {
         if (intervalGCContent != null) {
             logger.info("Performing GC-bias correction...");
-            GCCorrector.correctTransposedCoverage(m, intervalGCContent); //GCCorrector expects intervals x samples
+            GCCorrector.correctTransposedCoverage(matrix, intervalGCContent); //GCCorrector expects intervals x samples
         }
     }
 
-    private static void divideBySampleMedianAndTransformToLog2(final RealMatrix m) {
+    private static void divideBySampleMedianAndTransformToLog2(final RealMatrix matrix) {
         logger.info("Dividing by sample medians and transforming to log2 space...");
-        final double[] sampleMedians = MatrixSummaryUtils.getRowMedians(m);
-        m.walkInOptimizedOrder(new DefaultRealMatrixChangingVisitor() {
+        final double[] sampleMedians = MatrixSummaryUtils.getRowMedians(matrix);
+        matrix.walkInOptimizedOrder(new DefaultRealMatrixChangingVisitor() {
             @Override
             public double visit(int sampleIndex, int intervalIndex, double value) {
                 return safeLog2(value / sampleMedians[sampleIndex]);

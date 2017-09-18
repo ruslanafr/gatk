@@ -1,9 +1,8 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.utils.segmentation.KernelSegmenterUnitTest;
-import org.broadinstitute.hellbender.tools.exome.ReadCountCollection;
-import org.broadinstitute.hellbender.tools.exome.Target;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -43,9 +42,8 @@ public class CopyRatioKernelSegmenterUnitTest {
                         (i % 250) * 10 + 10))         //intervals for copy-ratio data points have length = 10
                 .collect(Collectors.toList());
 
-        final ReadCountCollection denoisedCopyRatioProfile = new ReadCountCollection(
-                intervals.stream().map(Target::new).collect(Collectors.toList()),
-                Collections.singletonList("testSampleName"),
+        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(
+                intervals,
                 new Array2DRowRealMatrix(dataGaussian.stream().mapToDouble(Double::doubleValue).toArray())
         );
 
@@ -65,12 +63,12 @@ public class CopyRatioKernelSegmenterUnitTest {
                         new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("4", 1501, 2500), dataGaussian.subList(900, 1000))));
 
         return new Object[][]{
-                {denoisedCopyRatioProfile, segmentsExpected}
+                {denoisedCopyRatios, segmentsExpected}
         };
     }
 
     @Test(dataProvider = "dataCopyRatioKernelSegmenter")
-    public void testCopyRatioKernelSegmenter(final ReadCountCollection denoisedCopyRatioProfile,
+    public void testCopyRatioKernelSegmenter(final CopyRatioCollection denoisedCopyRatios,
                                              final CopyRatioSegmentationResult segmentsExpected) {
         final int maxNumChangepointsPerChromosome = 25;
         final double kernelVariance = 0.;
@@ -79,7 +77,7 @@ public class CopyRatioKernelSegmenterUnitTest {
         final double numChangepointsPenaltyLinearFactor = 2.;
         final double numChangepointsPenaltyLogLinearFactor = 2.;
 
-        final CopyRatioSegmentationResult segments = new CopyRatioKernelSegmenter(denoisedCopyRatioProfile)
+        final CopyRatioSegmentationResult segments = new CopyRatioKernelSegmenter(denoisedCopyRatios)
                 .findSegmentation(maxNumChangepointsPerChromosome, kernelVariance, kernelApproximationDimension,
                         windowSizes, numChangepointsPenaltyLinearFactor, numChangepointsPenaltyLogLinearFactor);
         Assert.assertEquals(segments, segmentsExpected);

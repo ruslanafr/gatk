@@ -15,12 +15,14 @@ import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.copynumber.temporary.HDF5ReadCountCollection;
 import org.broadinstitute.hellbender.tools.exome.ReadCountCollectionUtils;
 import org.broadinstitute.hellbender.tools.exome.SampleCollection;
 import org.broadinstitute.hellbender.tools.exome.Target;
 import org.broadinstitute.hellbender.tools.exome.TargetWriter;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.io.File;
@@ -224,7 +226,7 @@ public class SparkGenomeReadCounts extends GATKSparkTool {
                     ? outputFile.getAbsolutePath().substring(0, outputFile.getAbsolutePath().length() - TSV_EXT.length()) + HDF5_EXT    //if a TSV file, replace extension with HDF5 extension
                     : outputFile.getAbsolutePath() + HDF5_EXT;                                                                          //else just append HDF5 extension
             final long writingHdf5CovFileStartTime = System.currentTimeMillis();
-            ReadCountCollectionUtils.writeReadCountsFromSimpleIntervalToHdf5(new File(hdf5File), sampleName,
+            writeReadCountsFromSimpleIntervalToHdf5(new File(hdf5File), sampleName,
                     byKeySorted);
             final long writingHdf5CovFileEndTime = System.currentTimeMillis();
             logger.info(String.format("Finished writing coverage file (HDF5). Elapse of %d seconds",
@@ -263,6 +265,33 @@ public class SparkGenomeReadCounts extends GATKSparkTool {
 
     private List<Target> createTargetListFromSimpleInterval(final List<SimpleInterval> intervalList){
         return intervalList.stream().map(Target::new).collect(Collectors.toList());
+    }
+
+    /**
+     *  Write a simple interval to number mapping as a HDF5 file.
+     *
+     *  When this file is read, all numbers will have been converted to double.  See {@link ReadCountCollectionUtils::parseHdf5AsDouble}
+     *
+     * @param outFile output file.  Cannot already exist.  Not {@code null}
+     * @param sampleName Name for the values per interval.  Not {@code null}
+     * @param byKeySorted Mapping of interval to number.  Not {@code null}
+     * @param <N> Class that extends Number.  Stored as a double.
+     */
+    private static <N extends Number> void writeReadCountsFromSimpleIntervalToHdf5(final File outFile, final String sampleName,
+                                                                                   final SortedMap<SimpleInterval, N> byKeySorted) {
+        Utils.nonNull(outFile, "Output file cannot be null.");
+        Utils.nonNull(sampleName, "Sample name cannot be null.");
+        Utils.nonNull(byKeySorted, "Intervals cannot be null.");
+
+        final List<SimpleInterval> newIntervals = new ArrayList<>(byKeySorted.size());
+        final double[][] newValues = new double[1][byKeySorted.size()];
+        final Iterator<Map.Entry<SimpleInterval, N>> iterator = byKeySorted.entrySet().iterator();
+        for (int i = 0; i < byKeySorted.entrySet().size(); i++) {
+            Map.Entry<SimpleInterval, N> entry = iterator.next();
+            newIntervals.add(entry.getKey());
+            newValues[0][i] = entry.getValue().doubleValue();
+        }
+        HDF5ReadCountCollection.write(outFile, sampleName, newIntervals, newValues);
     }
 }
 

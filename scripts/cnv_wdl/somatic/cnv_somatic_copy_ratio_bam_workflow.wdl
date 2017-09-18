@@ -106,8 +106,8 @@ task DenoiseReadCounts {
             --input ${read_counts} \
             ${"--readCountPanelOfNormals " + read_count_pon} \
             ${"--numberOfEigensamples " + number_of_eigensamples} \
-            --standardizedCopyRatioProfile ${entity_id}.standardizedCR.tsv \
-            --denoisedCopyRatioProfile ${entity_id}.denoisedCR.tsv
+            --standardizedCopyRatios ${entity_id}.standardizedCR.tsv \
+            --denoisedCopyRatios ${entity_id}.denoisedCR.tsv
     }
 
     runtime {

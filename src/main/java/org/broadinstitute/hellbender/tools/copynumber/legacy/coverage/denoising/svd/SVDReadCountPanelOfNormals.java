@@ -1,7 +1,7 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd;
 
-import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.tools.exome.ReadCountCollection;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 
 import java.util.List;
 
@@ -33,7 +33,7 @@ public interface SVDReadCountPanelOfNormals {
      * Returns a modifiable copy of the list of the original intervals that were used to build this PoN
      * (no filtering will have been applied).  This list has length {@code M_original}.
      */
-    List<Locatable> getOriginalIntervals();
+    List<SimpleInterval> getOriginalIntervals();
 
     /**
      * Returns a modifiable copy of an array containing the GC content of the original intervals
@@ -45,7 +45,7 @@ public interface SVDReadCountPanelOfNormals {
      * Returns a modifiable copy of the list of the intervals contained in this PoN after all filtering has been applied.
      * This list has length {@code M}.
      */
-    List<Locatable> getPanelIntervals();
+    List<SimpleInterval> getPanelIntervals();
 
     /**
      * Returns a modifiable copy of an array containing the median (across all samples, before filtering)

@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.temporary;
 
 import htsjdk.samtools.util.Lazy;
-import htsjdk.samtools.util.Locatable;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.broadinstitute.hdf5.HDF5File;
@@ -29,7 +28,7 @@ public class HDF5ReadCountCollection {
     private static final String READ_COUNTS_PATH = "/read_counts/values";
 
     private final HDF5File file;
-    private Lazy<List<Locatable>> intervals;
+    private Lazy<List<SimpleInterval>> intervals;
     private Lazy<List<String>> sampleNames;
 
     public HDF5ReadCountCollection(final HDF5File file) {
@@ -39,7 +38,7 @@ public class HDF5ReadCountCollection {
         sampleNames = new Lazy<>(() -> readNames(file, SAMPLE_NAME_PATH));
     }
 
-    public List<Locatable> getIntervals() {
+    public List<SimpleInterval> getIntervals() {
         return intervals.get();
     }
 
@@ -102,7 +101,7 @@ public class HDF5ReadCountCollection {
         return Collections.unmodifiableList(Arrays.asList(values));
     }
 
-    private <T extends Locatable> void writeIntervals(final List<T> intervals) {
+    private <T extends SimpleInterval> void writeIntervals(final List<T> intervals) {
         HDF5Utils.writeIntervals(file, INTERVALS_GROUP_NAME, intervals);
     }
 

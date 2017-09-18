@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd;
 
 import htsjdk.samtools.util.Lazy;
-import htsjdk.samtools.util.Locatable;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.logging.log4j.LogManager;
@@ -13,6 +12,7 @@ import org.apache.spark.mllib.linalg.distributed.RowMatrix;
 import org.broadinstitute.hdf5.HDF5File;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.temporary.HDF5Utils;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.spark.SparkConverter;
@@ -65,8 +65,8 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
     private static final String PANEL_NUM_EIGENSAMPLES_PATH = PANEL_EIGENSAMPLE_VECTORS_PATH + HDF5Utils.NUMBER_OF_ROWS_SUB_PATH;
 
     private final HDF5File file;
-    private final Lazy<List<Locatable>> originalIntervals;
-    private final Lazy<List<Locatable>> panelIntervals;
+    private final Lazy<List<SimpleInterval>> originalIntervals;
+    private final Lazy<List<SimpleInterval>> panelIntervals;
 
     /**
      * <p>DEV NOTE:  If you are adding attributes that are neither RealMatrix nor a primitive,
@@ -102,7 +102,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
     }
 
     @Override
-    public List<Locatable> getOriginalIntervals() {
+    public List<SimpleInterval> getOriginalIntervals() {
         return originalIntervals.get();
     }
 
@@ -115,7 +115,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
     }
 
     @Override
-    public List<Locatable> getPanelIntervals() {
+    public List<SimpleInterval> getPanelIntervals() {
         return panelIntervals.get();
     }
 
@@ -161,7 +161,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
                               final String commandLine,
                               final RealMatrix originalReadCounts,
                               final List<String> originalSampleFilenames,
-                              final List<Locatable> originalIntervals,
+                              final List<SimpleInterval> originalIntervals,
                               final double[] intervalGCContent,
                               final double minimumIntervalMedianPercentile,
                               final double maximumZerosInSamplePercentage,
@@ -207,7 +207,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
             final List<String> panelSampleFilenames = IntStream.range(0, originalSampleFilenames.size())
                     .filter(sampleIndex -> !preprocessedStandardizedResult.filterSamples[sampleIndex])
                     .mapToObj(originalSampleFilenames::get).collect(Collectors.toList());
-            final List<Locatable> panelIntervals = IntStream.range(0, originalIntervals.size())
+            final List<SimpleInterval> panelIntervals = IntStream.range(0, originalIntervals.size())
                     .filter(intervalIndex -> !preprocessedStandardizedResult.filterIntervals[intervalIndex])
                     .mapToObj(originalIntervals::get).collect(Collectors.toList());
 
@@ -281,7 +281,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
         file.makeStringArray(ORIGINAL_SAMPLE_FILENAMES_PATH, originalSampleFilenames.toArray(new String[originalSampleFilenames.size()]));
     }
 
-    private void writeOriginalIntervals(final List<Locatable> originalIntervals) {
+    private void writeOriginalIntervals(final List<SimpleInterval> originalIntervals) {
         HDF5Utils.writeIntervals(file, ORIGINAL_INTERVALS_PATH, originalIntervals);
     }
 
@@ -293,7 +293,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
         file.makeStringArray(PANEL_SAMPLE_FILENAMES_PATH, panelSampleFilenames.toArray(new String[panelSampleFilenames.size()]));
     }
 
-    private void writePanelIntervals(final List<Locatable> panelIntervals) {
+    private void writePanelIntervals(final List<SimpleInterval> panelIntervals) {
         HDF5Utils.writeIntervals(file, PANEL_INTERVALS_PATH, panelIntervals);
     }
 

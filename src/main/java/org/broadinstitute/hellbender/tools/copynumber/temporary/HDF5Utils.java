@@ -1,6 +1,5 @@
 package org.broadinstitute.hellbender.tools.copynumber.temporary;
 
-import htsjdk.samtools.util.Locatable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hdf5.HDF5File;
@@ -42,8 +41,8 @@ public class HDF5Utils {
     }
     private static final int NUM_INTERVAL_FIELDS = IntervalField.values().length;
 
-    public static List<Locatable> readIntervals(final HDF5File file,
-                                                final String path) {
+    public static List<SimpleInterval> readIntervals(final HDF5File file,
+                                                     final String path) {
         final String[] contigNames = file.readStringArray(path + INTERVAL_CONTIG_NAMES_SUB_PATH);
         final double[][] matrix = file.readDoubleMatrix(path + INTERVAL_MATRIX_SUB_PATH);
         final int numIntervals = matrix[0].length;
@@ -55,16 +54,16 @@ public class HDF5Utils {
                 .collect(Collectors.toList());
     }
 
-    public static <T extends Locatable> void writeIntervals(final HDF5File file,
-                                                            final String path,
-                                                            final List<T> intervals) {
-        final String[] contigNames = intervals.stream().map(Locatable::getContig).distinct().toArray(String[]::new);
+    public static <T extends SimpleInterval> void writeIntervals(final HDF5File file,
+                                                                 final String path,
+                                                                 final List<SimpleInterval> intervals) {
+        final String[] contigNames = intervals.stream().map(SimpleInterval::getContig).distinct().toArray(String[]::new);
         file.makeStringArray(path + INTERVAL_CONTIG_NAMES_SUB_PATH, contigNames);
         final Map<String, Double> contigNamesToIndexMap = IntStream.range(0, contigNames.length).boxed()
                 .collect(Collectors.toMap(i -> contigNames[i], i -> (double) i));
         final double[][] matrix = new double[NUM_INTERVAL_FIELDS][intervals.size()];
         for (int i = 0; i < intervals.size(); i++) {
-            final Locatable interval = intervals.get(i);
+            final SimpleInterval interval = intervals.get(i);
             matrix[IntervalField.CONTIG_INDEX.index][i] = contigNamesToIndexMap.get(interval.getContig());
             matrix[IntervalField.START.index][i] = interval.getStart();
             matrix[IntervalField.END.index][i] = interval.getEnd();

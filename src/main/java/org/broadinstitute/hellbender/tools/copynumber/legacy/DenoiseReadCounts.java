@@ -1,6 +1,5 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy;
 
-import htsjdk.samtools.util.Locatable;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -19,6 +18,7 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd.SVDReadCountPanelOfNormals;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
 import org.broadinstitute.hellbender.tools.exome.*;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
@@ -150,7 +150,7 @@ public final class DenoiseReadCounts extends CommandLineProgram {
             }
         } else {    //standardize and perform optional GC-bias correction
             //get GC content (null if not provided)
-            final List<Locatable> intervals = readCounts.targets().stream().map(Target::getInterval).collect(Collectors.toList());
+            final List<SimpleInterval> intervals = readCounts.targets().stream().map(Target::getInterval).collect(Collectors.toList());
             final double[] intervalGCContent = validateIntervalGCContent(logger, intervals, annotatedIntervalsFile);
 
             if (intervalGCContent == null) {
@@ -185,7 +185,7 @@ public final class DenoiseReadCounts extends CommandLineProgram {
     //TODO move GC-bias correction classes into legacy package, clean up use of TargetCollection, and move this method into appropriate class
     //code is duplicated in CreateReadCountPanelOfNormals for now
     private static double[] validateIntervalGCContent(final Logger logger,
-                                                      final List<Locatable> intervals,
+                                                      final List<SimpleInterval> intervals,
                                                       final File annotatedIntervalsFile) {
         if (annotatedIntervalsFile == null) {
             logger.info("No GC-content annotations for intervals found; GC-bias correction will not be performed...");

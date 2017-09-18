@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.temporary;
 
 import com.opencsv.CSVReader;
-import htsjdk.samtools.util.Locatable;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.broadinstitute.hdf5.HDF5File;
@@ -21,15 +20,15 @@ import java.util.List;
 /**
  * //TODO replace this class with updated ReadCountCollection
  *
- * Simple class to enable input of a TSV or HDF5 file containing a list of {@link Locatable} and integer read counts.
+ * Simple class to enable input of a TSV or HDF5 file containing a list of {@link SimpleInterval} and integer read counts.
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 public final class SimpleReadCountCollection {
-    private final List<Locatable> intervals;
+    private final List<SimpleInterval> intervals;
     private final RealMatrix readCounts;
 
-    private SimpleReadCountCollection(final List<Locatable> intervals,
+    private SimpleReadCountCollection(final List<SimpleInterval> intervals,
                                       final RealMatrix readCounts) {
         Utils.nonEmpty(intervals);
         Utils.nonNull(readCounts);
@@ -42,7 +41,7 @@ public final class SimpleReadCountCollection {
         this.readCounts = readCounts;
     }
 
-    public List<Locatable> getIntervals() {
+    public List<SimpleInterval> getIntervals() {
         return intervals;
     }
 
@@ -80,7 +79,7 @@ public final class SimpleReadCountCollection {
         private static SimpleReadCountCollection read(final File file) {
             IOUtils.canReadFile(file);
             final int numRows = countRows(file);
-            final List<Locatable> intervals = new ArrayList<>(numRows);
+            final List<SimpleInterval> intervals = new ArrayList<>(numRows);
             final List<Integer> readCounts = new ArrayList<>(numRows);
             try (final FileReader fileReader = new FileReader(file);
                  final CSVReader csvReader = new CSVReader(fileReader, SEPARATOR_CHAR)) {
@@ -92,7 +91,7 @@ public final class SimpleReadCountCollection {
                     }
                 }
                 while ((row = csvReader.readNext()) != null) {
-                    final Locatable interval = new SimpleInterval(
+                    final SimpleInterval interval = new SimpleInterval(
                             row[TSVColumn.CONTIG.index],
                             Integer.parseInt(row[TSVColumn.START.index]),
                             Integer.parseInt(row[TSVColumn.STOP.index]));

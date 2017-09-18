@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd;
 
 import com.google.common.primitives.Doubles;
-import htsjdk.samtools.util.Locatable;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.DefaultRealMatrixChangingVisitor;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -16,6 +15,7 @@ import org.broadinstitute.hellbender.tools.exome.Target;
 import org.broadinstitute.hellbender.tools.exome.gcbias.GCCorrector;
 import org.broadinstitute.hellbender.utils.GATKProtectedMathUtils;
 import org.broadinstitute.hellbender.utils.MatrixSummaryUtils;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
 
@@ -142,7 +142,7 @@ public final class SVDDenoisingUtils {
 
         //construct the result
         //TODO clean this up once Targets are removed
-        final Set<Locatable> panelIntervals = new HashSet<>(panelOfNormals.getPanelIntervals());
+        final Set<SimpleInterval> panelIntervals = new HashSet<>(panelOfNormals.getPanelIntervals());
         final List<Target> intervals = readCounts.targets().stream().filter(t -> panelIntervals.contains(t.getInterval())).collect(Collectors.toList());
 
         return new SVDDenoisedCopyRatioResult(intervals, readCounts.columnNames(), standardizedProfile, denoisedProfile);
@@ -384,7 +384,7 @@ public final class SVDDenoisingUtils {
         performOptionalGCBiasCorrection(result, panelOfNormals.getOriginalIntervalGCContent());
 
         logger.info("Subsetting sample intervals to post-filter panel intervals...");
-        final Set<Locatable> panelIntervals = new HashSet<>(panelOfNormals.getPanelIntervals());
+        final Set<SimpleInterval> panelIntervals = new HashSet<>(panelOfNormals.getPanelIntervals());
         final int[] subsetIntervalIndices = IntStream.range(0, panelOfNormals.getOriginalIntervals().size())
                 .filter(i -> panelIntervals.contains(panelOfNormals.getOriginalIntervals().get(i)))
                 .toArray();

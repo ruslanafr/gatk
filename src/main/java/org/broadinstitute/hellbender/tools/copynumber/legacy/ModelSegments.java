@@ -16,8 +16,6 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentatio
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioKernelSegmenter;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentationResult;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
-import org.broadinstitute.hellbender.tools.exome.*;
-import org.broadinstitute.hellbender.tools.exome.alleliccount.AllelicCount;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -47,7 +45,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
     //filename tags for output
     protected static final String FILTERED_ALLELIC_COUNTS_FILE_SUFFIX = ".filtered.ac.tsv";
-    protected static final String HET_ALLELIC_COUNTS_FILE_SUFFIX = ".hets.ac.tsv";
     protected static final String SEGMENTS_FILE_SUFFIX = ".seg";
     protected static final String COPY_RATIO_SEGMENTS_FILE_SUFFIX = ".cr" + SEGMENTS_FILE_SUFFIX;
     protected static final String ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX = ".af" + SEGMENTS_FILE_SUFFIX;
@@ -65,9 +62,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
     protected static final String MINIMUM_TOTAL_ALLELE_COUNT_LONG_NAME = "minTotalAlleleCount";
     protected static final String MINIMUM_TOTAL_ALLELE_COUNT_SHORT_NAME = "minAC";
-
-    protected static final String P_VALUE_HET_GENOTYPING_LONG_NAME = "pValueHetGenotyping";
-    protected static final String P_VALUE_HET_GENOTYPING_SHORT_NAME = "pValueHet";
 
     protected static final String KERNEL_VARIANCE_COPY_RATIO_LONG_NAME = "kernelVarianceCopyRatio";
     protected static final String KERNEL_VARIANCE_COPY_RATIO_SHORT_NAME = "kernVarCR";
@@ -157,16 +151,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
             minValue = 0
     )
     private int minTotalAlleleCount = 10;
-
-//    @Argument(
-//            doc = "P-value threshold to use for genotyping heterozygous sites to include in allele-fraction modeling.",
-//            fullName = P_VALUE_HET_GENOTYPING_LONG_NAME,
-//            shortName = P_VALUE_HET_GENOTYPING_SHORT_NAME,
-//            optional = true,
-//            minValue = 0,
-//            maxValue = 1
-//    )
-//    private double pValueThresholdHetGenotyping = 0.01;
 
     @Argument(
             doc = "Variance of Gaussian kernel for copy-ratio segmentation.  If zero, a linear kernel will be used.",
@@ -347,7 +331,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
             readAndFilterAllelicCounts();
             performAlleleFractionSegmentation();
             writeAlleleFractionSegments(sampleName);
-//            performHetGenotyping();
         } else {
             allelicCounts = new AllelicCountCollection();           //empty allele-fraction data
         }
@@ -452,22 +435,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
         alleleFractionSegments.write(alleleFractionSegmentsFile, sampleName);
         logSegmentsFileWrittenMessage(alleleFractionSegmentsFile);
     }
-
-//    private void performHetGenotyping() {
-//        hetAllelicCounts = new AllelicCountCollection(
-//                filteredAllelicCounts.getAllelicCounts().stream().filter(ac -> ac.getAltReadCount() != 0 && ac.getRefReadCount() != 0 &&
-//                        new BinomialTest().binomialTest(
-//                                ac.getAltReadCount() + ac.getRefReadCount(),
-//                                Math.max(ac.getAltReadCount(), ac.getRefReadCount()),
-//                                0.5,
-//                                AlternativeHypothesis.TWO_SIDED) >= pValueThresholdHetGenotyping)
-//                        .collect(Collectors.toList()));
-//        final File hetAllelicCountsFile = new File(outputPrefix + HET_ALLELIC_COUNTS_FILE_SUFFIX);
-//        hetAllelicCounts.write(hetAllelicCountsFile);
-//        logger.info(String.format("Retained %d / %d sites after binomial testing for heterozygosity...",
-//                hetAllelicCounts.getAllelicCounts().size(), filteredAllelicCounts.getAllelicCounts().size()));
-//        logger.info(String.format("Allelic counts at heterozygous sites written to %s.", hetAllelicCountsFile));
-//    }
 
     private void performSimilarSegmentMergingStep(final ACNVModeller modeller) {
         logger.info("Merging similar segments...");

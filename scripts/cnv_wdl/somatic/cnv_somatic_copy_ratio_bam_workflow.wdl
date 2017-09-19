@@ -75,8 +75,8 @@ workflow CNVSomaticCopyRatioBAMWorkflow {
     output {
         String entity_id = CollectReadCounts.entity_id
         File read_counts = CollectReadCounts.read_counts
-        File standardized_copy_ratios = DenoiseReadCounts.standardized_copy_ratio
-        File denoised_copy_ratios = DenoiseReadCounts.denoised_copy_ratio
+        File standardized_copy_ratios = DenoiseReadCounts.standardized_copy_ratios
+        File denoised_copy_ratios = DenoiseReadCounts.denoised_copy_ratios
         File called_copy_ratio_segments = CallCopyRatioSegments.called_copy_ratio_segments
         File denoised_copy_ratios_plot = PlotDenoisedCopyRatios.denoised_copy_ratios_plot
         File denoised_copy_ratios_lim_4_plot = PlotDenoisedCopyRatios.denoised_copy_ratios_lim_4_plot

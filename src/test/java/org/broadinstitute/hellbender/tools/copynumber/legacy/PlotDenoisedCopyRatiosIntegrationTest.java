@@ -1,4 +1,4 @@
-package org.broadinstitute.hellbender.tools.copynumber.legacy.plotting;
+package org.broadinstitute.hellbender.tools.copynumber.legacy;
 
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
@@ -11,7 +11,7 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 
-public final class PlotDenoisingResultsIntegrationTest extends CommandLineProgramTest {
+public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProgramTest {
     private static String TEST_SUB_DIR = toolsTestDir + "copynumber/plotting/";
 
     //test files
@@ -39,8 +39,6 @@ public final class PlotDenoisingResultsIntegrationTest extends CommandLineProgra
                 "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
-        Assert.assertTrue(new File(outputDir, OUTPUT_PREFIX + "_FullGenome.png").exists());
-        Assert.assertTrue(new File(outputDir, OUTPUT_PREFIX + "_FullGenome.png").length() > THRESHOLD_PLOT_FILE_SIZE_IN_BYTES);
         Assert.assertTrue(new File(outputDir, OUTPUT_PREFIX + "_Before_After_CR_Lim_4.png").exists());
         Assert.assertTrue(new File(outputDir, OUTPUT_PREFIX + "_Before_After_CR_Lim_4.png").length() > THRESHOLD_PLOT_FILE_SIZE_IN_BYTES);
         Assert.assertTrue(new File(outputDir, OUTPUT_PREFIX + "_Before_After.png").exists());

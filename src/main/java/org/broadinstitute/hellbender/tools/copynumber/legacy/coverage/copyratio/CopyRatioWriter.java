@@ -1,9 +1,9 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio;
 
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.NamedSampleFile;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.tsv.DataLine;
-import org.broadinstitute.hellbender.utils.tsv.TableUtils;
 import org.broadinstitute.hellbender.utils.tsv.TableWriter;
 
 import java.io.File;
@@ -18,7 +18,7 @@ final class CopyRatioWriter extends TableWriter<CopyRatio> {
     void writeSampleName(final String sampleName) {
         Utils.nonNull(sampleName);
         try {
-            writeComment(CopyRatioCollection.SAMPLE_NAME_COMMENT_PREFIX + sampleName);
+            writeComment(NamedSampleFile.SAMPLE_NAME_COMMENT_PREFIX + sampleName);
         } catch (final IOException e) {
             throw new UserException("Could not write sample name.");
         }
@@ -29,7 +29,8 @@ final class CopyRatioWriter extends TableWriter<CopyRatio> {
         Utils.nonNull(record);
         Utils.nonNull(dataLine);
         dataLine.append(record.getInterval().getContig())
+                .append(record.getInterval().getStart())
                 .append(record.getInterval().getEnd())
-                .append(record.getCopyRatioValue());
+                .append(record.getLog2CopyRatioValue());
     }
 }

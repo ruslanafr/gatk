@@ -6,14 +6,12 @@ import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
-import org.broadinstitute.hellbender.cmdline.ExomeStandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.CopyNumberProgramGroup;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatio;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
-import org.broadinstitute.hellbender.tools.exome.*;
 import org.broadinstitute.hellbender.utils.R.RScriptExecutor;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -43,13 +41,13 @@ import java.util.stream.Collectors;
  */
 @CommandLineProgramProperties(
         summary = "Create plots of denoised copy ratio.",
-        oneLineSummary = "Create plots of denoised copy ratio",
+        oneLineSummary = "Create plots of denoised copy ratio.",
         programGroup = CopyNumberProgramGroup.class
 )
 @DocumentedFeature
-public final class PlotDenoisingResults extends CommandLineProgram {
+public final class PlotDenoisedCopyRatios extends CommandLineProgram {
     private static final String CNV_PLOTTING_R_LIBRARY = "CNVPlottingLibrary.R";
-    private static final String PLOT_DENOISING_RESULTS_R_SCRIPT = "PlotDenoisingResults.R";
+    private static final String PLOT_DENOISED_COPY_RATIOS_R_SCRIPT = "PlotDenoisedCopyRatios.R";
 
     private static final String CONTIG_DELIMITER = "CONTIG_DELIMITER";  //used to delimit contig names and lengths passed to the R script
     private static final int DEFAULT_MINIMUM_CONTIG_LENGTH = 1000000;   //can be used to filter out mitochondrial contigs, unlocalized contigs, etc.
@@ -195,8 +193,8 @@ public final class PlotDenoisingResults extends CommandLineProgram {
         final RScriptExecutor executor = new RScriptExecutor();
 
         //this runs the R statement "source("CNVPlottingLibrary.R")" before the main script runs
-        executor.addScript(new Resource(CNV_PLOTTING_R_LIBRARY, PlotDenoisingResults.class));
-        executor.addScript(new Resource(PLOT_DENOISING_RESULTS_R_SCRIPT, PlotDenoisingResults.class));
+        executor.addScript(new Resource(CNV_PLOTTING_R_LIBRARY, PlotDenoisedCopyRatios.class));
+        executor.addScript(new Resource(PLOT_DENOISED_COPY_RATIOS_R_SCRIPT, PlotDenoisedCopyRatios.class));
         //--args is needed for Rscript to recognize other arguments properly
         executor.addArgs("--args",
                 "--sample_name=" + sampleName,

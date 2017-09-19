@@ -60,12 +60,12 @@ public final class AlleleFractionKernelSegmenter {
                         Collectors.mapping(Pair::getValue, Collectors.toList())));
     }
 
-    public AlleleFractionSegmentationResult findSegmentation(final int maxNumChangepointsPerChromosome,
-                                                             final double kernelVariance,
-                                                             final int kernelApproximationDimension,
-                                                             final List<Integer> windowSizes,
-                                                             final double numChangepointsPenaltyLinearFactor,
-                                                             final double numChangepointsPenaltyLogLinearFactor) {
+    public AlleleFractionSegmentCollection findSegmentation(final int maxNumChangepointsPerChromosome,
+                                                            final double kernelVariance,
+                                                            final int kernelApproximationDimension,
+                                                            final List<Integer> windowSizes,
+                                                            final double numChangepointsPenaltyLinearFactor,
+                                                            final double numChangepointsPenaltyLogLinearFactor) {
         ParamUtils.isPositiveOrZero(maxNumChangepointsPerChromosome, "Maximum number of changepoints must be non-negative.");
         ParamUtils.isPositiveOrZero(kernelVariance, "Variance of Gaussian kernel must be non-negative (if zero, a linear kernel will be used).");
         ParamUtils.isPositive(kernelApproximationDimension, "Dimension of kernel approximation must be positive.");
@@ -80,7 +80,7 @@ public final class AlleleFractionKernelSegmenter {
                 numPointsTotal, alternateAlleleFractionsPerChromosome.size()));
 
         //loop over chromosomes, find changepoints, and create allele-fraction segments
-        final List<AlleleFractionSegmentationResult.AlleleFractionSegment> segments = new ArrayList<>();
+        final List<AlleleFractionSegment> segments = new ArrayList<>();
         for (final String chromosome : alternateAlleleFractionsPerChromosome.keySet()) {
             logger.info(String.format("Finding changepoints in chromosome %s...", chromosome));
             final List<Double> alternateAlleleFractionsInChromosome = alternateAlleleFractionsPerChromosome.get(chromosome);
@@ -98,13 +98,13 @@ public final class AlleleFractionKernelSegmenter {
                 final int end = intervalsPerChromosome.get(chromosome).get(changepoint).getEnd();
                 final List<Double> alternateAlleleFractionsInSegment = alternateAlleleFractionsInChromosome.subList(
                         previousChangepoint + 1, changepoint + 1);
-                segments.add(new AlleleFractionSegmentationResult.AlleleFractionSegment(
+                segments.add(new AlleleFractionSegment(
                         new SimpleInterval(chromosome, start, end),
                         alternateAlleleFractionsInSegment));
                 previousChangepoint = changepoint;
             }
         }
         logger.info(String.format("Found %d segments in %d chromosomes.", segments.size(), alternateAlleleFractionsPerChromosome.keySet().size()));
-        return new AlleleFractionSegmentationResult(segments);
+        return new AlleleFractionSegmentCollection(segments);
     }
 }

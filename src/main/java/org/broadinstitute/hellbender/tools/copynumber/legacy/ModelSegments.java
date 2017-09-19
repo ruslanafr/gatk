@@ -10,12 +10,11 @@ import org.broadinstitute.hellbender.cmdline.programgroups.CopyNumberProgramGrou
 import org.broadinstitute.hellbender.engine.spark.SparkCommandLineProgram;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCountCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionKernelSegmenter;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionSegmentationResult;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionSegmentCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioKernelSegmenter;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentationResult;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
@@ -31,8 +30,8 @@ import java.util.stream.Collectors;
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 @CommandLineProgramProperties(
-        summary = "Model segmented copy ratio from denoised read counts.",
-        oneLineSummary = "Model segmented copy ratio from denoised read counts",
+        summary = "Model segmented copy ratio from denoised read counts and minor-allele fraction from allelic counts.",
+        oneLineSummary = "Model segmented copy ratio from denoised read counts.",
         programGroup = CopyNumberProgramGroup.class
 )
 @DocumentedFeature
@@ -293,10 +292,10 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
     //initialize data/segment variables, some of which may be optional
     private CopyRatioCollection denoisedCopyRatios = null;
-    private CopyRatioSegmentationResult copyRatioSegments = CopyRatioSegmentationResult.NO_SEGMENTS;
+    private CopyRatioSegmentCollection copyRatioSegments = CopyRatioSegmentCollection.NO_SEGMENTS;
     private AllelicCountCollection filteredAllelicCounts = null;
     private AllelicCountCollection allelicCounts = null;
-    private AlleleFractionSegmentationResult alleleFractionSegments = AlleleFractionSegmentationResult.NO_SEGMENTS;
+    private AlleleFractionSegmentCollection alleleFractionSegments = AlleleFractionSegmentCollection.NO_SEGMENTS;
 
     @Override
     protected void runPipeline(final JavaSparkContext ctx) {

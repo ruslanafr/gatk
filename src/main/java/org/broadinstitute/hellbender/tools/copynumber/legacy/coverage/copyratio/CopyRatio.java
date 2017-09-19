@@ -6,13 +6,13 @@ import org.broadinstitute.hellbender.utils.Utils;
 
 public class CopyRatio implements Locatable {
     private final SimpleInterval interval;
-    private final double copyRatioValue;
+    private final double log2CopyRatioValue;
 
     public CopyRatio(final SimpleInterval interval,
-                     final double copyRatioValue) {
+                     final double log2CopyRatioValue) {
         Utils.nonNull(interval);
         this.interval = interval;
-        this.copyRatioValue = copyRatioValue;
+        this.log2CopyRatioValue = log2CopyRatioValue;
     }
 
     @Override
@@ -34,7 +34,7 @@ public class CopyRatio implements Locatable {
         return interval;
     }
 
-    public double getCopyRatioValue() {
-        return copyRatioValue;
+    public double getLog2CopyRatioValue() {
+        return log2CopyRatioValue;
     }
 }

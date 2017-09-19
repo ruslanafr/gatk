@@ -1,12 +1,11 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.NamedSampleFile;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
-import org.broadinstitute.hellbender.utils.tsv.TableUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,8 +16,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class CopyRatioCollection {
-    protected static final String SAMPLE_NAME_COMMENT_PREFIX = TableUtils.COMMENT_PREFIX + "SAMPLE_NAME=";
-
     private final String sampleName;
     private final List<CopyRatio> copyRatios;
 
@@ -69,7 +66,7 @@ public class CopyRatioCollection {
      * Returns a new array of the copy-ratio values.
      */
     public double[] getCopyRatioValues() {
-        return copyRatios.stream().mapToDouble(CopyRatio::getCopyRatioValue).toArray();
+        return copyRatios.stream().mapToDouble(CopyRatio::getLog2CopyRatioValue).toArray();
     }
 
     /**

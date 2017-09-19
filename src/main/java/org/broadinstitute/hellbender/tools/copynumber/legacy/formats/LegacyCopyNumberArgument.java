@@ -16,6 +16,9 @@ public final class LegacyCopyNumberArgument {
     public static final String ALLELIC_COUNTS_FILE_FULL_NAME = "allelicCounts";
     public static final String ALLELIC_COUNTS_FILE_SHORT_NAME = "AC";
 
+    public static final String SEGMENTS_FILE_FULL_NAME = "segments";
+    public static final String SEGMENTS_FILE_SHORT_NAME = "S";
+
     public static final String OUTPUT_PREFIX_LONG_NAME = "outputPrefix";
     public static final String OUTPUT_PREFIX_SHORT_NAME = "pre";
 }

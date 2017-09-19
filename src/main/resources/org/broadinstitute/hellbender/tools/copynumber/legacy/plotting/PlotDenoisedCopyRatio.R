@@ -37,7 +37,7 @@ CalculateQc = function(dat) {
 
 #plotting is extracted to a function for debugging purposes
 create_copy_ratio_plots_file = function(standardized_file, denoised_file, contig_names, output_dir, output_prefix) {
-    #read in file and extract needed data
+    #read in files and extract needed data
     standardized = read.table(standardized_file, sep="\t", stringsAsFactors=FALSE, header=TRUE, check.names=FALSE)
     denoised = read.table(denoised_file, sep="\t", stringsAsFactors=FALSE, header=TRUE, check.names=FALSE)
 
@@ -60,9 +60,9 @@ create_copy_ratio_plots_file = function(standardized_file, denoised_file, contig
     plot_before_after_full_file = file.path(output_dir, paste(output_prefix, "_Before_After.png", sep=""))
     png(plot_before_after_full_file, 12, 7, units="in", type="cairo", res=300, bg="white")
     par(mfrow=c(2,1), cex=0.75, las=1)
-    SetUpPlot("Standardized copy ratio", 0, max(standardized$VALUE), paste("After standardization, QC = ", round(preQc, 3), sep=""), contig_names, contig_starts, contig_ends, FALSE)
+    SetUpPlot("Standardized copy ratio", 0, max(standardized$COPY_RATIO), paste("After standardization, QC = ", round(preQc, 3), sep=""), contig_names, contig_starts, contig_ends, FALSE)
     PlotCopyRatio(standardized, pre_color_blue, contig_names, contig_starts)
-    SetUpPlot("Denoised copy ratio", 0, max(denoised$VALUE), paste("After denoising, QC = ", round(postQc, 3), sep=""), contig_names, contig_starts, contig_ends, TRUE)
+    SetUpPlot("Denoised copy ratio", 0, max(denoised$COPY_RATIO), paste("After denoising, QC = ", round(postQc, 3), sep=""), contig_names, contig_starts, contig_ends, TRUE)
     PlotCopyRatio(denoised, post_color_green, contig_names, contig_starts)
     dev.off()
     #plot up to CR = 4

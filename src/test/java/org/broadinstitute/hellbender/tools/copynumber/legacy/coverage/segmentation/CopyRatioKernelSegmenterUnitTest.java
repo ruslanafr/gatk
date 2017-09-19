@@ -9,7 +9,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -50,20 +49,20 @@ public class CopyRatioKernelSegmenterUnitTest {
                 new Array2DRowRealMatrix(dataGaussian.stream().mapToDouble(Double::doubleValue).toArray())
         );
 
-        final CopyRatioSegmentationResult segmentsExpected =
-                new CopyRatioSegmentationResult(Arrays.asList(
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("1", 1, 1000), dataGaussian.subList(0, 100)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("1", 1001, 2000), dataGaussian.subList(100, 200)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("1", 2001, 2500), dataGaussian.subList(200, 250)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("2", 1, 500), dataGaussian.subList(250, 300)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("2", 501, 1500), dataGaussian.subList(300, 400)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("2", 1501, 2500), dataGaussian.subList(400, 500)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("3", 1, 1000), dataGaussian.subList(500, 600)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("3", 1001, 2000), dataGaussian.subList(600, 700)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("3", 2001, 2500), dataGaussian.subList(700, 750)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("4", 1, 500), dataGaussian.subList(750, 800)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("4", 501, 1500), dataGaussian.subList(800, 900)),
-                        new CopyRatioSegmentationResult.CopyRatioSegment(new SimpleInterval("4", 1501, 2500), dataGaussian.subList(900, 1000))));
+        final CopyRatioSegmentCollection segmentsExpected =
+                new CopyRatioSegmentCollection(Arrays.asList(
+                        new CopyRatioSegment(new SimpleInterval("1", 1, 1000), dataGaussian.subList(0, 100)),
+                        new CopyRatioSegment(new SimpleInterval("1", 1001, 2000), dataGaussian.subList(100, 200)),
+                        new CopyRatioSegment(new SimpleInterval("1", 2001, 2500), dataGaussian.subList(200, 250)),
+                        new CopyRatioSegment(new SimpleInterval("2", 1, 500), dataGaussian.subList(250, 300)),
+                        new CopyRatioSegment(new SimpleInterval("2", 501, 1500), dataGaussian.subList(300, 400)),
+                        new CopyRatioSegment(new SimpleInterval("2", 1501, 2500), dataGaussian.subList(400, 500)),
+                        new CopyRatioSegment(new SimpleInterval("3", 1, 1000), dataGaussian.subList(500, 600)),
+                        new CopyRatioSegment(new SimpleInterval("3", 1001, 2000), dataGaussian.subList(600, 700)),
+                        new CopyRatioSegment(new SimpleInterval("3", 2001, 2500), dataGaussian.subList(700, 750)),
+                        new CopyRatioSegment(new SimpleInterval("4", 1, 500), dataGaussian.subList(750, 800)),
+                        new CopyRatioSegment(new SimpleInterval("4", 501, 1500), dataGaussian.subList(800, 900)),
+                        new CopyRatioSegment(new SimpleInterval("4", 1501, 2500), dataGaussian.subList(900, 1000))));
 
         return new Object[][]{
                 {denoisedCopyRatios, segmentsExpected}
@@ -72,7 +71,7 @@ public class CopyRatioKernelSegmenterUnitTest {
 
     @Test(dataProvider = "dataCopyRatioKernelSegmenter")
     public void testCopyRatioKernelSegmenter(final CopyRatioCollection denoisedCopyRatios,
-                                             final CopyRatioSegmentationResult segmentsExpected) {
+                                             final CopyRatioSegmentCollection segmentsExpected) {
         final int maxNumChangepointsPerChromosome = 25;
         final double kernelVariance = 0.;
         final int kernelApproximationDimension = 20;
@@ -80,7 +79,7 @@ public class CopyRatioKernelSegmenterUnitTest {
         final double numChangepointsPenaltyLinearFactor = 2.;
         final double numChangepointsPenaltyLogLinearFactor = 2.;
 
-        final CopyRatioSegmentationResult segments = new CopyRatioKernelSegmenter(denoisedCopyRatios)
+        final CopyRatioSegmentCollection segments = new CopyRatioKernelSegmenter(denoisedCopyRatios)
                 .findSegmentation(maxNumChangepointsPerChromosome, kernelVariance, kernelApproximationDimension,
                         windowSizes, numChangepointsPenaltyLinearFactor, numChangepointsPenaltyLogLinearFactor);
         Assert.assertEquals(segments, segmentsExpected);

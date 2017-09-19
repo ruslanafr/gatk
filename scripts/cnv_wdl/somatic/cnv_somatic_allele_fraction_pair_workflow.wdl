@@ -50,7 +50,7 @@ workflow CNVSomaticAlleleFractionPairWorkflow {
         input:
             entity_id = GetBayesianHetCoverage.tumor_entity_id,
             hets = GetBayesianHetCoverage.tumor_hets,
-            denoised_copy_ratio = tumor_denoised_copy_ratio,
+            denoised_copy_ratios = tumor_denoised_copy_ratios,
             called_copy_ratio_segments = tumor_called_copy_ratio_segments,
             is_wgs = is_wgs,
             gatk_jar = gatk_jar,
@@ -61,7 +61,7 @@ workflow CNVSomaticAlleleFractionPairWorkflow {
         input:
             entity_id = GetBayesianHetCoverage.tumor_entity_id,
             hets = GetBayesianHetCoverage.tumor_hets,
-            denoised_copy_ratio = tumor_denoised_copy_ratio,
+            denoised_copy_ratios = tumor_denoised_copy_ratios,
             acnv_segments = AllelicCNV.acnv_segments,
             ref_fasta_dict = ref_fasta_dict,
             gatk_jar = gatk_jar,
@@ -72,7 +72,7 @@ workflow CNVSomaticAlleleFractionPairWorkflow {
         input:
             entity_id = GetBayesianHetCoverage.tumor_entity_id,
             hets = GetBayesianHetCoverage.tumor_hets,
-            denoised_copy_ratio = tumor_denoised_copy_ratio,
+            denoised_copy_ratios = tumor_denoised_copy_ratios,
             acnv_segments = AllelicCNV.acnv_segments,
             gatk_jar = gatk_jar,
             gatk_docker = gatk_docker
@@ -310,6 +310,6 @@ task ConvertACNVResults {
         File cnb_called_copy_ratio_segments = "${output_dir_}/${entity_id}-sim-final.cnb_called.seg"
         File cnv_segments = "${output_dir_}/${entity_id}-sim-final.cnv.seg"
         File titan_hets = "${output_dir_}/${entity_id}-sim-final.titan.het.tsv"
-        File titan_denoised_copy_ratio = "${output_dir_}/${entity_id}-sim-final.titan.denoisedCR.tsv"
+        File titan_denoised_copy_ratios = "${output_dir_}/${entity_id}-sim-final.titan.denoisedCR.tsv"
     }
 }

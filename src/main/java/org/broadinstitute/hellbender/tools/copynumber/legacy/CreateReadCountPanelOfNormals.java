@@ -60,8 +60,8 @@ import java.util.stream.Collectors;
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 @CommandLineProgramProperties(
-        summary = "Create a panel of normals for copy-ratio denoising given the read counts for samples in the panel.",
-        oneLineSummary = "Create a panel of normals for copy-ratio denoising.",
+        summary = "Create a panel of normals for read-count denoising given the read counts for samples in the panel.",
+        oneLineSummary = "Create a panel of normals for read-count denoising.",
         programGroup = CopyNumberProgramGroup.class
 )
 @DocumentedFeature

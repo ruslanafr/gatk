@@ -48,26 +48,25 @@ workflow CNVSomaticCopyRatioBAMWorkflow {
     call ModelSegments {
         input:
             entity_id = CollectReadCounts.entity_id,
-            denoised_copy_ratio = DenoiseReadCounts.denoised_copy_ratio,
+            denoised_copy_ratios = DenoiseReadCounts.denoised_copy_ratios,
             gatk_jar = gatk_jar,
             gatk_docker = gatk_docker
     }
 
-    call CallSegments {
+    call CallCopyRatioSegments {
         input:
             entity_id = CollectReadCounts.entity_id,
-            denoised_copy_ratio = DenoiseReadCounts.denoised_copy_ratio,
+            denoised_copy_ratios = DenoiseReadCounts.denoised_copy_ratios,
             copy_ratio_segments = ModelSegments.copy_ratio_segments,
             gatk_jar = gatk_jar,
             gatk_docker = gatk_docker
     }
 
-    call PlotSegmentedCopyRatio  {
+    call PlotDenoisedCopyRatios  {
         input:
             entity_id = CollectReadCounts.entity_id,
-            standardized_copy_ratio = DenoiseReadCounts.standardized_copy_ratio,
-            denoised_copy_ratio = DenoiseReadCounts.denoised_copy_ratio,
-            called_copy_ratio_segments = CallSegments.called_copy_ratio_segments,
+            standardized_copy_ratios = DenoiseReadCounts.standardized_copy_ratios,
+            denoised_copy_ratios = DenoiseReadCounts.denoised_copy_ratios,
             ref_fasta_dict = ref_fasta_dict,
             gatk_jar = gatk_jar,
             gatk_docker = gatk_docker
@@ -76,12 +75,11 @@ workflow CNVSomaticCopyRatioBAMWorkflow {
     output {
         String entity_id = CollectReadCounts.entity_id
         File read_counts = CollectReadCounts.read_counts
-        File standardized_copy_ratio = DenoiseReadCounts.standardized_copy_ratio
-        File denoised_copy_ratio = DenoiseReadCounts.denoised_copy_ratio
-        File called_copy_ratio_segments = CallSegments.called_copy_ratio_segments
-        File segmented_copy_ratio_plot = PlotSegmentedCopyRatio.segmented_copy_ratio_plot
-        File copy_ratio_before_after_denoising_plot = PlotSegmentedCopyRatio.copy_ratio_before_after_denoising_plot
-        File copy_ratio_before_after_denoising_lim_4_plot = PlotSegmentedCopyRatio.copy_ratio_before_after_denoising_lim_4_plot
+        File standardized_copy_ratios = DenoiseReadCounts.standardized_copy_ratio
+        File denoised_copy_ratios = DenoiseReadCounts.denoised_copy_ratio
+        File called_copy_ratio_segments = CallCopyRatioSegments.called_copy_ratio_segments
+        File denoised_copy_ratios_plot = PlotDenoisedCopyRatios.denoised_copy_ratios_plot
+        File denoised_copy_ratios_lim_4_plot = PlotDenoisedCopyRatios.denoised_copy_ratios_lim_4_plot
     }
 }
 
@@ -118,15 +116,15 @@ task DenoiseReadCounts {
     }
 
     output {
-        File standardized_copy_ratio = "${entity_id}.standardizedCR.tsv"
-        File denoised_copy_ratio = "${entity_id}.denoisedCR.tsv"
+        File standardized_copy_ratios = "${entity_id}.standardizedCR.tsv"
+        File denoised_copy_ratios = "${entity_id}.denoisedCR.tsv"
     }
 }
 
 # Segment the denoised copy-ratio profile
 task ModelSegments {
     String entity_id
-    File denoised_copy_ratio
+    File denoised_copy_ratios
     Int? max_num_segments_per_chromosome
     Float? kernel_variance
     Int? kernel_approximation_dimension
@@ -143,7 +141,7 @@ task ModelSegments {
 
     command {
         java -Xmx${default="4" mem}g -jar ${gatk_jar} ModelSegments \
-            --input ${denoised_copy_ratio} \
+            --input ${denoised_copy_ratios} \
             --maxNumSegmentsPerChromosome ${default="50" max_num_segments_per_chromosome} \
             --kernelVariance ${default="0.0" kernel_variance} \
             --kernelApproximationDimension ${default="100" kernel_approximation_dimension} \
@@ -166,9 +164,9 @@ task ModelSegments {
 }
 
 # Make calls (amplified, neutral, or deleted) on each segment
-task CallSegments {
+task CallCopyRatioSegments {
     String entity_id
-    File denoised_copy_ratio
+    File denoised_copy_ratios
     File copy_ratio_segments
     String gatk_jar
 
@@ -179,11 +177,10 @@ task CallSegments {
     Int? disk_space_gb
 
     command {
-        java -Xmx${default="4" mem}g -jar ${gatk_jar} CallSegments \
-            --tangentNormalized ${denoised_copy_ratio} \
+        java -Xmx${default="4" mem}g -jar ${gatk_jar} CallCopyRatioSegments \
+            --denoisedCopyRatios ${denoised_copy_ratios} \
             --segments ${copy_ratio_segments} \
-            --legacy false \
-            --output ${entity_id}.called
+            --output ${entity_id}.called.seg
     }
 
     runtime {
@@ -198,12 +195,11 @@ task CallSegments {
     }
 }
 
-# Create plots of coverage data and copy-ratio estimates
-task PlotSegmentedCopyRatio {
+# Create plots of denoised copy ratios
+task PlotDenoisedCopyRatios {
     String entity_id
-    File standardized_copy_ratio
-    File denoised_copy_ratio
-    File called_copy_ratio_segments
+    File standardized_copy_ratios
+    File denoised_copy_ratios
     File ref_fasta_dict
     Int? minimum_contig_length
     String? output_dir
@@ -220,10 +216,9 @@ task PlotSegmentedCopyRatio {
 
     command {
         mkdir -p ${output_dir_}; \
-        java -Xmx${default="4" mem}g -jar ${gatk_jar} PlotSegmentedCopyRatio \
-            --preTangentNormalized ${standardized_copy_ratio} \
-            --tangentNormalized ${denoised_copy_ratio} \
-            --segments ${called_copy_ratio_segments} \
+        java -Xmx${default="4" mem}g -jar ${gatk_jar} PlotDenoisedCopyRatios \
+            --standardizedCopyRatios ${standardized_copy_ratios} \
+            --denoisedCopyRatios ${denoised_copy_ratios} \
             -SD ${ref_fasta_dict} \
             --minimumContigLength ${default="2000000" minimum_contig_length} \
             --output ${output_dir_} \
@@ -238,8 +233,7 @@ task PlotSegmentedCopyRatio {
     }
 
     output {
-        File segmented_copy_ratio_plot = "${output_dir_}/${entity_id}_FullGenome.png"
-        File copy_ratio_before_after_denoising_plot = "${output_dir_}/${entity_id}_Before_After.png"
-        File copy_ratio_before_after_denoising_lim_4_plot = "${output_dir_}/${entity_id}_Before_After_CR_Lim_4.png"
+        File denoised_copy_ratios_plot = "${output_dir_}/${entity_id}_Before_After.png"
+        File denoised_copy_ratios_lim_4_plot = "${output_dir_}/${entity_id}_Before_After_CR_Lim_4.png"
     }
 }

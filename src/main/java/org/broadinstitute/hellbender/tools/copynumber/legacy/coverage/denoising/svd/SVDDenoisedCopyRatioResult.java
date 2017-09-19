@@ -1,12 +1,15 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd;
 
 import org.apache.commons.math3.linear.RealMatrix;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatio;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.File;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Represents copy ratios for a sample that has been standardized and denoised by an {@link SVDReadCountPanelOfNormals}.
@@ -45,9 +48,17 @@ public final class SVDDenoisedCopyRatioResult {
                       final File denoisedCopyRatiosFile) {
         Utils.nonNull(standardizedCopyRatiosFile);
         Utils.nonNull(denoisedCopyRatiosFile);
-        final CopyRatioCollection standardizedCopyRatios = new CopyRatioCollection(sampleName, intervals, standardizedCopyRatioValues);
+        final CopyRatioCollection standardizedCopyRatios = new CopyRatioCollection(
+                sampleName,
+                IntStream.range(0, intervals.size()).boxed()
+                        .map(i -> new CopyRatio(intervals.get(i), standardizedCopyRatioValues.getEntry(0, i)))
+                        .collect(Collectors.toList()));
         standardizedCopyRatios.write(standardizedCopyRatiosFile);
-        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(sampleName, intervals, denoisedCopyRatioValues);
+        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(
+                sampleName,
+                IntStream.range(0, intervals.size()).boxed()
+                        .map(i -> new CopyRatio(intervals.get(i), denoisedCopyRatioValues.getEntry(0, i)))
+                        .collect(Collectors.toList()));
         denoisedCopyRatios.write(denoisedCopyRatiosFile);
     }
 }

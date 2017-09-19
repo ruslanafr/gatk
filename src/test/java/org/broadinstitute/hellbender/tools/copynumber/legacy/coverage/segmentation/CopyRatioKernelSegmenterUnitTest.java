@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatio;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.utils.segmentation.KernelSegmenterUnitTest;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -42,12 +43,11 @@ public class CopyRatioKernelSegmenterUnitTest {
                         (i % 250) * 10 + 10))         //intervals for copy-ratio data points have length = 10
                 .collect(Collectors.toList());
 
-        final CopyRatioCollection denoisedCopyRatios =
-                new CopyRatioCollection(
+        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(
                 sampleName,
-                intervals,
-                new Array2DRowRealMatrix(dataGaussian.stream().mapToDouble(Double::doubleValue).toArray())
-        );
+                IntStream.range(0, intervals.size()).boxed()
+                        .map(i -> new CopyRatio(intervals.get(i), dataGaussian.get(i)))
+                        .collect(Collectors.toList()));
 
         final CopyRatioSegmentCollection segmentsExpected =
                 new CopyRatioSegmentCollection(

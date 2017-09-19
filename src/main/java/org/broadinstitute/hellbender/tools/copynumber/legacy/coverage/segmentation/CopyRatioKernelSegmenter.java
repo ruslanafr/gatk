@@ -42,16 +42,16 @@ public final class CopyRatioKernelSegmenter {
     public CopyRatioKernelSegmenter(final CopyRatioCollection denoisedCopyRatios) {
         Utils.nonNull(denoisedCopyRatios);
         this.denoisedCopyRatios = denoisedCopyRatios;
-        intervalsPerChromosome = denoisedCopyRatios.getCopyRatios().stream().map(CopyRatio::getInterval)
+        intervalsPerChromosome = denoisedCopyRatios.getRecords().stream().map(CopyRatio::getInterval)
                 .collect(Collectors.groupingBy(
                         SimpleInterval::getContig,
                         LinkedHashMap::new,
                         Collectors.mapping(Function.identity(), Collectors.toList())));
-        final double[] denoisedCopyRatioValues = denoisedCopyRatios.getCopyRatioValues();
-        denoisedCopyRatiosPerChromosome = IntStream.range(0, denoisedCopyRatios.getCopyRatios().size()).boxed()
+        final List<Double> denoisedCopyRatioValues = denoisedCopyRatios.getCopyRatioValues();
+        denoisedCopyRatiosPerChromosome = IntStream.range(0, denoisedCopyRatios.getRecords().size()).boxed()
                 .map(i -> new ImmutablePair<>(
-                        denoisedCopyRatios.getCopyRatios().get(i).getContig(),
-                        denoisedCopyRatioValues[i]))
+                        denoisedCopyRatios.getRecords().get(i).getContig(),
+                        denoisedCopyRatioValues.get(i)))
                 .collect(Collectors.groupingBy(
                         Pair::getKey,
                         LinkedHashMap::new,
@@ -75,7 +75,7 @@ public final class CopyRatioKernelSegmenter {
                 "Log-linear factor for the penalty on the number of changepoints per chromosome must be non-negative.");
 
         logger.info(String.format("Finding changepoints in %d data points and %d chromosomes...",
-                denoisedCopyRatios.getCopyRatios().size(), denoisedCopyRatiosPerChromosome.size()));
+                denoisedCopyRatios.getRecords().size(), denoisedCopyRatiosPerChromosome.size()));
 
         //loop over chromosomes, find changepoints, and create copy-ratio segments
         final List<CopyRatioSegment> segments = new ArrayList<>();

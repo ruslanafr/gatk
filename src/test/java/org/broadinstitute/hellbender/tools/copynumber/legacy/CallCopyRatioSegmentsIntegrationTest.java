@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy;
 
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.CalledCopyRatioSegment;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.CalledCopyRatioSegmentCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
 import org.testng.Assert;
@@ -20,7 +19,7 @@ public final class CallCopyRatioSegmentsIntegrationTest extends CommandLineProgr
 
     @Test
     public void testCallSegments() {
-        final File outputFile = new File("/home/slee/working/gatk/test.tsv");//createTempFile("test",".txt");
+        final File outputFile = createTempFile("test",".txt");
 
         final String[] arguments = {
                 "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, TEST_DENOISED_COPY_RATIOS.getAbsolutePath(),
@@ -30,6 +29,6 @@ public final class CallCopyRatioSegmentsIntegrationTest extends CommandLineProgr
         runCommandLine(arguments);
 
         final CalledCopyRatioSegmentCollection calledCopyRatioSegments = new CalledCopyRatioSegmentCollection(outputFile);
-        Assert.assertEquals(calledCopyRatioSegments.getSegments().stream().map(s -> s.getCall().getOutputString()).toArray(), new String[] {"+", "-", "0", "0"});
+        Assert.assertEquals(calledCopyRatioSegments.getRecords().stream().map(s -> s.getCall().getOutputString()).toArray(), new String[] {"+", "-", "0", "0"});
     }
 }

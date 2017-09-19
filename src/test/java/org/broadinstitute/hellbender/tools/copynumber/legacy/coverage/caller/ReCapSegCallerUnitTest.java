@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatio;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegment;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.CalledCopyRatioSegment.Call.AMPLIFICATION_CALL;
 import static org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.CalledCopyRatioSegment.Call.DELETION_CALL;
@@ -55,7 +57,11 @@ public final class ReCapSegCallerUnitTest extends BaseTest {
 
         final RealMatrix denoisedCopyRatioValues = new Array2DRowRealMatrix(1, intervals.size());
         denoisedCopyRatioValues.setRow(0, testData.stream().mapToDouble(x -> x).toArray());
-        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(sampleName, intervals, denoisedCopyRatioValues);
+        final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(
+                sampleName,
+                IntStream.range(0, intervals.size()).boxed()
+                        .map(i -> new CopyRatio(intervals.get(i), denoisedCopyRatioValues.getEntry(0, i)))
+                        .collect(Collectors.toList()));
 
         final CopyRatioSegmentCollection copyRatioSegments = new CopyRatioSegmentCollection(sampleName,
                 Arrays.asList(
@@ -67,12 +73,14 @@ public final class ReCapSegCallerUnitTest extends BaseTest {
         final CalledCopyRatioSegmentCollection calledCopyRatioSegments = new ReCapSegCaller(denoisedCopyRatios, copyRatioSegments).makeCalls();
 
         Assert.assertEquals(copyRatioSegments.getSampleName(), calledCopyRatioSegments.getSampleName());
-        Assert.assertEquals(copyRatioSegments.getIntervals(), calledCopyRatioSegments.getIntervals());
         Assert.assertEquals(
-                copyRatioSegments.getSegments().stream().map(CopyRatioSegment::getMeanLog2CopyRatio).collect(Collectors.toList()),
-                calledCopyRatioSegments.getSegments().stream().map(CopyRatioSegment::getMeanLog2CopyRatio).collect(Collectors.toList()));
+                copyRatioSegments.getRecords().stream().map(CopyRatioSegment::getInterval).collect(Collectors.toList()),
+                calledCopyRatioSegments.getRecords().stream().map(CopyRatioSegment::getInterval).collect(Collectors.toList()));
         Assert.assertEquals(
-                calledCopyRatioSegments.getSegments().stream().map(CalledCopyRatioSegment::getCall).collect(Collectors.toList()),
+                copyRatioSegments.getRecords().stream().map(CopyRatioSegment::getMeanLog2CopyRatio).collect(Collectors.toList()),
+                calledCopyRatioSegments.getRecords().stream().map(CopyRatioSegment::getMeanLog2CopyRatio).collect(Collectors.toList()));
+        Assert.assertEquals(
+                calledCopyRatioSegments.getRecords().stream().map(CalledCopyRatioSegment::getCall).collect(Collectors.toList()),
                 Arrays.asList(AMPLIFICATION_CALL, DELETION_CALL, NEUTRAL_CALL, NEUTRAL_CALL));
     }
 }

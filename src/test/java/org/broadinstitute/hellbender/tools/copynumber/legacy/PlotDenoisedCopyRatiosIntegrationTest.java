@@ -12,7 +12,7 @@ import java.io.File;
 import java.io.IOException;
 
 public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProgramTest {
-    private static String TEST_SUB_DIR = toolsTestDir + "copynumber/plotting/";
+    private static String TEST_SUB_DIR = toolsTestDir + "copynumber/legacy/plotting/";
 
     //test files
     private static final File STANDARDIZED_COPY_RATIOS_FILE = new File(TEST_SUB_DIR, "plotting-copy-ratios.tsv"); //just use the TN file

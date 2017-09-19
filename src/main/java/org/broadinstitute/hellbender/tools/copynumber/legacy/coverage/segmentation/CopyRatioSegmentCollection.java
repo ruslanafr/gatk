@@ -1,79 +1,49 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation;
 
-import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.io.IOUtils;
+import org.broadinstitute.hellbender.utils.tsv.DataLine;
+import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
-/**
- * Represents a legacy copy-ratio segmentation.
- *
- * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
- */
-public final class CopyRatioSegmentCollection {
+public final class CopyRatioSegmentCollection extends TSVCollection<CopyRatioSegment> {
+    enum CopyRatioSegmentTableColumn {
+        CONTIG,
+        START,
+        END,
+        NUM_POINTS,
+        MEAN_LOG2_COPY_RATIO;
 
-    private final String sampleName;
-    private final List<CopyRatioSegment> segments;
+        static final TableColumnCollection COLUMNS = new TableColumnCollection(
+                CONTIG, START, END, NUM_POINTS, MEAN_LOG2_COPY_RATIO);
+    }
+    private static final Function<DataLine, CopyRatioSegment> COPY_RATIO_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION = dataLine -> {
+        final String contig = dataLine.get(CopyRatioSegmentTableColumn.CONTIG);
+        final int start = dataLine.getInt(CopyRatioSegmentTableColumn.START);
+        final int end = dataLine.getInt(CopyRatioSegmentTableColumn.END);
+        final int numPoints = dataLine.getInt(CopyRatioSegmentTableColumn.NUM_POINTS);
+        final double meanLog2CopyRatio = dataLine.getDouble(CopyRatioSegmentTableColumn.MEAN_LOG2_COPY_RATIO);
+        final SimpleInterval interval = new SimpleInterval(contig, start, end);
+        return new CopyRatioSegment(interval, numPoints, meanLog2CopyRatio);
+    };
+
+    private static final BiConsumer<CopyRatioSegment, DataLine> COPY_RATIO_SEGMENT_RECORD_AND_DATA_LINE_BI_CONSUMER = (copyRatioSegment, dataLine) ->
+            dataLine.append(copyRatioSegment.getInterval().getContig())
+                    .append(copyRatioSegment.getInterval().getStart())
+                    .append(copyRatioSegment.getInterval().getEnd())
+                    .append(copyRatioSegment.getNumPoints())
+                    .append(copyRatioSegment.getMeanLog2CopyRatio());
 
     public CopyRatioSegmentCollection(final File inputFile) {
-        IOUtils.canReadFile(inputFile);
-
-        try (final CopyRatioSegmentReader reader = new CopyRatioSegmentReader(inputFile)) {
-            sampleName = reader.getSampleName();
-            segments = reader.stream().collect(Collectors.toList());
-        } catch (final IOException | UncheckedIOException e) {
-            throw new UserException.CouldNotReadInputFile(inputFile, e);
-        }
+        super(inputFile, CopyRatioSegmentTableColumn.COLUMNS, COPY_RATIO_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION, COPY_RATIO_SEGMENT_RECORD_AND_DATA_LINE_BI_CONSUMER);
     }
 
     public CopyRatioSegmentCollection(final String sampleName,
-                                      final List<CopyRatioSegment> segments) {
-        this.sampleName = sampleName;
-        this.segments = Utils.nonNull(segments);
-    }
-
-    public String getSampleName() {
-        return sampleName;
-    }
-
-    public List<SimpleInterval> getIntervals() {
-        return segments.stream().map(CopyRatioSegment::getInterval).collect(Collectors.toList());
-    }
-
-    public List<CopyRatioSegment> getSegments() {
-        return Collections.unmodifiableList(segments);
-    }
-
-    public void write(final File outputFile) {
-        try (final CopyRatioSegmentWriter writer = new CopyRatioSegmentWriter(outputFile, sampleName)) {
-            writer.writeSampleName();
-            writer.writeAllRecords(segments);
-        } catch (final IOException e) {
-            throw new UserException.CouldNotCreateOutputFile(outputFile, e);
-        }
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        final CopyRatioSegmentCollection that = (CopyRatioSegmentCollection) o;
-        return segments.equals(that.segments);
-    }
-
-    @Override
-    public int hashCode() {
-        return segments.hashCode();
+                                      final List<CopyRatioSegment> copyRatioSegments) {
+        super(sampleName, copyRatioSegments, CopyRatioSegmentTableColumn.COLUMNS, COPY_RATIO_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION, COPY_RATIO_SEGMENT_RECORD_AND_DATA_LINE_BI_CONSUMER);
     }
 }

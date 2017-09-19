@@ -34,8 +34,8 @@ public final class ReCapSegCaller {
     // Number of standard deviations before assuming that a target was an outlier in a segment
     private static final double Z_THRESHOLD = 2;
 
-    final CopyRatioCollection denoisedCopyRatios;
-    final CopyRatioSegmentCollection copyRatioSegments;
+    private final CopyRatioCollection denoisedCopyRatios;
+    private final CopyRatioSegmentCollection copyRatioSegments;
     private final LinkedHashMap<CopyRatioSegment, List<CopyRatio>> segmentToCopyRatiosMap;
 
     /**
@@ -54,17 +54,17 @@ public final class ReCapSegCaller {
                                                                                                     final CopyRatioSegmentCollection copyRatioSegments) {
         final LinkedHashMap<CopyRatioSegment, List<CopyRatio>> segmentToCopyRatiosMap = new LinkedHashMap<>();
         int index = 0;
-        for (final CopyRatioSegment segment : copyRatioSegments.getSegments()) {
+        for (final CopyRatioSegment segment : copyRatioSegments.getRecords()) {
             final int numPoints = segment.getNumPoints();
-            final int firstPointStart = denoisedCopyRatios.getCopyRatios().get(index).getStart();
-            final int lastPointEnd = denoisedCopyRatios.getCopyRatios().get(index + numPoints - 1).getEnd();
+            final int firstPointStart = denoisedCopyRatios.getRecords().get(index).getStart();
+            final int lastPointEnd = denoisedCopyRatios.getRecords().get(index + numPoints - 1).getEnd();
             if (!(firstPointStart == segment.getStart() && lastPointEnd == segment.getEnd())) {
                 throw new IllegalArgumentException("Denoised copy ratios and copy-ratio segments are not consistent.");
             }
-            segmentToCopyRatiosMap.put(segment, denoisedCopyRatios.getCopyRatios().subList(index, index + numPoints));
+            segmentToCopyRatiosMap.put(segment, denoisedCopyRatios.getRecords().subList(index, index + numPoints));
             index += numPoints;
         }
-        if (index != denoisedCopyRatios.getCopyRatios().size()) {
+        if (index != denoisedCopyRatios.getRecords().size()) {
             throw new IllegalArgumentException("Denoised copy ratios and copy-ratio segments are not consistent.");
         }
         return segmentToCopyRatiosMap;

@@ -167,11 +167,11 @@ public final class PlotDenoisedCopyRatios extends CommandLineProgram {
                                  final CopyRatioCollection copyRatios,
                                  final Map<String, Integer> contigLengthMap) {
         final Set<String> contigNamesFromMap = contigLengthMap.keySet();
-        final Set<String> contigNames = copyRatios.getCopyRatios().stream().map(CopyRatio::getContig).collect(Collectors.toSet());
+        final Set<String> contigNames = copyRatios.getRecords().stream().map(CopyRatio::getContig).collect(Collectors.toSet());
         if (!contigNamesFromMap.containsAll(contigNames)) {
             logger.warn(String.format("Contigs present in %s are missing from the sequence dictionary and will not be plotted.", copyRatiosFile.getAbsolutePath()));
         }
-        final Map<String, Integer> contigMaxPositionMap = copyRatios.getCopyRatios().stream()
+        final Map<String, Integer> contigMaxPositionMap = copyRatios.getRecords().stream()
                 .filter(i -> contigNamesFromMap.contains(i.getContig()))
                 .collect(Collectors.toMap(CopyRatio::getContig, CopyRatio::getEnd, Integer::max));
         contigMaxPositionMap.keySet().forEach(c -> Utils.validateArg(contigMaxPositionMap.get(c) <= contigLengthMap.get(c),

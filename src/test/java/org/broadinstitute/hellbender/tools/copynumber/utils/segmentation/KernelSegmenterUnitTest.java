@@ -16,7 +16,7 @@ import java.util.stream.IntStream;
 /**
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
-public class KernelSegmenterUnitTest extends BaseTest {
+public final class KernelSegmenterUnitTest extends BaseTest {
     private static final int RANDOM_SEED = 1;   //reset seed before each simulated test case
 
     @DataProvider(name = "dataKernelSegmenter")
@@ -63,6 +63,7 @@ public class KernelSegmenterUnitTest extends BaseTest {
         final List<Integer> changepointsIndexSorted = new KernelSegmenter<>(data)
                 .findChangepoints(maxNumChangepoints, kernel, kernelApproximationDimension, windowSizes,
                         numChangepointsPenaltyLinearFactor, numChangepointsPenaltyLogLinearFactor, true);
+
         Assert.assertEquals(changepoints, changepointsExpected);
         Assert.assertEquals(changepointsIndexSorted, changepointsExpected.stream().sorted().collect(Collectors.toList()));
     }
@@ -80,6 +81,7 @@ public class KernelSegmenterUnitTest extends BaseTest {
         final List<Integer> changepoints = new KernelSegmenter<>(data)
                 .findChangepoints(maxNumChangepoints, kernel, kernelApproximationDimension, windowSizes,
                         numChangepointsPenaltyLinearFactor, numChangepointsPenaltyLogLinearFactor, false);
+
         Assert.assertEquals(changepoints, changepointsExpected.subList(0, maxNumChangepoints));
     }
 
@@ -99,6 +101,7 @@ public class KernelSegmenterUnitTest extends BaseTest {
         final List<Integer> changepointsIndexSorted = new KernelSegmenter<>(data)
                 .findChangepoints(maxNumChangepoints, kernel, kernelApproximationDimension, windowSizes,
                         numChangepointsPenaltyLinearFactor, numChangepointsPenaltyLogLinearFactor, true);
+
         Assert.assertEquals(changepoints, Collections.emptyList());
         Assert.assertEquals(changepointsIndexSorted, Collections.emptyList());
     }
@@ -116,6 +119,7 @@ public class KernelSegmenterUnitTest extends BaseTest {
         final List<Integer> changepoints = new KernelSegmenter<>(data)
                 .findChangepoints(maxNumChangepoints, kernel, kernelApproximationDimension, windowSizes,
                         numChangepointsPenaltyLinearFactor, numChangepointsPenaltyLogLinearFactor, false);
+
         Assert.assertEquals(changepoints.size(), maxNumChangepoints);
         Assert.assertEquals(changepoints.subList(0, changepointsExpected.size()), changepointsExpected);
     }

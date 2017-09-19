@@ -20,7 +20,7 @@ import java.util.stream.IntStream;
 
 /**
  * <p>
- * Segments data (i.e., find multiple changepoints) using a method based on the kernel-segmentation algorithm
+ * Segments data (i.e., finds multiple changepoints) using a method based on the kernel-segmentation algorithm
  * described in <a href="https://hal.inria.fr/hal-01413230/document">https://hal.inria.fr/hal-01413230/document</a>,
  * which gives a framework to quickly calculate the cost of a segment given a low-rank approximation to a specified kernel.
  * However, unlike the algorithm described there, which seeks to minimize a global segmentation cost,

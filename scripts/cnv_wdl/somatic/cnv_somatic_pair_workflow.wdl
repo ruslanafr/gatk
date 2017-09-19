@@ -123,7 +123,7 @@ workflow CNVSomaticPairWorkflow {
         String? normal_entity_id = NormalCopyRatioWorkflow.entity_id
         File? normal_read_counts = NormalCopyRatioWorkflow.read_counts
         File? normal_standardized_copy_ratios = NormalCopyRatioWorkflow.standardized_copy_ratio
-        File? normal_denoised_copy_ratios = NormalCopyRatioWorkflow.denoised_copy_ratio
+        File? normal_denoised_copy_ratios = NormalCopyRatioWorkflow.denoised_copy_ratios
         File? normal_called_copy_ratio_segments = NormalCopyRatioWorkflow.called_copy_ratio_segments
         File? normal_denoised_copy_ratios_plot = NormalCopyRatioWorkflow.denoised_copy_ratios_plot
         File? normal_denoised_copy_ratios_lim_4_plot = NormalCopyRatioWorkflow.denoised_copy_ratios_lim_4_plot
@@ -131,7 +131,7 @@ workflow CNVSomaticPairWorkflow {
         String tumor_entity_id = TumorCopyRatioWorkflow.entity_id
         File tumor_read_counts = TumorCopyRatioWorkflow.read_counts
         File tumor_standardized_copy_ratios = TumorCopyRatioWorkflow.standardized_copy_ratio
-        File tumor_denoised_copy_ratios = TumorCopyRatioWorkflow.denoised_copy_ratio
+        File tumor_denoised_copy_ratios = TumorCopyRatioWorkflow.denoised_copy_ratios
         File tumor_called_copy_ratio_segments = TumorCopyRatioWorkflow.called_copy_ratio_segments
         File tumor_denoised_copy_ratios_plot = TumorCopyRatioWorkflow.denoised_copy_ratios_plot
         File tumor_denoised_copy_ratios_lim_4_plot = TumorCopyRatioWorkflow.denoised_copy_ratios_lim_4_plot

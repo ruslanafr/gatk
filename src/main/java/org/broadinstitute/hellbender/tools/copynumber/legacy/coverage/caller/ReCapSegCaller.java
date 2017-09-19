@@ -34,6 +34,8 @@ public final class ReCapSegCaller {
     // Number of standard deviations before assuming that a target was an outlier in a segment
     private static final double Z_THRESHOLD = 2;
 
+    final CopyRatioCollection denoisedCopyRatios;
+    final CopyRatioSegmentCollection copyRatioSegments;
     private final LinkedHashMap<CopyRatioSegment, List<CopyRatio>> segmentToCopyRatiosMap;
 
     /**
@@ -41,8 +43,10 @@ public final class ReCapSegCaller {
      */
     public ReCapSegCaller(final CopyRatioCollection denoisedCopyRatios,
                           final CopyRatioSegmentCollection copyRatioSegments) {
-        Utils.nonNull(denoisedCopyRatios);
-        Utils.nonNull(copyRatioSegments);
+        this.denoisedCopyRatios = Utils.nonNull(denoisedCopyRatios);
+        this.copyRatioSegments = Utils.nonNull(copyRatioSegments);
+        Utils.validateArg(denoisedCopyRatios.getSampleName().equals(copyRatioSegments.getSampleName()),
+                "Denoised copy ratios and copy-ratio segments do not have the same sample name.");
         segmentToCopyRatiosMap = constructSegmentToCopyRatiosMap(denoisedCopyRatios, copyRatioSegments);
     }
 
@@ -108,6 +112,6 @@ public final class ReCapSegCaller {
             }
         }
 
-        return new CalledCopyRatioSegmentCollection(calledSegments);
+        return new CalledCopyRatioSegmentCollection(copyRatioSegments.getSampleName(), calledSegments);
     }
 }

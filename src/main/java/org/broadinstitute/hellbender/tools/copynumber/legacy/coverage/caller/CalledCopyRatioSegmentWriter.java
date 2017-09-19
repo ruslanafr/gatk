@@ -1,4 +1,4 @@
-package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation;
+package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller;
 
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.NamedSampleFile;
@@ -9,13 +9,12 @@ import org.broadinstitute.hellbender.utils.tsv.TableWriter;
 import java.io.File;
 import java.io.IOException;
 
-final class CopyRatioSegmentWriter extends TableWriter<CopyRatioSegment> {
-
+public class CalledCopyRatioSegmentWriter extends TableWriter<CalledCopyRatioSegment> {
     private final String sampleName;
 
-    CopyRatioSegmentWriter(final File file,
-                           final String sampleName) throws IOException {
-        super(file, CopyRatioSegmentTableColumn.COLUMNS);
+    CalledCopyRatioSegmentWriter(final File file,
+                                 final String sampleName) throws IOException {
+        super(file, CalledCopyRatioSegmentTableColumn.COLUMNS);
         this.sampleName = Utils.nonNull(sampleName);
     }
 
@@ -28,7 +27,7 @@ final class CopyRatioSegmentWriter extends TableWriter<CopyRatioSegment> {
     }
 
     @Override
-    protected void composeLine(final CopyRatioSegment record, final DataLine dataLine) {
+    protected void composeLine(final CalledCopyRatioSegment record, final DataLine dataLine) {
         Utils.nonNull(record);
         Utils.nonNull(dataLine);
         dataLine.append(sampleName)
@@ -36,6 +35,7 @@ final class CopyRatioSegmentWriter extends TableWriter<CopyRatioSegment> {
                 .append(record.getInterval().getStart())
                 .append(record.getInterval().getEnd())
                 .append(record.getNumPoints())
-                .append(record.getMeanLog2CopyRatio());
+                .append(record.getMeanLog2CopyRatio())
+                .append(record.getCall().getOutputString());
     }
 }

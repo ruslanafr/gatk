@@ -2,10 +2,8 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller;
 
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegment;
 
-import java.util.List;
-
 public class CalledCopyRatioSegment extends CopyRatioSegment {
-    enum Call {
+    public enum Call {
         AMPLIFICATION_CALL("+"),
         DELETION_CALL("-"),
         NEUTRAL_CALL("0");

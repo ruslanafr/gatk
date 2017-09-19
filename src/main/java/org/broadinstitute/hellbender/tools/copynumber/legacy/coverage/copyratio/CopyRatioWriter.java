@@ -11,12 +11,15 @@ import java.io.IOException;
 
 final class CopyRatioWriter extends TableWriter<CopyRatio> {
 
-    CopyRatioWriter(final File file) throws IOException {
+    private final String sampleName;
+
+    CopyRatioWriter(final File file,
+                           final String sampleName) throws IOException {
         super(file, CopyRatioTableColumn.COLUMNS);
+        this.sampleName = Utils.nonNull(sampleName);
     }
 
-    void writeSampleName(final String sampleName) {
-        Utils.nonNull(sampleName);
+    void writeSampleName() {
         try {
             writeComment(NamedSampleFile.SAMPLE_NAME_COMMENT_PREFIX + sampleName);
         } catch (final IOException e) {

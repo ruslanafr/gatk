@@ -11,10 +11,9 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.ReC
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Calls segments as amplified, deleted or copy number neutral given files containing denoised copy ratios
@@ -63,10 +62,14 @@ public final class CallCopyRatioSegments extends CommandLineProgram {
     @Override
     protected Object doWork() {
         final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(inputDenoisedCopyRatiosFile);
-        final CopyRatioSegmentCollection segments = new CopyRatioSegmentCollection(segmentsFile);
+        final CopyRatioSegmentCollection copyRatioSegments = new CopyRatioSegmentCollection(segmentsFile);
+        Utils.validateArg(denoisedCopyRatios.getSampleName().equals(copyRatioSegments.getSampleName()),
+                "Denoised copy ratios and copy-ratio segments do not have the same sample name.");
 
-        final CalledCopyRatioSegmentCollection calledSegments = new ReCapSegCaller(denoisedCopyRatios, segments).makeCalls();
-        calledSegments.write(outFile, denoisedCopyRatios.getSampleName());
+        final CalledCopyRatioSegmentCollection calledCopyRatioSegments =
+                new ReCapSegCaller(denoisedCopyRatios, copyRatioSegments).makeCalls();
+        calledCopyRatioSegments.write(outFile);
+
         return "SUCCESS";
     }
 }

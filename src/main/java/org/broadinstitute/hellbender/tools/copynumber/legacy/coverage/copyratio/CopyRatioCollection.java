@@ -2,7 +2,6 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio
 
 import org.apache.commons.math3.linear.RealMatrix;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.NamedSampleFile;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -75,8 +74,8 @@ public class CopyRatioCollection {
      * @throws UserException.CouldNotCreateOutputFile if output file cannot be created
      */
     public void write(final File outputFile) {
-        try (final CopyRatioWriter writer = new CopyRatioWriter(outputFile)) {
-            writer.writeSampleName(sampleName);
+        try (final CopyRatioWriter writer = new CopyRatioWriter(outputFile, sampleName)) {
+            writer.writeSampleName();
             writer.writeAllRecords(copyRatios);
         } catch (final IOException e) {
             throw new UserException.CouldNotCreateOutputFile(outputFile, e);

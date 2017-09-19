@@ -1,38 +1,41 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller;
 
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegment;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
-import org.broadinstitute.hellbender.utils.tsv.TableUtils;
-import org.broadinstitute.hellbender.utils.tsv.TableWriter;
+import org.broadinstitute.hellbender.utils.io.IOUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class CalledCopyRatioSegmentCollection {
-    enum CalledCopyRatioSegmentTableColumn {
-        SAMPLE,
-        CONTIG,
-        START,
-        END,
-        NUM_POINTS,
-        MEAN_LOG2_COPY_RATIO,
-        CALL;
 
-        static final TableColumnCollection COLUMNS = new TableColumnCollection(
-                SAMPLE, CONTIG, START, END, NUM_POINTS, MEAN_LOG2_COPY_RATIO, CALL);
-    }
-
+    private final String sampleName;
     private final List<CalledCopyRatioSegment> segments;
 
-    public CalledCopyRatioSegmentCollection(final List<CalledCopyRatioSegment> segments) {
+    public CalledCopyRatioSegmentCollection(final File inputFile) {
+        IOUtils.canReadFile(inputFile);
+
+        try (final CalledCopyRatioSegmentReader reader = new CalledCopyRatioSegmentReader(inputFile)) {
+            sampleName = reader.getSampleName();
+            segments = reader.stream().collect(Collectors.toList());
+        } catch (final IOException | UncheckedIOException e) {
+            throw new UserException.CouldNotReadInputFile(inputFile, e);
+        }
+    }
+
+    public CalledCopyRatioSegmentCollection(final String sampleName,
+                                            final List<CalledCopyRatioSegment> segments) {
+        this.sampleName = Utils.nonNull(sampleName);
         this.segments = Utils.nonNull(segments);
+    }
+
+    public String getSampleName() {
+        return sampleName;
     }
 
     public List<SimpleInterval> getIntervals() {
@@ -43,23 +46,12 @@ public class CalledCopyRatioSegmentCollection {
         return Collections.unmodifiableList(segments);
     }
 
-    public void write(final File file,
-                      final String sampleName) {
-        Utils.nonNull(file);
-        Utils.nonNull(sampleName);
-        try (final TableWriter<CalledCopyRatioSegment> writer =
-                     TableUtils.writer(file, CalledCopyRatioSegmentCollection.CalledCopyRatioSegmentTableColumn.COLUMNS,
-                             (segment, dataLine) ->
-                                     dataLine.append(sampleName)
-                                             .append(segment.getContig())
-                                             .append(segment.getStart())
-                                             .append(segment.getEnd())
-                                             .append(segment.getNumPoints())
-                                             .append(segment.getMeanLog2CopyRatio())
-                                             .append(segment.getCall().getOutputString()))) {
+    public void write(final File outputFile) {
+        try (final CalledCopyRatioSegmentWriter writer = new CalledCopyRatioSegmentWriter(outputFile, sampleName)) {
+            writer.writeSampleName();
             writer.writeAllRecords(segments);
         } catch (final IOException e) {
-            throw new UserException.CouldNotCreateOutputFile(file, e);
+            throw new UserException.CouldNotCreateOutputFile(outputFile, e);
         }
     }
 

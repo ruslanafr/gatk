@@ -22,7 +22,6 @@ public final class CopyRatioSegmentCollection {
     private final String sampleName;
     private final List<CopyRatioSegment> segments;
 
-
     public CopyRatioSegmentCollection(final File inputFile) {
         IOUtils.canReadFile(inputFile);
 
@@ -40,6 +39,10 @@ public final class CopyRatioSegmentCollection {
         this.segments = Utils.nonNull(segments);
     }
 
+    public String getSampleName() {
+        return sampleName;
+    }
+
     public List<SimpleInterval> getIntervals() {
         return segments.stream().map(CopyRatioSegment::getInterval).collect(Collectors.toList());
     }
@@ -50,6 +53,7 @@ public final class CopyRatioSegmentCollection {
 
     public void write(final File outputFile) {
         try (final CopyRatioSegmentWriter writer = new CopyRatioSegmentWriter(outputFile, sampleName)) {
+            writer.writeSampleName();
             writer.writeAllRecords(segments);
         } catch (final IOException e) {
             throw new UserException.CouldNotCreateOutputFile(outputFile, e);

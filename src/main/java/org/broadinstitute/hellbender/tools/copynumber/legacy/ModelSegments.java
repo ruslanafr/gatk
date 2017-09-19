@@ -292,10 +292,10 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
     //initialize data/segment variables, some of which may be optional
     private CopyRatioCollection denoisedCopyRatios = null;
-    private CopyRatioSegmentCollection copyRatioSegments = CopyRatioSegmentCollection.NO_SEGMENTS;
+    private CopyRatioSegmentCollection copyRatioSegments = null;
     private AllelicCountCollection filteredAllelicCounts = null;
     private AllelicCountCollection allelicCounts = null;
-    private AlleleFractionSegmentCollection alleleFractionSegments = AlleleFractionSegmentCollection.NO_SEGMENTS;
+    private AlleleFractionSegmentCollection alleleFractionSegments = null;
 
     @Override
     protected void runPipeline(final JavaSparkContext ctx) {
@@ -311,7 +311,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
         if (inputDenoisedCopyRatiosFile != null) {
             readDenoisedCopyRatios();                         //TODO remove use of ReadCountCollection
             performCopyRatioSegmentation();
-            writeCopyRatioSegments(sampleName);
+            writeCopyRatioSegments();
         }
         
         if (inputAllelicCountsFile != null) {
@@ -381,9 +381,9 @@ public final class ModelSegments extends SparkCommandLineProgram {
                         numChangepointsPenaltyFactorCopyRatio, numChangepointsPenaltyFactorCopyRatio);
     }
 
-    private void writeCopyRatioSegments(final String sampleName) {
+    private void writeCopyRatioSegments() {
         final File copyRatioSegmentsFile = new File(outputPrefix + COPY_RATIO_SEGMENTS_FILE_SUFFIX);
-        copyRatioSegments.write(copyRatioSegmentsFile, sampleName);
+        copyRatioSegments.write(copyRatioSegmentsFile);
         logSegmentsFileWrittenMessage(copyRatioSegmentsFile);
     }
 

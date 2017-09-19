@@ -50,19 +50,21 @@ public class CopyRatioKernelSegmenterUnitTest {
         );
 
         final CopyRatioSegmentCollection segmentsExpected =
-                new CopyRatioSegmentCollection(Arrays.asList(
-                        new CopyRatioSegment(new SimpleInterval("1", 1, 1000), dataGaussian.subList(0, 100)),
-                        new CopyRatioSegment(new SimpleInterval("1", 1001, 2000), dataGaussian.subList(100, 200)),
-                        new CopyRatioSegment(new SimpleInterval("1", 2001, 2500), dataGaussian.subList(200, 250)),
-                        new CopyRatioSegment(new SimpleInterval("2", 1, 500), dataGaussian.subList(250, 300)),
-                        new CopyRatioSegment(new SimpleInterval("2", 501, 1500), dataGaussian.subList(300, 400)),
-                        new CopyRatioSegment(new SimpleInterval("2", 1501, 2500), dataGaussian.subList(400, 500)),
-                        new CopyRatioSegment(new SimpleInterval("3", 1, 1000), dataGaussian.subList(500, 600)),
-                        new CopyRatioSegment(new SimpleInterval("3", 1001, 2000), dataGaussian.subList(600, 700)),
-                        new CopyRatioSegment(new SimpleInterval("3", 2001, 2500), dataGaussian.subList(700, 750)),
-                        new CopyRatioSegment(new SimpleInterval("4", 1, 500), dataGaussian.subList(750, 800)),
-                        new CopyRatioSegment(new SimpleInterval("4", 501, 1500), dataGaussian.subList(800, 900)),
-                        new CopyRatioSegment(new SimpleInterval("4", 1501, 2500), dataGaussian.subList(900, 1000))));
+                new CopyRatioSegmentCollection(
+                        sampleName,
+                        Arrays.asList(
+                                new CopyRatioSegment(new SimpleInterval("1", 1, 1000), dataGaussian.subList(0, 100)),
+                                new CopyRatioSegment(new SimpleInterval("1", 1001, 2000), dataGaussian.subList(100, 200)),
+                                new CopyRatioSegment(new SimpleInterval("1", 2001, 2500), dataGaussian.subList(200, 250)),
+                                new CopyRatioSegment(new SimpleInterval("2", 1, 500), dataGaussian.subList(250, 300)),
+                                new CopyRatioSegment(new SimpleInterval("2", 501, 1500), dataGaussian.subList(300, 400)),
+                                new CopyRatioSegment(new SimpleInterval("2", 1501, 2500), dataGaussian.subList(400, 500)),
+                                new CopyRatioSegment(new SimpleInterval("3", 1, 1000), dataGaussian.subList(500, 600)),
+                                new CopyRatioSegment(new SimpleInterval("3", 1001, 2000), dataGaussian.subList(600, 700)),
+                                new CopyRatioSegment(new SimpleInterval("3", 2001, 2500), dataGaussian.subList(700, 750)),
+                                new CopyRatioSegment(new SimpleInterval("4", 1, 500), dataGaussian.subList(750, 800)),
+                                new CopyRatioSegment(new SimpleInterval("4", 501, 1500), dataGaussian.subList(800, 900)),
+                                new CopyRatioSegment(new SimpleInterval("4", 1501, 2500), dataGaussian.subList(900, 1000))));
 
         return new Object[][]{
                 {denoisedCopyRatios, segmentsExpected}

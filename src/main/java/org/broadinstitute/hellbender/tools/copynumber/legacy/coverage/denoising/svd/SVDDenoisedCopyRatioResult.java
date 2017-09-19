@@ -6,7 +6,6 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 /**

@@ -21,7 +21,7 @@ workflow CNVSomaticAlleleFractionPairWorkflow {
     File tumor_bam_idx
     File? normal_bam
     File? normal_bam_idx
-    File tumor_denoised_copy_ratio
+    File tumor_denoised_copy_ratios
     File tumor_called_copy_ratio_segments
     File ref_fasta
     File ref_fasta_dict
@@ -156,7 +156,7 @@ task GetBayesianHetCoverage {
 task AllelicCNV {
     String entity_id
     File hets
-    File denoised_copy_ratio
+    File denoised_copy_ratios
     File called_copy_ratio_segments
     Boolean is_wgs
     String gatk_jar
@@ -183,7 +183,7 @@ task AllelicCNV {
             then
                 java -Xmx${default=4 mem}g -jar ${gatk_jar} AllelicCNV \
                     --tumorHets ${hets} \
-                    --tangentNormalized ${denoised_copy_ratio} \
+                    --tangentNormalized ${denoised_copy_ratios} \
                     --segments ${called_copy_ratio_segments} \
                     --outputPrefix ${entity_id} \
                     --useAllCopyRatioSegments ${default=false use_all_copy_ratio_segments} \
@@ -200,7 +200,7 @@ task AllelicCNV {
             else
                 java -Xmx${default=4 mem}g -jar ${gatk_jar} AllelicCNV \
                     --tumorHets ${hets} \
-                    --tangentNormalized ${denoised_copy_ratio} \
+                    --tangentNormalized ${denoised_copy_ratios} \
                     --segments ${called_copy_ratio_segments} \
                     --outputPrefix ${entity_id} \
                     --useAllCopyRatioSegments ${default=false use_all_copy_ratio_segments} \
@@ -233,7 +233,7 @@ task AllelicCNV {
 task PlotACNVResults {
     String entity_id
     File hets
-    File denoised_copy_ratio
+    File denoised_copy_ratios
     File acnv_segments
     File ref_fasta_dict
     String? output_dir
@@ -252,7 +252,7 @@ task PlotACNVResults {
         mkdir -p ${output_dir_}; \
         java -Xmx${default=4 mem}g -jar ${gatk_jar} PlotACNVResults \
             --hets ${hets} \
-            --tangentNormalized ${denoised_copy_ratio} \
+            --tangentNormalized ${denoised_copy_ratios} \
             --segments ${acnv_segments} \
             -SD ${ref_fasta_dict} \
             --output ${output_dir_} \
@@ -275,7 +275,7 @@ task PlotACNVResults {
 task ConvertACNVResults {
     String entity_id
     File hets
-    File denoised_copy_ratio
+    File denoised_copy_ratios
     File acnv_segments
     String? output_dir
     String gatk_jar
@@ -293,7 +293,7 @@ task ConvertACNVResults {
         mkdir -p ${output_dir_}; \
         java -Xmx${default=4 mem}g -jar ${gatk_jar} ConvertACNVResults \
             --tumorHets ${hets} \
-            --tangentNormalized ${denoised_copy_ratio} \
+            --tangentNormalized ${denoised_copy_ratios} \
             --segments ${acnv_segments} \
             --outputDir ${output_dir_}
     }

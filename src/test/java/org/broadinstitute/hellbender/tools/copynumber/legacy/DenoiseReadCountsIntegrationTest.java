@@ -11,12 +11,12 @@ import java.io.File;
 import static org.testng.Assert.*;
 
 /**
- * Integration test for {@link DenoiseReadCounts}.
+ * Integration tests for {@link DenoiseReadCounts}.
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 public class DenoiseReadCountsIntegrationTest extends CommandLineProgramTest {
-    private static final String TEST_SUB_DIR = publicTestDir + "org/broadinstitute/hellbender/tools/copynumber/allelic";
+    private static final String TEST_SUB_DIR = toolsTestDir + "copynumber/legacy/coverage";
     private static final File NORMAL_READ_COUNT_FILE = new File("/home/slee/working/ipython/wes.tsv");
 
     @Test

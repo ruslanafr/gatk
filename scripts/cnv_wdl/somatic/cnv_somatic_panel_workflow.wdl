@@ -39,7 +39,7 @@ workflow CNVSomaticPanelWorkflow {
 
     # If true, AnnotateTargets will be run to create GC annotations and
     # explicit GC correction will be performed by CreateReadCountPanelOfNormals before PCA is performed
-    Boolean do_explicit_gc_correction = false
+    Boolean? do_explicit_gc_correction
 
     # If no target file is input, then do WGS workflow
     Boolean is_wgs = !defined(targets)
@@ -68,7 +68,7 @@ workflow CNVSomaticPanelWorkflow {
         }
     }
 
-	if (do_explicit_gc_correction) {
+	if (select_first([do_explicit_gc_correction, false])) {
 		call CNVTasks.AnnotateTargets {
             input:
                 entity_id = pon_entity_id,

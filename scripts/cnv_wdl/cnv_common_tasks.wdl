@@ -133,7 +133,7 @@ task AnnotateIntervals {
 
     command {
         java -Xmx${default="4" mem}g -jar ${gatk_jar} AnnotateTargets \
-            --targets ${targets} \
+            --targets ${intervals} \
             --reference ${ref_fasta} \
             --interval_merging_rule OVERLAPPING_ONLY \
             --output ${entity_id}.annotated.tsv

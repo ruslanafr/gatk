@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.formats;
 
 import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.tsv.*;
@@ -56,8 +57,21 @@ public abstract class TSVCollection<T extends Locatable> {
         return sampleName;
     }
 
+    /**
+     * @return  an unmodifiable view of the records contained in the collection
+     */
     public List<T> getRecords() {
         return Collections.unmodifiableList(records);
+    }
+
+    /**
+     * @return  a new modifiable list of {@link SimpleInterval}s corresponding to the {@link Locatable}s
+     *          for each record contained in the collection
+     */
+    public List<SimpleInterval> getIntervals() {
+        return records.stream()
+                .map(r -> new SimpleInterval(r.getContig(), r.getStart(), r.getEnd()))
+                .collect(Collectors.toList());
     }
 
     public void write(final File outputFile) {

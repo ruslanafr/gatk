@@ -74,8 +74,7 @@ public final class ReCapSegCallerUnitTest extends BaseTest {
 
         Assert.assertEquals(copyRatioSegments.getSampleName(), calledCopyRatioSegments.getSampleName());
         Assert.assertEquals(
-                copyRatioSegments.getRecords().stream().map(CopyRatioSegment::getInterval).collect(Collectors.toList()),
-                calledCopyRatioSegments.getRecords().stream().map(CopyRatioSegment::getInterval).collect(Collectors.toList()));
+                copyRatioSegments.getIntervals(), calledCopyRatioSegments.getIntervals());
         Assert.assertEquals(
                 copyRatioSegments.getRecords().stream().map(CopyRatioSegment::getMeanLog2CopyRatio).collect(Collectors.toList()),
                 calledCopyRatioSegments.getRecords().stream().map(CopyRatioSegment::getMeanLog2CopyRatio).collect(Collectors.toList()));

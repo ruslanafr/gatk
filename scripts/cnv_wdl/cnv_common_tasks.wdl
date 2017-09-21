@@ -67,7 +67,7 @@ task CollectReadCounts {
 
     String read_counts_tsv_filename = "${base_filename}.readCounts.tsv"
     String read_counts_hdf5_filename = if is_wgs then "${base_filename}.readCounts.hdf5" else ""
-    String intervals_filename = if is_wgs then "${base_filename}.readCounts.intervals.tsv" else padded_targets
+    String intervals_filename = if is_wgs then "${base_filename}.readCounts.intervals.tsv" else select_first([padded_targets. ""])
 
     command <<<
         if [ ${is_wgs} = true ]

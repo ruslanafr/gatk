@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller;
 
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegment;
+import org.broadinstitute.hellbender.utils.Utils;
 
 public class CalledCopyRatioSegment extends CopyRatioSegment {
     public enum Call {
@@ -22,10 +23,32 @@ public class CalledCopyRatioSegment extends CopyRatioSegment {
     public CalledCopyRatioSegment(final CopyRatioSegment segment,
                                   final Call call) {
         super(segment.getInterval(), segment.getNumPoints(), segment.getMeanLog2CopyRatio());
-        this.call = call;
+        this.call = Utils.nonNull(call);
     }
 
     public Call getCall() {
         return call;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        final CalledCopyRatioSegment that = (CalledCopyRatioSegment) o;
+        return call == that.call;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + call.hashCode();
+        return result;
     }
 }

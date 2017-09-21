@@ -37,4 +37,26 @@ public class CopyRatio implements Locatable {
     public double getLog2CopyRatioValue() {
         return log2CopyRatioValue;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final CopyRatio copyRatio = (CopyRatio) o;
+        return Double.compare(copyRatio.log2CopyRatioValue, log2CopyRatioValue) == 0 && interval.equals(copyRatio.interval);
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        result = interval.hashCode();
+        temp = Double.doubleToLongBits(log2CopyRatioValue);
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        return result;
+    }
 }

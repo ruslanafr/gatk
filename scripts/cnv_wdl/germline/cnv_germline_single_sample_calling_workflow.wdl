@@ -80,7 +80,7 @@ workflow CNVGermlineSingleSampleWorkflow {
       gatk_docker = gatk_docker
   }
 
-  call CNVTasks.AnnotateTargets {
+  call CNVTasks.AnnotateIntervals {
     input:
       entity_id = CollectReadCounts.entity_id,
       targets = CollectReadCounts.read_counts,
@@ -95,7 +95,7 @@ workflow CNVGermlineSingleSampleWorkflow {
     input:
       entity_id = CollectReadCounts.entity_id,
       coverage = CollectReadCounts.read_counts,
-      annotated_targets = AnnotateTargets.annotated_targets,
+      annotated_intervals = AnnotateIntervals.annotated_intervals,
       gatk_jar = gatk_jar,
       gatk_docker = gatk_docker
   }

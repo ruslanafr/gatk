@@ -94,10 +94,10 @@ workflow CNVGermlinePanelWorkflow {
       gatk_docker = gatk_docker
   }
 
-  call CNVTasks.AnnotateTargets {
+  call CNVTasks.AnnotateIntervals {
     input:
       entity_id = combined_entity_id,
-      targets = CollectReadCounts.read_counts[0],
+      intervals = CollectReadCounts.intervals,
       ref_fasta = ref_fasta,
       ref_fasta_fai = ref_fasta_fai,
       ref_fasta_dict = ref_fasta_dict,
@@ -109,7 +109,7 @@ workflow CNVGermlinePanelWorkflow {
     input:
       entity_id = combined_entity_id,
       coverage = CombineReadCounts.combined_coverage,
-      annotated_targets = AnnotateTargets.annotated_targets,
+      annotated_intervals = AnnotateIntervals.annotated_intervals,
       gatk_jar = gatk_jar,
       gatk_docker = gatk_docker
   } 

@@ -67,6 +67,7 @@ task CollectReadCounts {
 
     String read_counts_tsv_filename = "${base_filename}.readCounts.tsv"
     String read_counts_hdf5_filename = if is_wgs then "${base_filename}.readCounts.hdf5" else ""
+    String intervals_filename = if is_wgs then "${base_filename}.readCounts.intervals.tsv" else padded_targets
 
     command <<<
         if [ ${is_wgs} = true ]
@@ -111,13 +112,14 @@ task CollectReadCounts {
         String entity_id = base_filename
         File read_counts = read_counts_tsv_filename
         File read_counts_hdf5 = read_counts_hdf5_filename   #"" if is_wgs = false
+        File intervals = intervals_filename                 #padded_targets if is_wgs = false
     }
 }
 
 # Create a target file with GC annotations
-task AnnotateTargets {
+task AnnotateIntervals {
     String entity_id
-    File targets
+    File intervals
     File ref_fasta
     File ref_fasta_fai
     File ref_fasta_dict
@@ -145,7 +147,7 @@ task AnnotateTargets {
     }
 
     output {
-        File annotated_targets = "${entity_id}.annotated.tsv"
+        File annotated_intervals = "${entity_id}.annotated.tsv"
     }
 }
 
@@ -153,7 +155,7 @@ task AnnotateTargets {
 task CorrectGCBias {
     String entity_id
     File coverage   # This can be either single-sample or multi-sample
-    File annotated_targets
+    File annotated_intervals
     String gatk_jar
 
     # Runtime parameters
@@ -165,7 +167,7 @@ task CorrectGCBias {
     command {
         java -Xmx${default=4 mem}g -jar ${gatk_jar} CorrectGCBias \
           --input ${coverage} \
-          --targets ${annotated_targets} \
+          --targets ${annotated_intervals} \
           --output ${entity_id}.gc_corrected.tsv
     }
 

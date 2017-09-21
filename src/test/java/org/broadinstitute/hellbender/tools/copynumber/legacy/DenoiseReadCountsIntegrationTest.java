@@ -19,13 +19,13 @@ import static org.testng.Assert.*;
 public class DenoiseReadCountsIntegrationTest extends CommandLineProgramTest {
     private static final String TEST_SUB_DIR = toolsTestDir + "copynumber/legacy/coverage";
     private static final File NORMAL_READ_COUNT_FILE = new File("/home/slee/working/ipython/wes.tsv");
-    private static final String WES_NO_GC_PON_FILE = largeFileTestDir + "cnv_somatic_workflows_test_files/wes-no-gc.pon.hdf5";
+    private static final String WGS_NO_GC_PON_FILE = largeFileTestDir + "cnv_somatic_workflows_test_files/wgs-no-gc.pon.hdf5";
 
     @Test
-    public void testWESWithNoGCPonWithoutAnnotations() {
+    public void testWGSWithNoGCPonWithoutAnnotations() {
         final String[] arguments = {
                 "-" + StandardArgumentDefinitions.INPUT_SHORT_NAME, "/home/slee/working/ipython/wes-pon-test/wes_case.tsv",
-                "-" + LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME, WES_NO_GC_PON_FILE,
+                "-" + LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME, WGS_NO_GC_PON_FILE,
                 "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, "wes_case.with-no-gc-pon_without-annot.ptn.tsv",
                 "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, "wes_case.with-no-gc-pon_without-annot.tn.tsv",
                 "-" + LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME, "10",

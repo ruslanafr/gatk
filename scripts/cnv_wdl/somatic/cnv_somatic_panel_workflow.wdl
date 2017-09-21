@@ -37,7 +37,7 @@ workflow CNVSomaticPanelWorkflow {
     # PoN name
     String pon_entity_id
 
-    # If true, AnnotateTargets will be run to create GC annotations and
+    # If true, AnnotateIntervals will be run to create GC annotations and
     # explicit GC correction will be performed by CreateReadCountPanelOfNormals before PCA is performed
     Boolean? do_explicit_gc_correction
 
@@ -69,7 +69,7 @@ workflow CNVSomaticPanelWorkflow {
     }
 
 	if (select_first([do_explicit_gc_correction, false])) {
-		call CNVTasks.AnnotateTargets {
+		call CNVTasks.AnnotateIntervals {
             input:
                 entity_id = pon_entity_id,
                 targets = CollectReadCounts.read_counts[0],
@@ -85,7 +85,7 @@ workflow CNVSomaticPanelWorkflow {
         input:
             pon_entity_id = pon_entity_id,
             read_count_files = if is_wgs then CollectReadCounts.read_counts_hdf5 else CollectReadCounts.read_counts,
-            annotated_intervals = AnnotateTargets.annotated_targets,
+            annotated_intervals = AnnotateIntervals.annotated_intervals,
             gatk_jar = gatk_jar,
             gatk_docker = gatk_docker
     }

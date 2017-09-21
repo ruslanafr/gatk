@@ -26,7 +26,7 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
 
     @Test
     public void testSparkGenomeReadCounts() throws IOException {
-        final File outputFile = createTempFile(BAM_FILE.getName(),".cov");
+        final File outputFile = createTempFile(BAM_FILE.getName(),".tsv");
         final String[] arguments = {
                 "--disableSequenceDictionaryValidation",
                 "-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME, REFERENCE_FILE.getAbsolutePath(),
@@ -37,21 +37,21 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         runCommandLine(arguments);
         Assert.assertTrue(outputFile.exists());
         Assert.assertTrue(outputFile.length() > 0);
-        final ReadCountCollection coverage = ReadCountCollectionUtils.parse(outputFile);
-        final File targetsFile = new File(outputFile.getAbsolutePath()+".targets.tsv");
-        Assert.assertTrue(targetsFile.exists());
-        Assert.assertTrue(targetsFile.length() > 0);
+        final ReadCountCollection rcc = ReadCountCollectionUtils.parse(outputFile);
 
-        final List<Target> targets = TargetTableReader.readTargetFile(targetsFile);
-        Assert.assertEquals(targets.size(), 8);
-        Assert.assertEquals(targets.get(1).getEnd(), 16000);
-        Assert.assertEquals(targets.get(5).getName(), "target_3_10001_16000");
-        Assert.assertEquals(coverage.targets().size(), targets.size());
+        final File intervalsFile = new File(FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + SparkGenomeReadCounts.INTERVALS_EXT);
+        Assert.assertTrue(intervalsFile.exists());
+        Assert.assertTrue(intervalsFile.length() > 0);
+        final List<Target> intervals = TargetTableReader.readTargetFile(intervalsFile);
+        Assert.assertEquals(intervals.size(), 8);
+        Assert.assertEquals(intervals.get(1).getEnd(), 16000);
+        Assert.assertEquals(intervals.get(5).getName(), "target_3_10001_16000");
+        Assert.assertEquals(rcc.targets().size(), intervals.size());
     }
 
     @Test
     public void testSparkGenomeReadCountsBigBins() throws IOException {
-        final File outputFile = createTempFile(BAM_FILE.getName(), ".cov");
+        final File outputFile = createTempFile(BAM_FILE.getName(), ".tsv");
         final String[] arguments = {
                 "--disableSequenceDictionaryValidation",
                 "-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME, REFERENCE_FILE.getAbsolutePath(),
@@ -62,21 +62,21 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         runCommandLine(arguments);
         Assert.assertTrue(outputFile.exists());
         Assert.assertTrue(outputFile.length() > 0);
-        final ReadCountCollection coverage = ReadCountCollectionUtils.parse(outputFile);
-        final File targetsFile = new File(outputFile.getAbsolutePath()+".targets.tsv");
-        Assert.assertTrue(targetsFile.exists());
-        Assert.assertTrue(targetsFile.length() > 0);
+        final ReadCountCollection rcc = ReadCountCollectionUtils.parse(outputFile);
 
-        final List<Target> targets = TargetTableReader.readTargetFile(targetsFile);
-        Assert.assertEquals(targets.size(), 4);
-        Assert.assertEquals(targets.get(1).getEnd(), 16000);
-        Assert.assertEquals(targets.get(2).getName(), "target_3_1_16000");
-        Assert.assertEquals(coverage.targets().size(), targets.size());
+        final File intervalsFile = new File(FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + SparkGenomeReadCounts.INTERVALS_EXT);
+        Assert.assertTrue(intervalsFile.exists());
+        Assert.assertTrue(intervalsFile.length() > 0);
+        final List<Target> intervals = TargetTableReader.readTargetFile(intervalsFile);
+        Assert.assertEquals(intervals.size(), 4);
+        Assert.assertEquals(intervals.get(1).getEnd(), 16000);
+        Assert.assertEquals(intervals.get(2).getName(), "target_3_1_16000");
+        Assert.assertEquals(rcc.targets().size(), intervals.size());
     }
 
     @Test
     public void testSparkGenomeReadCountsSmallBins()  throws IOException {
-        final File outputFile = createTempFile(BAM_FILE.getName(), ".cov");
+        final File outputFile = createTempFile(BAM_FILE.getName(), ".tsv");
         final String[] arguments = {
                 "--disableSequenceDictionaryValidation",
                 "-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME, REFERENCE_FILE.getAbsolutePath(),
@@ -90,22 +90,21 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         Assert.assertFalse(hdf5File.exists());
         Assert.assertTrue(outputFile.length() > 0);
 
-        final ReadCountCollection coverage = ReadCountCollectionUtils.parse(outputFile);
-        Assert.assertTrue(coverage.records().stream().anyMatch(t -> Math.abs(t.getDouble(0)) > 1e-10));
+        final ReadCountCollection rcc = ReadCountCollectionUtils.parse(outputFile);
+        Assert.assertTrue(rcc.records().stream().anyMatch(t -> Math.abs(t.getDouble(0)) > 1e-10));
 
         // The reads are all in three bins of contig 3 with values
-        Assert.assertEquals(coverage.records().stream().filter(t -> t.getContig().equals("3")).filter(t -> Math.abs(t.getDouble(0)) >= 1).count(), 3);
+        Assert.assertEquals(rcc.records().stream().filter(t -> t.getContig().equals("3")).filter(t -> Math.abs(t.getDouble(0)) >= 1).count(), 3);
 
-        final File targetsFile = new File(outputFile.getAbsolutePath()+".targets.tsv");
-        Assert.assertTrue(targetsFile.exists());
-        Assert.assertTrue(targetsFile.length() > 0);
-
-        final List<Target> targets = TargetTableReader.readTargetFile(targetsFile);
-        Assert.assertEquals(targets.size(), 16000/2000 * 4); // 4 is the number of contigs in the fasta file
-        Assert.assertEquals(targets.get(1).getEnd(), 4000);
-        Assert.assertEquals(targets.get(2).getName(), "target_1_4001_6000");
-        Assert.assertEquals(targets.get(8).getName(), "target_2_1_2000");
-        Assert.assertEquals(targets.get(17).getName(), "target_3_2001_4000");
+        final File intervalsFile = new File(FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + SparkGenomeReadCounts.INTERVALS_EXT);
+        Assert.assertTrue(intervalsFile.exists());
+        Assert.assertTrue(intervalsFile.length() > 0);
+        final List<Target> intervals = TargetTableReader.readTargetFile(intervalsFile);
+        Assert.assertEquals(intervals.size(), 16000/2000 * 4); // 4 is the number of contigs in the fasta file
+        Assert.assertEquals(intervals.get(1).getEnd(), 4000);
+        Assert.assertEquals(intervals.get(2).getName(), "target_1_4001_6000");
+        Assert.assertEquals(intervals.get(8).getName(), "target_2_1_2000");
+        Assert.assertEquals(intervals.get(17).getName(), "target_3_2001_4000");
     }
 
     private ReadCountCollection loadReadCountCollection(File outputFile) {
@@ -119,7 +118,7 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
 
     @Test
     public void testSparkGenomeReadCountsInterval() {
-        final File outputFile = createTempFile(BAM_FILE.getName(), ".cov");
+        final File outputFile = createTempFile(BAM_FILE.getName(), ".tsv");
         final String[] arguments = {
                 "--disableSequenceDictionaryValidation",
                 "-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME, REFERENCE_FILE.getAbsolutePath(),
@@ -130,17 +129,19 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         };
         runCommandLine(arguments);
 
-        final ReadCountCollection coverage = loadReadCountCollection(outputFile);
-        Assert.assertTrue(coverage.records().stream().noneMatch(t -> t.getContig().equals("2") || t.getContig().equals("3")));
+        final ReadCountCollection rcc = loadReadCountCollection(outputFile);
+        Assert.assertTrue(rcc.records().stream().noneMatch(t -> t.getContig().equals("2") || t.getContig().equals("3")));
 
-        final File targetsFile = new File(outputFile.getAbsolutePath()+".targets.tsv");
-        final List<Target> targets = TargetTableReader.readTargetFile(targetsFile);
-        Assert.assertTrue(targets.stream().allMatch(t -> t.getContig().equals("1")));
+        final File intervalsFile = new File(FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + SparkGenomeReadCounts.INTERVALS_EXT);
+        Assert.assertTrue(intervalsFile.exists());
+        Assert.assertTrue(intervalsFile.length() > 0);
+        final List<Target> intervals = TargetTableReader.readTargetFile(intervalsFile);
+        Assert.assertTrue(intervals.stream().allMatch(t -> t.getContig().equals("1")));
     }
 
     @Test
     public void testSparkGenomeReadCountsTwoIntervals() {
-        final File outputFile = createTempFile(BAM_FILE.getName(), ".cov");
+        final File outputFile = createTempFile(BAM_FILE.getName(), ".tsv");
         final String[] arguments = {
                 "--disableSequenceDictionaryValidation",
                 "-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME, REFERENCE_FILE.getAbsolutePath(),
@@ -151,20 +152,21 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         };
         runCommandLine(arguments);
 
-        // coverage
-        final ReadCountCollection coverage = loadReadCountCollection(outputFile);
-        Assert.assertTrue(coverage.records().stream().anyMatch(t -> t.getContig().equals("1")));
-        Assert.assertTrue(coverage.records().stream().anyMatch(t -> t.getContig().equals("2")));
-        Assert.assertTrue(coverage.records().stream().noneMatch(t -> t.getContig().equals("3") || t.getContig().equals("4")));
+        final ReadCountCollection rcc = loadReadCountCollection(outputFile);
+        Assert.assertTrue(rcc.records().stream().anyMatch(t -> t.getContig().equals("1")));
+        Assert.assertTrue(rcc.records().stream().anyMatch(t -> t.getContig().equals("2")));
+        Assert.assertTrue(rcc.records().stream().noneMatch(t -> t.getContig().equals("3") || t.getContig().equals("4")));
 
-        final File targetsFile = new File(outputFile.getAbsolutePath()+".targets.tsv");
-        final List<Target> targets = TargetTableReader.readTargetFile(targetsFile);
-        Assert.assertTrue(targets.stream().allMatch(t -> (t.getContig().equals("1")) || (t.getContig().equals("2"))));
+        final File intervalsFile = new File(FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + SparkGenomeReadCounts.INTERVALS_EXT);
+        Assert.assertTrue(intervalsFile.exists());
+        Assert.assertTrue(intervalsFile.length() > 0);
+        final List<Target> intervals = TargetTableReader.readTargetFile(intervalsFile);
+        Assert.assertTrue(intervals.stream().allMatch(t -> (t.getContig().equals("1")) || (t.getContig().equals("2"))));
     }
 
     @Test
     public void testSparkGenomeReadCountsSubContig() {
-        final File outputFile = createTempFile(BAM_FILE.getName(), ".cov");
+        final File outputFile = createTempFile(BAM_FILE.getName(), ".tsv");
         final String[] arguments = {
                 "--disableSequenceDictionaryValidation",
                 "-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME, REFERENCE_FILE.getAbsolutePath(),
@@ -175,14 +177,16 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         };
         runCommandLine(arguments);
 
-        final File targetsFile = new File(outputFile.getAbsolutePath()+".targets.tsv");
-        final List<Target> targets = TargetTableReader.readTargetFile(targetsFile);
-        Assert.assertTrue(targets.stream().allMatch(t -> t.getContig().equals("1")));
-        Assert.assertEquals(targets.size(), 5);
+        final File intervalsFile = new File(FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + SparkGenomeReadCounts.INTERVALS_EXT);
+        Assert.assertTrue(intervalsFile.exists());
+        Assert.assertTrue(intervalsFile.length() > 0);
+        final List<Target> intervals = TargetTableReader.readTargetFile(intervalsFile);
+        Assert.assertTrue(intervals.stream().allMatch(t -> t.getContig().equals("1")));
+        Assert.assertEquals(intervals.size(), 5);
 
-        for (int i = 0; i < targets.size(); i ++) {
-            Assert.assertEquals(targets.get(i).getStart(), i*100 + 1);
-            Assert.assertEquals(targets.get(i).getEnd(), (i+1)*100);
+        for (int i = 0; i < intervals.size(); i ++) {
+            Assert.assertEquals(intervals.get(i).getStart(), i*100 + 1);
+            Assert.assertEquals(intervals.get(i).getEnd(), (i+1)*100);
         }
     }
 

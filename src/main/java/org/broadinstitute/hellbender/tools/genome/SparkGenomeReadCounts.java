@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
  *
  */
 @CommandLineProgramProperties(
-        summary = "Calculate coverage on a WGS bam file using Spark.  This creates a set of pseudo-targets that span " +
+        summary = "Calculate coverage on a WGS bam file using Spark.  This creates a set of intervals that span " +
                 "the entire genome.  Use the 'binsize' parameter to specify the size of each interval.  By default, any " +
                 "contigs X, Y, M, and MT are excluded.\n" +
         "Please see the " + SparkGenomeReadCounts.DROP_NON_AUTOSOMES_LONG_NAME + " option if using this tool on a non-human genome.",
@@ -66,47 +66,49 @@ import java.util.stream.Collectors;
 @DocumentedFeature
 public class SparkGenomeReadCounts extends GATKSparkTool {
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = LogManager.getLogger(SparkGenomeReadCounts.class);
 
     private static final Set<String> NONAUTOSOMALCONTIGS = new HashSet<>(Arrays.asList("X", "Y", "MT", "M", "x", "y",
             "m", "chrX", "chrY", "chrMT", "chrM", "chrm"));
 
-    protected static final String DROP_NON_AUTOSOMES_SHORT_NAME = "keepXYMT";
-    protected static final String DROP_NON_AUTOSOMES_LONG_NAME = "keepXYMT";
+    static final String DROP_NON_AUTOSOMES_LONG_NAME = "keepXYMT";
+    static final String DROP_NON_AUTOSOMES_SHORT_NAME = "keepXYMT";
+
+    private static final String BINSIZE_LONG_NAME = "binsize";
+    static final String BINSIZE_SHORT_NAME = "bins";
+
+    static final String WRITE_HDF5_SHORT_NAME = "hdf5";
+    private static final String WRITE_HDF5_LONG_NAME = "writeHdf5";
+    static final String HDF5_EXT = ".hdf5";
+
+    private static final String TSV_EXT = ".tsv";
+
+    static final String INTERVALS_EXT = ".intervals" + TSV_EXT;
 
     @Argument(doc = "Keep X, Y, GL*, NC_*, and MT regions.  If this option is not specified, these regions will be dropped, regardless of intervals specified.  Use -L (or -XL) and enable this option for exact specification of intervals.  This option may be removed in the future.",
             fullName = DROP_NON_AUTOSOMES_LONG_NAME,
             shortName = DROP_NON_AUTOSOMES_SHORT_NAME,
             optional = true
     )
-    protected boolean keepNonAutosomes = false;
-
-    private static final Logger logger = LogManager.getLogger(SparkGenomeReadCounts.class);
-    protected static final String BINSIZE_SHORT_NAME = "bins";
-    protected static final String BINSIZE_LONG_NAME = "binsize";
+    private boolean keepNonAutosomes = false;
 
     @Argument(doc = "The size of bins for each interval specified.  E.g. chr2:100-200 --> chr2:100-150, chr2:151-200 if binsize = 50.",
             fullName = BINSIZE_LONG_NAME,
             shortName = BINSIZE_SHORT_NAME,
             optional = true)
-    protected int binsize = 10000;
-
-    protected static final String WRITE_HDF5_SHORT_NAME = "hdf5";
-    protected static final String WRITE_HDF5_LONG_NAME = "writeHdf5";
-    protected static final String HDF5_EXT = ".hdf5";
-
-    private static final String TSV_EXT = ".tsv";
+    private int binsize = 10000;
 
     @Argument(doc = "Whether we should write an additional coverage file in HDF5 with extension " + HDF5_EXT,
             fullName = WRITE_HDF5_LONG_NAME,
             shortName = WRITE_HDF5_SHORT_NAME,
             optional = true)
-    protected boolean isWritingHdf5 = false;
+    private boolean isWritingHdf5 = false;
 
-    @Argument(doc = "Output tsv file for the counts.",
+    @Argument(doc = "Output read-counts TSV file.",
             fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME
     )
-    protected File outputFile;
+    private File outputFile;
 
     /**
      * Determine the intervals to consider for coverage collection.  Honors the keepAutosome parameter.
@@ -173,14 +175,17 @@ public class SparkGenomeReadCounts extends GATKSparkTool {
         final Set<SimpleInterval> readIntervalKeySet = byKey.keySet();
         final long totalReads = byKey.values().stream().mapToLong(v -> v).sum();
         final long coverageCollectionEndTime = System.currentTimeMillis();
-        logger.info(String.format("Finished the spark coverage collection with %d targets and %d reads. Elapse of %d seconds",
+        logger.info(String.format("Finished the spark coverage collection with %d intervals and %d reads. Elapse of %d seconds",
                 readIntervalKeySet.size(), totalReads, (coverageCollectionEndTime - coverageCollectionStartTime) / 1000));
 
         logger.info("Creating full genome bins...");
         final long createGenomeBinsStartTime = System.currentTimeMillis();
         final List<SimpleInterval> fullGenomeBins = createFullGenomeBins(binsize);
         List<Target> fullGenomeTargetCollection = createTargetListFromSimpleInterval(fullGenomeBins);
-        TargetWriter.writeTargetsToFile(new File(outputFile.getAbsolutePath() + ".targets.tsv"), fullGenomeTargetCollection);
+        final String intervalsFile = outputFile.getAbsolutePath().endsWith(TSV_EXT)
+                ? FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + INTERVALS_EXT    //if a TSV file, replace extension with .intervals.tsv extension
+                : outputFile.getAbsolutePath() + INTERVALS_EXT;                                  //else just append HDF5 extension
+        TargetWriter.writeTargetsToFile(new File(intervalsFile), fullGenomeTargetCollection);
         final long createGenomeBinsEndTime = System.currentTimeMillis();
         logger.info(String.format("Finished creating genome bins. Elapse of %d seconds",
                 (createGenomeBinsEndTime - createGenomeBinsStartTime) / 1000));

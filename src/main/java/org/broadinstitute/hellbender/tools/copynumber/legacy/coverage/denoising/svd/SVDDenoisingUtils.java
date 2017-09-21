@@ -114,7 +114,7 @@ public final class SVDDenoisingUtils {
                 "Sample intervals must be identical to the original intervals used to build the panel of normals.");
 
         logger.info("Preprocessing and standardizing sample read counts...");
-        final RealMatrix standardizedCopyRatioValues = preprocessAndStandardizeSample(panelOfNormals, readCounts.getReadCounts().transpose());
+        final RealMatrix standardizedCopyRatioValues = preprocessAndStandardizeSample(panelOfNormals, readCounts.getReadCounts());
 
         logger.info(String.format("Using %d out of %d eigensamples to denoise...", numEigensamples, panelOfNormals.getNumEigensamples()));
 

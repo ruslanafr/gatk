@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.genome;
 
 import htsjdk.samtools.SAMSequenceDictionary;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
@@ -223,8 +224,8 @@ public class SparkGenomeReadCounts extends GATKSparkTool {
         if (isWritingHdf5) {
             logger.info("Writing coverage file in HDF5...");
             final String hdf5File = outputFile.getAbsolutePath().endsWith(TSV_EXT)
-                    ? outputFile.getAbsolutePath().substring(0, outputFile.getAbsolutePath().length() - TSV_EXT.length()) + HDF5_EXT    //if a TSV file, replace extension with HDF5 extension
-                    : outputFile.getAbsolutePath() + HDF5_EXT;                                                                          //else just append HDF5 extension
+                    ? FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + HDF5_EXT    //if a TSV file, replace extension with HDF5 extension
+                    : outputFile.getAbsolutePath() + HDF5_EXT;                                  //else just append HDF5 extension
             final long writingHdf5CovFileStartTime = System.currentTimeMillis();
             writeReadCountsFromSimpleIntervalToHdf5(new File(hdf5File), sampleName,
                     byKeySorted);

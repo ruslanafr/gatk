@@ -4,6 +4,7 @@ import htsjdk.samtools.util.Log;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.ExomeStandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
 import org.broadinstitute.hellbender.tools.exome.TargetArgumentCollection;
 import org.broadinstitute.hellbender.utils.LoggingUtils;
 import org.testng.annotations.Test;
@@ -44,7 +45,7 @@ public final class CreateReadCountPanelOfNormalsIntegrationTest extends CommandL
                 "-" + StandardArgumentDefinitions.INPUT_SHORT_NAME, "/home/slee/working/ipython/wes-pon-test/wes_17.tsv",
                 "-" + StandardArgumentDefinitions.INPUT_SHORT_NAME, "/home/slee/working/ipython/wes-pon-test/wes_18.tsv",
                 "-" + StandardArgumentDefinitions.INPUT_SHORT_NAME, "/home/slee/working/ipython/wes-pon-test/wes_19.tsv",
-                "-" + CreateReadCountPanelOfNormals.NUMBER_OF_EIGENSAMPLES_SHORT_NAME, "20",
+                "-" + LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME, "20",
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputPanelOfNormalsFile.getAbsolutePath(),
                 "--" + StandardArgumentDefinitions.VERBOSITY_NAME, "INFO"
         };
@@ -132,7 +133,7 @@ public final class CreateReadCountPanelOfNormalsIntegrationTest extends CommandL
                 "-" + StandardArgumentDefinitions.INPUT_SHORT_NAME, "/home/slee/working/ipython/wes-pon-test/wes_18.tsv",
                 "-" + StandardArgumentDefinitions.INPUT_SHORT_NAME, "/home/slee/working/ipython/wes-pon-test/wes_19.tsv",
                 "-" + TargetArgumentCollection.TARGET_FILE_SHORT_NAME, "/home/slee/working/ipython/wes-pon-test/wes.intervals.annot.tsv",
-                "-" + CreateReadCountPanelOfNormals.NUMBER_OF_EIGENSAMPLES_SHORT_NAME, "20",
+                "-" + LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME, "20",
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputPanelOfNormalsFile.getAbsolutePath(),
                 "--" + StandardArgumentDefinitions.VERBOSITY_NAME, "INFO"
         };

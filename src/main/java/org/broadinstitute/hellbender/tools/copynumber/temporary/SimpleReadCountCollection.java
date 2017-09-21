@@ -37,7 +37,7 @@ public final class SimpleReadCountCollection {
         Utils.nonNull(readCounts);
         Utils.validateArg(readCounts.getRowDimension() == 1, "Read-count matrix must contain only a single row.");
         Utils.validateArg(intervals.size() == readCounts.getColumnDimension(), "Number of intervals and read counts must match.");
-        Utils.validateArg(Arrays.stream(readCounts.getColumn(0)).noneMatch(c -> c < 0), "Read counts must all be non-negative integers.");
+        Utils.validateArg(Arrays.stream(readCounts.getRow(0)).noneMatch(c -> c < 0), "Read counts must all be non-negative integers.");
         Utils.validateArg(intervals.stream().distinct().count() == intervals.size(), "Intervals must all be unique.");
 
         this.sampleName = sampleName;
@@ -53,6 +53,9 @@ public final class SimpleReadCountCollection {
         return intervals;
     }
 
+    /**
+     * @return single-row matrix containing the read counts
+     */
     public RealMatrix getReadCounts() {
         return readCounts;
     }

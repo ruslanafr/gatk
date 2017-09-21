@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.genome;
 
+import org.apache.commons.io.FilenameUtils;
 import org.broadinstitute.hdf5.HDF5File;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
@@ -16,7 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+
 
 public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest {
     private static final File TEST_FILE_DIR = new File("src/test/resources/org/broadinstitute/hellbender/tools/genome");
@@ -85,7 +86,8 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
         };
         runCommandLine(arguments);
         Assert.assertTrue(outputFile.exists());
-        Assert.assertFalse(new File(outputFile + SparkGenomeReadCounts.HDF5_EXT).exists());
+        final File hdf5File = new File(FilenameUtils.removeExtension(outputFile.getAbsolutePath()) + SparkGenomeReadCounts.HDF5_EXT);
+        Assert.assertFalse(hdf5File.exists());
         Assert.assertTrue(outputFile.length() > 0);
 
         final ReadCountCollection coverage = ReadCountCollectionUtils.parse(outputFile);
@@ -186,23 +188,23 @@ public class SparkGenomeReadCountsIntegrationTest extends CommandLineProgramTest
 
     @Test
     public void testSparkGenomeReadCountsHdf5Writing() throws IOException {
-        final File outputFile = createTempFile(BAM_FILE.getName(),".cov");
+        final File tsvFile = createTempFile(BAM_FILE.getName(),".tsv");
         final String[] arguments = {
                 "--disableSequenceDictionaryValidation",
                 "-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME, REFERENCE_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.INPUT_SHORT_NAME, BAM_FILE.getAbsolutePath(),
-                "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputFile.getAbsolutePath(),
+                "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, tsvFile.getAbsolutePath(),
                 "-" + SparkGenomeReadCounts.BINSIZE_SHORT_NAME, "10000",
-                "-" + SparkGenomeReadCounts.WRITE_HDF5_SHORT_NAME, "True"
+                "-" + SparkGenomeReadCounts.WRITE_HDF5_SHORT_NAME
         };
         runCommandLine(arguments);
-        Assert.assertTrue(outputFile.exists());
-        final File hdf5File = new File(outputFile + SparkGenomeReadCounts.HDF5_EXT);
+        Assert.assertTrue(tsvFile.exists());
+        final File hdf5File = new File(FilenameUtils.removeExtension(tsvFile.getAbsolutePath()) + SparkGenomeReadCounts.HDF5_EXT);
         Assert.assertTrue(hdf5File.exists());
         Assert.assertTrue(hdf5File.length() > 0);
 
         final HDF5ReadCountCollection rccHdf5 = new HDF5ReadCountCollection(new HDF5File(hdf5File));
-        final ReadCountCollection rccTsv = ReadCountCollectionUtils.parse(outputFile);
+        final ReadCountCollection rccTsv = ReadCountCollectionUtils.parse(tsvFile);
 
         Assert.assertEquals(rccHdf5.getReadCounts(), rccTsv.counts().transpose());
         Assert.assertEquals(rccHdf5.getSampleName(), rccTsv.columnNames().get(0));

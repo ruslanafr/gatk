@@ -14,12 +14,12 @@ import java.io.File;
  */
 public final class CallCopyRatioSegmentsIntegrationTest extends CommandLineProgramTest {
     private static final File TEST_DIR = new File(toolsTestDir, "copynumber/legacy/coverage/caller");
-    private static final File TEST_DENOISED_COPY_RATIOS = new File(TEST_DIR, "call-copy-ratio-segments-denoised-copy-ratios.tsv");
-    private static final File TEST_SEGMENTS = new File(TEST_DIR, "call-copy-ratio-segments-segments.tsv");
+    private static final File TEST_DENOISED_COPY_RATIOS = new File(TEST_DIR, "call-copy-ratio-segments-denoised-copy-ratios.denoisedCR.tsv");
+    private static final File TEST_SEGMENTS = new File(TEST_DIR, "call-copy-ratio-segments-segments.seg");
 
     @Test
     public void testCallSegments() {
-        final File outputFile = createTempFile("test",".txt");
+        final File outputFile = createTempFile("test.called",".seg");
 
         final String[] arguments = {
                 "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, TEST_DENOISED_COPY_RATIOS.getAbsolutePath(),

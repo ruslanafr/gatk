@@ -79,8 +79,6 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
     static final String EXTREME_SAMPLE_MEDIAN_PERCENTILE_SHORT_NAME = "extSampleMedPct";
     public static final String EXTREME_OUTLIER_TRUNCATION_PERCENTILE_LONG_NAME = "extremeOutlierTruncationPercentile";
     static final String EXTREME_OUTLIER_TRUNCATION_PERCENTILE_SHORT_NAME = "extOutTruncPct";
-    private static final String NUMBER_OF_EIGENSAMPLES_LONG_NAME = "numberOfEigensamples";
-    static final String NUMBER_OF_EIGENSAMPLES_SHORT_NAME = "numEigen";
 
     //default values for filtering (taken from ReCapSeg)
     private static final double DEFAULT_MINIMUM_INTERVAL_MEDIAN_PERCENTILE = 5.0;
@@ -174,8 +172,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
     @Argument(
             doc = "Number of eigensamples to use for truncated SVD and to store in the panel of normals.  " +
                     "The number of samples retained after filtering will be used instead if it is smaller than this.",
-            fullName = NUMBER_OF_EIGENSAMPLES_LONG_NAME,
-            shortName = NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
+            fullName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_LONG_NAME,
+            shortName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
             minValue = 1
     )
     private int numEigensamplesRequested = DEFAULT_NUMBER_OF_EIGENSAMPLES;

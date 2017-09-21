@@ -9,6 +9,7 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 public class HDF5ReadCountCollection {
@@ -33,6 +34,9 @@ public class HDF5ReadCountCollection {
         return intervals.get();
     }
 
+    /**
+     * @return single-row matrix containing the read counts
+     */
     public RealMatrix getReadCounts() {
         return new Array2DRowRealMatrix(file.readDoubleMatrix(READ_COUNTS_PATH));
     }
@@ -40,22 +44,22 @@ public class HDF5ReadCountCollection {
     public static void write(final File outFile,
                              final String sampleName,
                              final List<SimpleInterval> intervals,
-                             final double[][] values) {
+                             final double[][] readCounts) {
         Utils.nonNull(outFile);
         Utils.nonNull(sampleName);
-        Utils.nonNull(intervals);
-        Utils.nonNull(values);
+        Utils.nonEmpty(intervals);
+        Utils.nonNull(readCounts);
 
-        if (values[0].length != intervals.size()) {
-            throw new GATKException("The shape of the values array (" + values.length + " x " + values[0].length +
-                    ") does not match the number of intervals (" + intervals.size() + ").");
-        }
+        Utils.validateArg(readCounts.length == 1, "Read-count matrix must contain only a single row.");
+        Utils.validateArg(intervals.size() == readCounts[0].length, "Number of intervals and read counts must match.");
+        Utils.validateArg(Arrays.stream(readCounts[0]).noneMatch(c -> c < 0), "Read counts must all be non-negative integers.");
+        Utils.validateArg(intervals.stream().distinct().count() == intervals.size(), "Intervals must all be unique.");
 
         try (final HDF5File file = new HDF5File(outFile, HDF5File.OpenMode.CREATE)) {
             final HDF5ReadCountCollection hdf5ReadCountCollection = new HDF5ReadCountCollection(file);
             hdf5ReadCountCollection.writeName(SAMPLE_NAME_PATH, sampleName);
             hdf5ReadCountCollection.writeIntervals(intervals);
-            hdf5ReadCountCollection.writeReadCounts(values);
+            hdf5ReadCountCollection.writeReadCounts(readCounts);
         }
     }
 

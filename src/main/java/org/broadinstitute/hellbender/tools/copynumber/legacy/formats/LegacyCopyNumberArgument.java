@@ -7,6 +7,9 @@ public final class LegacyCopyNumberArgument {
     public static final String READ_COUNT_PANEL_OF_NORMALS_FILE_FULL_NAME = "readCountPanelOfNormals";
     public static final String READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME = "rcPON";
 
+    public static final String NUMBER_OF_EIGENSAMPLES_LONG_NAME = "numberOfEigensamples";
+    public static final String NUMBER_OF_EIGENSAMPLES_SHORT_NAME = "numEigen";
+
     public static final String STANDARDIZED_COPY_RATIOS_FILE_FULL_NAME = "standardizedCopyRatios";
     public static final String STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME = "standardizedCR";
 

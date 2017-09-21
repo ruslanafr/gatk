@@ -59,9 +59,6 @@ import java.util.stream.Collectors;
 )
 @DocumentedFeature
 public final class DenoiseReadCounts extends CommandLineProgram {
-    private static final String NUMBER_OF_EIGENSAMPLES_LONG_NAME = "numberOfEigensamples";
-    private static final String NUMBER_OF_EIGENSAMPLES_SHORT_NAME = "numEigen";
-
     @Argument(
             doc = "Input read-count file containing integer read counts in genomic intervals for a single case sample.",
             fullName = StandardArgumentDefinitions.INPUT_LONG_NAME,
@@ -105,8 +102,8 @@ public final class DenoiseReadCounts extends CommandLineProgram {
             doc = "Number of eigensamples to use for denoising.  " +
                     "If not specified or if the number of eigensamples available in the panel of normals " +
                     "is smaller than this, all eigensamples will be used.",
-            fullName = NUMBER_OF_EIGENSAMPLES_LONG_NAME,
-            shortName = NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
+            fullName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_LONG_NAME,
+            shortName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
             optional = true
     )
     private Integer numEigensamplesRequested = null;

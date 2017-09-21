@@ -83,7 +83,7 @@ workflow CNVGermlineSingleSampleWorkflow {
   call CNVTasks.AnnotateIntervals {
     input:
       entity_id = CollectReadCounts.entity_id,
-      targets = CollectReadCounts.read_counts,
+      intervals = CollectReadCounts.intervals,
       ref_fasta = ref_fasta,
       ref_fasta_fai = ref_fasta_fai,
       ref_fasta_dict = ref_fasta_dict,

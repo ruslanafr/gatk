@@ -72,7 +72,7 @@ workflow CNVSomaticPanelWorkflow {
 		call CNVTasks.AnnotateIntervals {
             input:
                 entity_id = pon_entity_id,
-                intervals = CollectReadCounts.intervals,
+                intervals = CollectReadCounts[0].intervals,
                 ref_fasta = ref_fasta,
                 ref_fasta_fai = ref_fasta_fai,
                 ref_fasta_dict = ref_fasta_dict,

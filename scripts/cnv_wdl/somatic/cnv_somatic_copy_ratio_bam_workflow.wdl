@@ -155,7 +155,7 @@ task ModelSegments {
     }
 
     output {
-        File copy_ratio_segments = "${entity_id}.seg"
+        File copy_ratio_segments = "${entity_id}.cr.seg"
     }
 }
 

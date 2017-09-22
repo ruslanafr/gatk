@@ -124,11 +124,11 @@ task ModelSegments {
     String entity_id
     File denoised_copy_ratios
     Int? max_num_segments_per_chromosome
-    Float? kernel_variance
+    Float? kernel_variance_copy_ratio
     Int? kernel_approximation_dimension
     Array[Int]? window_sizes = [8, 16, 32, 64, 128, 256]
-    Float? num_changepoints_penalty_linear_factor
-    Float? num_changepoints_penalty_log_linear_factor
+    Float? num_changepoints_penalty_linear_factor_copy_ratio
+    Float? num_changepoints_penalty_log_linear_factor_copy_ratio
     String gatk_jar
 
     # Runtime parameters
@@ -139,13 +139,13 @@ task ModelSegments {
 
     command {
         java -Xmx${default="4" mem}g -jar ${gatk_jar} ModelSegments \
-            --input ${denoised_copy_ratios} \
+            --denoisedCopyRatios ${denoised_copy_ratios} \
             --maxNumSegmentsPerChromosome ${default="50" max_num_segments_per_chromosome} \
-            --kernelVariance ${default="0.0" kernel_variance} \
+            --kernelVarianceCopyRatio ${default="0.0" kernel_variance_copy_ratio} \
             --kernelApproximationDimension ${default="100" kernel_approximation_dimension} \
             --windowSizes ${sep= " --windowSizes " window_sizes} \
-            --numChangepointsPenaltyLinearFactor ${default="1.0" num_changepoints_penalty_linear_factor} \
-            --numChangepointsPenaltyLogLinearFactor ${default="1.0" num_changepoints_penalty_log_linear_factor} \
+            --numChangepointsPenaltyLinearFactorCopyRatio ${default="1.0" num_changepoints_penalty_linear_factor_copy_ratio} \
+            --numChangepointsPenaltyLogLinearFactorCopyRatio ${default="1.0" num_changepoints_penalty_log_linear_factor_copy_ratio} \
             --output ${entity_id}.seg
     }
 
@@ -218,7 +218,7 @@ task PlotDenoisedCopyRatios {
             --standardizedCopyRatios ${standardized_copy_ratios} \
             --denoisedCopyRatios ${denoised_copy_ratios} \
             -SD ${ref_fasta_dict} \
-            --minimumContigLength ${default="2000000" minimum_contig_length} \
+            --minimumContigLength ${default="1000000" minimum_contig_length} \
             --output ${output_dir_} \
             --outputPrefix ${entity_id}
     }

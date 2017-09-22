@@ -1,6 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation;
 
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVCollection;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVLocatableCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.tsv.DataLine;
 import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public final class CopyRatioSegmentCollection extends TSVCollection<CopyRatioSegment> {
+public final class CopyRatioSegmentCollection extends TSVLocatableCollection<CopyRatioSegment> {
     enum CopyRatioSegmentTableColumn {
         CONTIG,
         START,

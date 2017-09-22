@@ -2,7 +2,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller;
 
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegment;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVCollection;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVLocatableCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.tsv.DataLine;
 import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class CalledCopyRatioSegmentCollection extends TSVCollection<CalledCopyRatioSegment> {
+public class CalledCopyRatioSegmentCollection extends TSVLocatableCollection<CalledCopyRatioSegment> {
     enum CalledCopyRatioSegmentTableColumn {
         CONTIG,
         START,

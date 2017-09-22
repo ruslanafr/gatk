@@ -69,7 +69,8 @@ public final class DenoiseReadCounts extends CommandLineProgram {
     @Argument(
             doc = "Input HDF5 file containing the panel of normals (output of CreateReadCountPanelOfNormals).",
             fullName = LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME
+            shortName = LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME,
+            optional = true
     )
     private File inputPanelOfNormalsFile = null;
 
@@ -102,7 +103,8 @@ public final class DenoiseReadCounts extends CommandLineProgram {
                     "If not specified or if the number of eigensamples available in the panel of normals " +
                     "is smaller than this, all eigensamples will be used.",
             fullName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_LONG_NAME,
-            shortName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME
+            shortName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
+            optional = true
     )
     private Integer numEigensamplesRequested = null;
 

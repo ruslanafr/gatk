@@ -103,7 +103,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
                     "If provided, explicit GC correction will be performed before performing SVD.  " +
                     "Intervals must be identical to and in the same order as those in the input read-count files.",
             fullName = LegacyCopyNumberArgument.ANNOTATED_INTERVALS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.ANNOTATED_INTERVALS_FILE_SHORT_NAME
+            shortName = LegacyCopyNumberArgument.ANNOTATED_INTERVALS_FILE_SHORT_NAME,
+            optional = true
     )
     private File annotatedIntervalsFile = null;
 
@@ -122,7 +123,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
             fullName = MINIMUM_INTERVAL_MEDIAN_PERCENTILE_LONG_NAME,
             shortName = MINIMUM_INTERVAL_MEDIAN_PERCENTILE_SHORT_NAME,
             minValue = 0.,
-            maxValue = 100.
+            maxValue = 100.,
+            optional = true
     )
     private double minimumIntervalMedianPercentile = DEFAULT_MINIMUM_INTERVAL_MEDIAN_PERCENTILE;
 
@@ -132,7 +134,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
             fullName = MAXIMUM_ZEROS_IN_SAMPLE_PERCENTAGE_LONG_NAME,
             shortName = MAXIMUM_ZEROS_IN_SAMPLE_PERCENTAGE_SHORT_NAME,
             minValue = 0.,
-            maxValue = 100.
+            maxValue = 100.,
+            optional = true
     )
     private double maximumZerosInSamplePercentage = DEFAULT_MAXIMUM_ZEROS_IN_SAMPLE_PERCENTAGE;
 
@@ -142,7 +145,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
             fullName = MAXIMUM_ZEROS_IN_INTERVAL_PERCENTAGE_LONG_NAME,
             shortName = MAXIMUM_ZEROS_IN_INTERVAL_PERCENTAGE_SHORT_NAME,
             minValue = 0.,
-            maxValue = 100.
+            maxValue = 100.,
+            optional = true
     )
     private double maximumZerosInIntervalPercentage = DEFAULT_MAXIMUM_ZEROS_IN_INTERVAL_PERCENTAGE;
 
@@ -153,7 +157,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
             fullName = EXTREME_SAMPLE_MEDIAN_PERCENTILE_LONG_NAME,
             shortName = EXTREME_SAMPLE_MEDIAN_PERCENTILE_SHORT_NAME,
             minValue = 0.,
-            maxValue = 50.
+            maxValue = 50.,
+            optional = true
     )
     private double extremeSampleMedianPercentile = DEFAULT_EXTREME_SAMPLE_MEDIAN_PERCENTILE;
 
@@ -164,7 +169,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
             fullName = EXTREME_OUTLIER_TRUNCATION_PERCENTILE_LONG_NAME,
             shortName = EXTREME_OUTLIER_TRUNCATION_PERCENTILE_SHORT_NAME,
             minValue = 0.,
-            maxValue = 50.
+            maxValue = 50.,
+            optional = true
     )
     private double extremeOutlierTruncationPercentile = DEFAULT_EXTREME_OUTLIER_TRUNCATION_PERCENTILE;
 
@@ -173,7 +179,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
                     "The number of samples retained after filtering will be used instead if it is smaller than this.",
             fullName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_LONG_NAME,
             shortName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
-            minValue = 1
+            minValue = 1,
+            optional = true
     )
     private int numEigensamplesRequested = DEFAULT_NUMBER_OF_EIGENSAMPLES;
 

@@ -16,18 +16,18 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class TSVCollection<T extends Locatable> {
+public abstract class TSVLocatableCollection<T extends Locatable> {
     private final String sampleName;
     private final List<T> records;
     private final TableColumnCollection mandatoryColumns;
     private final Function<DataLine, T> dataLineToRecordFunction;
     private final BiConsumer<T, DataLine> recordAndDataLineBiConsumer;
 
-    public TSVCollection(final String sampleName,
-                         final List<T> records,
-                         final TableColumnCollection mandatoryColumns,
-                         final Function<DataLine, T> dataLineToRecordFunction,
-                         final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
+    public TSVLocatableCollection(final String sampleName,
+                                  final List<T> records,
+                                  final TableColumnCollection mandatoryColumns,
+                                  final Function<DataLine, T> dataLineToRecordFunction,
+                                  final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
         this.sampleName = Utils.nonNull(sampleName);
         this.records = Utils.nonNull(records);
         this.mandatoryColumns = Utils.nonNull(mandatoryColumns);
@@ -35,10 +35,10 @@ public abstract class TSVCollection<T extends Locatable> {
         this.recordAndDataLineBiConsumer = Utils.nonNull(recordAndDataLineBiConsumer);
     }
 
-    public TSVCollection(final File inputFile,
-                         final TableColumnCollection mandatoryColumns,
-                         final Function<DataLine, T> dataLineToRecordFunction,
-                         final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
+    public TSVLocatableCollection(final File inputFile,
+                                  final TableColumnCollection mandatoryColumns,
+                                  final Function<DataLine, T> dataLineToRecordFunction,
+                                  final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
         IOUtils.canReadFile(inputFile);
         this.mandatoryColumns = Utils.nonNull(mandatoryColumns);
         this.dataLineToRecordFunction = Utils.nonNull(dataLineToRecordFunction);
@@ -92,7 +92,7 @@ public abstract class TSVCollection<T extends Locatable> {
             return false;
         }
 
-        final TSVCollection<?> that = (TSVCollection<?>) o;
+        final TSVLocatableCollection<?> that = (TSVLocatableCollection<?>) o;
 
         return sampleName.equals(that.sampleName) && records.equals(that.records);
     }

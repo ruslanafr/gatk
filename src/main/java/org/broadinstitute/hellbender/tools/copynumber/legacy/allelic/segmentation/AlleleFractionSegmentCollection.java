@@ -1,81 +1,55 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation;
 
-import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVLocatableCollection;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.tsv.DataLine;
 import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
-import org.broadinstitute.hellbender.utils.tsv.TableUtils;
-import org.broadinstitute.hellbender.utils.tsv.TableWriter;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Represents a legacy allele-fraction segmentation.
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
-public final class AlleleFractionSegmentCollection {
+public final class AlleleFractionSegmentCollection extends TSVLocatableCollection<AlleleFractionSegment> {
     enum AlleleFractionSegmentTableColumn {
         SAMPLE,
         CONTIG,
         START,
         END,
         NUM_POINTS,
-        MINOR_ALLELE_FRACTION;
+        MEAN_MINOR_ALLELE_FRACTION;
 
-        static final TableColumnCollection COLUMNS = new TableColumnCollection(
-                SAMPLE, CONTIG, START, END, NUM_POINTS, MINOR_ALLELE_FRACTION);
+        static final TableColumnCollection COLUMNS = new TableColumnCollection((Object[]) values());
     }
 
-    public static final AlleleFractionSegmentCollection NO_SEGMENTS = new AlleleFractionSegmentCollection(Collections.emptyList());
+    private static final Function<DataLine, AlleleFractionSegment> ALLELE_FRACTION_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION = dataLine -> {
+        final String contig = dataLine.get(AlleleFractionSegmentTableColumn.CONTIG);
+        final int start = dataLine.getInt(AlleleFractionSegmentTableColumn.START);
+        final int end = dataLine.getInt(AlleleFractionSegmentTableColumn.END);
+        final int numPoints = dataLine.getInt(AlleleFractionSegmentTableColumn.NUM_POINTS);
+        final double meanMinorAlleleFraction = dataLine.getDouble(AlleleFractionSegmentTableColumn.MEAN_MINOR_ALLELE_FRACTION);
+        final SimpleInterval interval = new SimpleInterval(contig, start, end);
+        return new AlleleFractionSegment(interval, numPoints, meanMinorAlleleFraction);
+    };
 
-    private final List<AlleleFractionSegment> segments;
+    private static final BiConsumer<AlleleFractionSegment, DataLine> ALLELE_FRACTION_SEGMENT_RECORD_AND_DATA_LINE_BI_CONSUMER = (alleleFractionSegment, dataLine) ->
+            dataLine.append(alleleFractionSegment.getContig())
+                    .append(alleleFractionSegment.getStart())
+                    .append(alleleFractionSegment.getEnd())
+                    .append(alleleFractionSegment.getNumPoints())
+                    .append(alleleFractionSegment.getMeanMinorAlleleFraction());
 
-    public AlleleFractionSegmentCollection(final List<AlleleFractionSegment> segments) {
-        this.segments = Utils.nonNull(segments);
+    public AlleleFractionSegmentCollection(final File inputFile) {
+        super(inputFile, AlleleFractionSegmentTableColumn.COLUMNS, ALLELE_FRACTION_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION, ALLELE_FRACTION_SEGMENT_RECORD_AND_DATA_LINE_BI_CONSUMER);
     }
 
-    public List<SimpleInterval> getIntervals() {
-        return segments.stream().map(AlleleFractionSegment::getInterval).collect(Collectors.toList());
-    }
-
-    public void write(final File file,
-                      final String sampleName) {
-        Utils.nonNull(file);
-        Utils.nonNull(sampleName);
-        try (final TableWriter<AlleleFractionSegment> writer =
-                     TableUtils.writer(file, AlleleFractionSegmentTableColumn.COLUMNS,
-                             (segment, dataLine) ->
-                                     dataLine.append(sampleName)
-                                             .append(segment.getContig())
-                                             .append(segment.getStart())
-                                             .append(segment.getEnd())
-                                             .append(segment.getNumPoints())
-                                             .append(segment.getMeanMinorAlleleFraction()))) {
-            writer.writeAllRecords(segments);
-        } catch (final IOException e) {
-            throw new UserException.CouldNotCreateOutputFile(file, e);
-        }
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        final AlleleFractionSegmentCollection that = (AlleleFractionSegmentCollection) o;
-        return segments.equals(that.segments);
-    }
-
-    @Override
-    public int hashCode() {
-        return segments.hashCode();
+    public AlleleFractionSegmentCollection(final String sampleName,
+                                            final List<AlleleFractionSegment> AlleleFractionSegments) {
+        super(sampleName, AlleleFractionSegments, AlleleFractionSegmentTableColumn.COLUMNS, ALLELE_FRACTION_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION, ALLELE_FRACTION_SEGMENT_RECORD_AND_DATA_LINE_BI_CONSUMER);
     }
 }

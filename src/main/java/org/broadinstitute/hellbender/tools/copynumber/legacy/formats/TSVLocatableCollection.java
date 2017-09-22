@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.formats;
 
 import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -16,6 +17,15 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Represents a coordinate-sorted collection of records that extend {@link Locatable}
+ * (although contigs are assumed to be non-null when writing to file) associated with a sample name, a set of
+ * mandatory column headers given by a {@link TableColumnCollection}, and lambdas for
+ * reading and writing records.  Records are sorted using {@link IntervalUtils#LEXICOGRAPHICAL_ORDER_COMPARATOR}.
+ * See TSVLocatableCollectionUnitTest for a simple example of a subclass.
+ *
+ * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
+ */
 public abstract class TSVLocatableCollection<T extends Locatable> {
     private final String sampleName;
     private final List<T> records;
@@ -23,18 +33,29 @@ public abstract class TSVLocatableCollection<T extends Locatable> {
     private final Function<DataLine, T> dataLineToRecordFunction;
     private final BiConsumer<T, DataLine> recordAndDataLineBiConsumer;
 
+    /**
+     * Constructor given the sample name, the list of records, the mandatory column headers,
+     * and the lambdas for reading and writing records.
+     * Records are sorted using {@link IntervalUtils#LEXICOGRAPHICAL_ORDER_COMPARATOR}.
+     */
     public TSVLocatableCollection(final String sampleName,
                                   final List<T> records,
                                   final TableColumnCollection mandatoryColumns,
                                   final Function<DataLine, T> dataLineToRecordFunction,
                                   final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
         this.sampleName = Utils.nonNull(sampleName);
-        this.records = Utils.nonNull(records);
+        this.records = Utils.nonNull(records).stream().sorted(IntervalUtils.LEXICOGRAPHICAL_ORDER_COMPARATOR).collect(Collectors.toList());
         this.mandatoryColumns = Utils.nonNull(mandatoryColumns);
         this.dataLineToRecordFunction = Utils.nonNull(dataLineToRecordFunction);
         this.recordAndDataLineBiConsumer = Utils.nonNull(recordAndDataLineBiConsumer);
     }
 
+    /**
+     * Constructor given an input file, the mandatory column headers, and the lambdas for reading and writing records.
+     * The sample name is read from a comment string in the file and the list of records is read using
+     * the column headers and the appropriate lambda.
+     * @throws UserException.BadInput if records are not sorted using {@link IntervalUtils#LEXICOGRAPHICAL_ORDER_COMPARATOR}
+     */
     public TSVLocatableCollection(final File inputFile,
                                   final TableColumnCollection mandatoryColumns,
                                   final Function<DataLine, T> dataLineToRecordFunction,
@@ -46,8 +67,12 @@ public abstract class TSVLocatableCollection<T extends Locatable> {
 
         try (final TSVReader reader = new TSVReader(inputFile)) {
             TableUtils.checkMandatoryColumns(reader.columns(), mandatoryColumns, UserException.BadInput::new);
-            sampleName = reader.getSampleName();
-            records = reader.stream().collect(Collectors.toList());
+            sampleName = reader.readSampleName();
+            final List<T> recordsFromFile = reader.stream().collect(Collectors.toList());
+            records = recordsFromFile.stream().sorted(IntervalUtils.LEXICOGRAPHICAL_ORDER_COMPARATOR).collect(Collectors.toList());
+            if (!recordsFromFile.equals(records)) {
+                throw new UserException.BadInput(String.format("Records in input file %s were not sorted in lexicographical order.", inputFile));
+            }
         } catch (final IOException | UncheckedIOException e) {
             throw new UserException.CouldNotReadInputFile(inputFile, e);
         }
@@ -74,6 +99,9 @@ public abstract class TSVLocatableCollection<T extends Locatable> {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Writes the sample name in a comment string and the records to file.
+     */
     public void write(final File outputFile) {
         try (final TSVWriter writer = new TSVWriter(outputFile, sampleName)) {
             writer.writeSampleName();
@@ -112,8 +140,8 @@ public abstract class TSVLocatableCollection<T extends Locatable> {
             this.file = file;
         }
 
-        private String getSampleName() {
-            return getSampleName(file);
+        private String readSampleName() {
+            return readSampleName(file);
         }
 
         @Override
@@ -138,7 +166,7 @@ public abstract class TSVLocatableCollection<T extends Locatable> {
 
         void writeSampleName() {
             try {
-                writeComment(NamedSampleFile.SAMPLE_NAME_COMMENT_PREFIX + sampleName);
+                writeComment(NamedSampleFile.SAMPLE_NAME_COMMENT_TAG + sampleName);
             } catch (final IOException e) {
                 throw new UserException("Could not write sample name.");
             }

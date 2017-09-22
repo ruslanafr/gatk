@@ -18,8 +18,7 @@ public final class CopyRatioSegmentCollection extends TSVLocatableCollection<Cop
         NUM_POINTS,
         MEAN_LOG2_COPY_RATIO;
 
-        static final TableColumnCollection COLUMNS = new TableColumnCollection(
-                CONTIG, START, END, NUM_POINTS, MEAN_LOG2_COPY_RATIO);
+        static final TableColumnCollection COLUMNS = new TableColumnCollection((Object[]) values());
     }
     private static final Function<DataLine, CopyRatioSegment> COPY_RATIO_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION = dataLine -> {
         final String contig = dataLine.get(CopyRatioSegmentTableColumn.CONTIG);

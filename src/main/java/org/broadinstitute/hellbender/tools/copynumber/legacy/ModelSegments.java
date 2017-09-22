@@ -391,13 +391,15 @@ public final class ModelSegments extends SparkCommandLineProgram {
         logger.info(String.format("Reading allelic-counts file (%s)...", inputAllelicCountsFile));
         unfilteredAllelicCounts = new AllelicCountCollection(inputAllelicCountsFile);
         logger.info(String.format("Filtering allelic counts with total count less than %d...", minTotalAlleleCount));
-        filteredAllelicCounts = new AllelicCountCollection(unfilteredAllelicCounts.getAllelicCounts().stream()
-                .filter(ac -> ac.getRefReadCount() + ac.getAltReadCount() >= minTotalAlleleCount)
-                .collect(Collectors.toList()));
+        filteredAllelicCounts = new AllelicCountCollection(
+                unfilteredAllelicCounts.getSampleName(),
+                unfilteredAllelicCounts.getRecords().stream()
+                        .filter(ac -> ac.getRefReadCount() + ac.getAltReadCount() >= minTotalAlleleCount)
+                        .collect(Collectors.toList()));
         final File filteredAllelicCountsFile = new File(outputPrefix + FILTERED_ALLELIC_COUNTS_FILE_SUFFIX);
         filteredAllelicCounts.write(filteredAllelicCountsFile);
         logger.info(String.format("Retained %d / %d sites after filtering on total count...",
-                filteredAllelicCounts.getAllelicCounts().size(), unfilteredAllelicCounts.getAllelicCounts().size()));
+                filteredAllelicCounts.getRecords().size(), unfilteredAllelicCounts.getRecords().size()));
         logger.info(String.format("Filtered allelic counts written to %s.", filteredAllelicCountsFile));
     }
 
@@ -412,7 +414,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
     private void writeAlleleFractionSegments(final String sampleName) {
         final File alleleFractionSegmentsFile = new File(outputPrefix + ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX);
-        alleleFractionSegments.write(alleleFractionSegmentsFile, sampleName);
+        alleleFractionSegments.write(alleleFractionSegmentsFile);
         logSegmentsFileWrittenMessage(alleleFractionSegmentsFile);
     }
 

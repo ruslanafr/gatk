@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentati
 import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.param.ParamUtils;
 
 import java.util.List;
 
@@ -10,6 +11,16 @@ public class AlleleFractionSegment implements Locatable {
     private final SimpleInterval interval;
     private final int numPoints;
     private final double meanMinorAlleleFraction;
+
+    public AlleleFractionSegment(final SimpleInterval interval,
+                            final int numPoints,
+                            final double meanMinorAlleleFraction) {
+        Utils.nonNull(interval);
+        ParamUtils.isPositive(numPoints, "Number of points must be positive.");
+        this.interval = interval;
+        this.numPoints = numPoints;
+        this.meanMinorAlleleFraction = meanMinorAlleleFraction;
+    }
 
     public AlleleFractionSegment(final SimpleInterval interval,
                                  final List<Double> alternateAlleleFractions) {

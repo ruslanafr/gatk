@@ -18,8 +18,7 @@ public class CopyRatioCollection extends TSVLocatableCollection<CopyRatio> {
         END,
         LOG2_COPY_RATIO;
 
-        static final TableColumnCollection COLUMNS = new TableColumnCollection(
-                CONTIG, START, END, LOG2_COPY_RATIO);
+        static final TableColumnCollection COLUMNS = new TableColumnCollection((Object[]) values());
     }
 
     private static final Function<DataLine, CopyRatio> COPY_RATIO_DATA_LINE_TO_RECORD_FUNCTION = dataLine -> {

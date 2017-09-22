@@ -32,27 +32,27 @@ public final class AlleleFractionKernelSegmenter {
                     ? (x, y) -> x * y
                     : (x, y) -> FastMath.exp(-(x - y) * (x - y) / variance);
 
-    private final int numPointsTotal;
+    final AllelicCountCollection allelicCounts;
     private final Map<String, List<SimpleInterval>> intervalsPerChromosome;
     private final Map<String, List<Double>> alternateAlleleFractionsPerChromosome;    //in log2 space
 
     public AlleleFractionKernelSegmenter(final AllelicCountCollection allelicCounts) {
         Utils.nonNull(allelicCounts);
-        numPointsTotal = allelicCounts.getAllelicCounts().size();
-        intervalsPerChromosome = allelicCounts.getAllelicCounts().stream()
+        this.allelicCounts = allelicCounts;
+        intervalsPerChromosome = allelicCounts.getRecords().stream()
                 .map(AllelicCount::getInterval)
                 .collect(Collectors.groupingBy(
                         SimpleInterval::getContig,
                         LinkedHashMap::new,
                         Collectors.mapping(Function.identity(), Collectors.toList())));
-        final double[] alternateAlleleFractions = allelicCounts.getAllelicCounts().stream()
+        final double[] alternateAlleleFractions = allelicCounts.getRecords().stream()
                 .mapToDouble(ac -> ac.getRefReadCount() + ac.getAltReadCount() == 0
                         ? 0.
                         : (double) ac.getAltReadCount() / (ac.getRefReadCount() + ac.getAltReadCount()))
                 .toArray();
-        alternateAlleleFractionsPerChromosome = IntStream.range(0, allelicCounts.getAllelicCounts().size()).boxed()
+        alternateAlleleFractionsPerChromosome = IntStream.range(0, allelicCounts.getRecords().size()).boxed()
                 .map(i -> new ImmutablePair<>(
-                        allelicCounts.getAllelicCounts().get(i).getContig(),
+                        allelicCounts.getRecords().get(i).getContig(),
                         alternateAlleleFractions[i]))
                 .collect(Collectors.groupingBy(
                         Pair::getKey,
@@ -77,7 +77,7 @@ public final class AlleleFractionKernelSegmenter {
                 "Log-linear factor for the penalty on the number of changepoints per chromosome must be non-negative.");
 
         logger.info(String.format("Finding changepoints in %d data points and %d chromosomes...",
-                numPointsTotal, alternateAlleleFractionsPerChromosome.size()));
+                allelicCounts.getRecords().size(), alternateAlleleFractionsPerChromosome.size()));
 
         //loop over chromosomes, find changepoints, and create allele-fraction segments
         final List<AlleleFractionSegment> segments = new ArrayList<>();
@@ -105,6 +105,6 @@ public final class AlleleFractionKernelSegmenter {
             }
         }
         logger.info(String.format("Found %d segments in %d chromosomes.", segments.size(), alternateAlleleFractionsPerChromosome.keySet().size()));
-        return new AlleleFractionSegmentCollection(segments);
+        return new AlleleFractionSegmentCollection(allelicCounts.getSampleName(), segments);
     }
 }

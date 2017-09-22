@@ -22,8 +22,7 @@ public class CalledCopyRatioSegmentCollection extends TSVLocatableCollection<Cal
         MEAN_LOG2_COPY_RATIO,
         CALL;
 
-        static final TableColumnCollection COLUMNS = new TableColumnCollection(
-                CONTIG, START, END, NUM_POINTS, MEAN_LOG2_COPY_RATIO, CALL);
+        static final TableColumnCollection COLUMNS = new TableColumnCollection((Object[]) values());
     }
 
     private static final Function<DataLine, CalledCopyRatioSegment> CALLED_COPY_RATIO_SEGMENT_DATA_LINE_TO_RECORD_FUNCTION = dataLine -> {

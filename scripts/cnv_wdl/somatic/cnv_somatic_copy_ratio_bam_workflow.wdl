@@ -100,7 +100,7 @@ task DenoiseReadCounts {
     command {
         java -Xmx${default="4" mem}g -jar ${gatk_jar} DenoiseReadCounts \
             --input ${read_counts} \
-            ${"--readCountPanelOfNormals " + read_count_pon} \
+            --readCountPanelOfNormals ${read_count_pon} \
             ${"--numberOfEigensamples " + number_of_eigensamples} \
             --standardizedCopyRatios ${entity_id}.standardizedCR.tsv \
             --denoisedCopyRatios ${entity_id}.denoisedCR.tsv

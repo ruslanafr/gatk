@@ -127,8 +127,8 @@ task ModelSegments {
     Float? kernel_variance_copy_ratio
     Int? kernel_approximation_dimension
     Array[Int]? window_sizes = [8, 16, 32, 64, 128, 256]
-    Float? num_changepoints_penalty_linear_factor_copy_ratio
-    Float? num_changepoints_penalty_log_linear_factor_copy_ratio
+    Float? num_changepoints_penalty_linear_factor
+    Float? num_changepoints_penalty_log_linear_factor
     String gatk_jar
 
     # Runtime parameters
@@ -144,8 +144,8 @@ task ModelSegments {
             --kernelVarianceCopyRatio ${default="0.0" kernel_variance_copy_ratio} \
             --kernelApproximationDimension ${default="100" kernel_approximation_dimension} \
             --windowSizes ${sep= " --windowSizes " window_sizes} \
-            --numChangepointsPenaltyLinearFactorCopyRatio ${default="1.0" num_changepoints_penalty_linear_factor_copy_ratio} \
-            --numChangepointsPenaltyLogLinearFactorCopyRatio ${default="1.0" num_changepoints_penalty_log_linear_factor_copy_ratio} \
+            --numChangepointsPenaltyLinearFactor ${default="1.0" num_changepoints_penalty_linear_factor} \
+            --numChangepointsPenaltyLogLinearFactor ${default="1.0" num_changepoints_penalty_log_linear_factor} \
             --output ${entity_id}.seg
     }
 

@@ -11,7 +11,7 @@ import org.broadinstitute.hellbender.cmdline.programgroups.CopyNumberProgramGrou
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatio;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
 import org.broadinstitute.hellbender.utils.R.RScriptExecutor;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -57,16 +57,16 @@ public final class PlotDenoisedCopyRatios extends CommandLineProgram {
 
     @Argument(
             doc = "Input file containing standardized copy-ratio profile (output of DenoiseReadCounts).",
-            fullName = LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME,
+            fullName = CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_FULL_NAME,
+            shortName = CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME,
             optional = true
     )
     private File inputStandardizedCopyRatiosFile;
 
     @Argument(
             doc = "Input file containing denoised copy-ratio profile (output of DenoiseReadCounts).",
-            fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,
+            fullName = CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
+            shortName = CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,
             optional = true
     )
     private File inputDenoisedCopyRatiosFile;
@@ -95,8 +95,8 @@ public final class PlotDenoisedCopyRatios extends CommandLineProgram {
 
     @Argument(
             doc = "Prefix for output filenames.",
-            fullName =  LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME,
-            shortName = LegacyCopyNumberArgument.OUTPUT_PREFIX_SHORT_NAME
+            fullName =  CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME,
+            shortName = CopyNumberStandardArgument.OUTPUT_PREFIX_SHORT_NAME
     )
     private String outputPrefix;
 

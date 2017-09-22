@@ -29,7 +29,8 @@ public final class HDF5UtilsUnitTest {
         };
     }
 
-    @Test(dataProvider = "testCreateLargeMatrixData")
+    //this test requires a large amount of heap space by design, so we disable it
+    @Test(dataProvider = "testCreateLargeMatrixData", enabled = false)
     public void testCreateLargeMatrix(final int numRows,
                                       final int numColumns) {
         final double mean = 0.;

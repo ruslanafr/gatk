@@ -3,7 +3,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.CalledCopyRatioSegmentCollection;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -22,8 +22,8 @@ public final class CallCopyRatioSegmentsIntegrationTest extends CommandLineProgr
         final File outputFile = createTempFile("test.called",".seg");
 
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, TEST_DENOISED_COPY_RATIOS.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.SEGMENTS_FILE_SHORT_NAME, TEST_SEGMENTS.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, TEST_DENOISED_COPY_RATIOS.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.SEGMENTS_FILE_SHORT_NAME, TEST_SEGMENTS.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputFile.getAbsolutePath()
         };
         runCommandLine(arguments);

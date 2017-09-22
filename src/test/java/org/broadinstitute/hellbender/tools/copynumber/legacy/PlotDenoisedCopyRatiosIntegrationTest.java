@@ -3,7 +3,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -15,7 +15,7 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     private static String TEST_SUB_DIR = toolsTestDir + "copynumber/legacy/plotting/";
 
     //test files
-    private static final File STANDARDIZED_COPY_RATIOS_FILE = new File(TEST_SUB_DIR, "plotting-copy-ratios.tsv"); //just use the TN file
+    private static final File STANDARDIZED_COPY_RATIOS_FILE = new File(TEST_SUB_DIR, "plotting-copy-ratios.tsv"); //just use the same file for both standardized and denoised
     private static final File DENOISED_COPY_RATIOS_FILE = new File(TEST_SUB_DIR, "plotting-copy-ratios.tsv");
     private static final File SEQUENCE_DICTIONARY_FILE = new File(TEST_SUB_DIR, "plotting-sequence-dictionary.dict");
 
@@ -32,11 +32,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testPlotting() {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
         Assert.assertTrue(new File(outputDir, OUTPUT_PREFIX + "_Before_After_CR_Lim_4.png").exists());
@@ -63,11 +63,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testMinimumContigLength() {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_WITH_NO_CONTIGS_ABOVE_MINIMUM_LENGTH_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -75,11 +75,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     @Test(expectedExceptions = UserException.class)
     public void testOutputDirExists() throws IOException {
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,  DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,  DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, "Non-existent-path",
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -88,11 +88,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testMissingStandardizedFile() throws IOException {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, "Non-existent-file",
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,  DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, "Non-existent-file",
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,  DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -101,11 +101,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testMissingDenoisedFile() throws IOException {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,  "Non-existent-file",
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,  "Non-existent-file",
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -114,11 +114,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testMissingSequenceDictionaryFile() throws IOException {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME,  "Non-existent-file",
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -127,11 +127,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testStandardizedSampleNameMismatch() throws IOException {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_WITH_BAD_SAMPLE_NAME_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_WITH_BAD_SAMPLE_NAME_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -140,11 +140,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testStandardizedDataOutOfBounds() throws IOException {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_OUT_OF_BOUNDS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_OUT_OF_BOUNDS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, DENOISED_COPY_RATIOS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -153,11 +153,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testDenoisedSampleNameMismatch() throws IOException {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_WITH_BAD_SAMPLE_NAME_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_WITH_BAD_SAMPLE_NAME_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }
@@ -166,11 +166,11 @@ public final class PlotDenoisedCopyRatiosIntegrationTest extends CommandLineProg
     public void testDenoisedDataOutOfBounds() throws IOException {
         final File outputDir = createTempDir("testDir");
         final String[] arguments = {
-                "-" + LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_OUT_OF_BOUNDS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, STANDARDIZED_COPY_RATIOS_FILE.getAbsolutePath(),
+                "-" + CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, COPY_RATIOS_OUT_OF_BOUNDS_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.SEQUENCE_DICTIONARY_SHORT_NAME, SEQUENCE_DICTIONARY_FILE.getAbsolutePath(),
                 "-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME, outputDir.getAbsolutePath(),
-                "-" + LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
+                "-" + CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, OUTPUT_PREFIX
         };
         runCommandLine(arguments);
     }

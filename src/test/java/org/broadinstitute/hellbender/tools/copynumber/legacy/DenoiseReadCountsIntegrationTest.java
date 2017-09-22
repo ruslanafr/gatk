@@ -3,7 +3,7 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
 import org.broadinstitute.hellbender.utils.test.ArgumentsBuilder;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -19,31 +19,36 @@ import java.util.List;
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
-public class DenoiseReadCountsIntegrationTest extends CommandLineProgramTest {
+public final class DenoiseReadCountsIntegrationTest extends CommandLineProgramTest {
     private static final String TEST_SUB_DIR = toolsTestDir + "copynumber/legacy/coverage/denoising";
-    private static final File WGS_READ_COUNTS_TSV_FILE = new File(TEST_SUB_DIR, "denoise-read-counts-SM-74P4M-v1-chr20-downsampled-wgs-read-counts.readCounts.tsv");
-    private static final File WGS_READ_COUNTS_HDF5_FILE = new File(TEST_SUB_DIR, "denoise-read-counts-SM-74P4M-v1-chr20-downsampled-wgs-read-counts.readCounts.hdf5");
-    private static final File WGS_ANNOTATED_INTERVALS_FILE = new File(TEST_SUB_DIR, "denoise-read-counts-SM-74P4M-v1-chr20-downsampled-wgs-read-counts.readCounts.intervals.annotated.tsv");
+    private static final File WGS_READ_COUNTS_TSV_FILE = new File(TEST_SUB_DIR, "denoise-read-counts-wgs-read-counts-HCC1143_BL-n1-chr20-downsampled-deduplicated.readCounts.tsv");
+    private static final File WGS_READ_COUNTS_HDF5_FILE = new File(TEST_SUB_DIR, "denoise-read-counts-wgs-read-counts-HCC1143_BL-n1-chr20-downsampled-deduplicated.readCounts.hdf5");
+    private static final File WGS_ANNOTATED_INTERVALS_FILE = new File(TEST_SUB_DIR, "denoise-read-counts-wgs-annotated-intervals.annotated.tsv");
     private static final File WGS_NO_GC_PON_FILE = new File(largeFileTestDir, "cnv_somatic_workflows_test_files/wgs-no-gc.pon.hdf5");
     private static final File WGS_DO_GC_PON_FILE = new File(largeFileTestDir, "cnv_somatic_workflows_test_files/wgs-do-gc.pon.hdf5");
+    private static final List<Integer> NUMBER_OF_EIGENVALUES_LIST = Arrays.asList(null, 1, 10);
 
-    //create all combinations of input
+    //create all combinations of arguments
     @DataProvider(name = "dataDenoiseReadCounts")
     public Object[][] dataDenoiseReadCounts() {
-
         final List<List<Object>> data = new ArrayList<>();
         for (final File inputReadCountsFile : Arrays.asList(WGS_READ_COUNTS_TSV_FILE, WGS_READ_COUNTS_HDF5_FILE)) {
             for (final File annotatedIntervalsFile : Arrays.asList(WGS_ANNOTATED_INTERVALS_FILE, null)) {
                 for (final File ponFile : Arrays.asList(WGS_NO_GC_PON_FILE, WGS_DO_GC_PON_FILE, null)) {
-                    final ArgumentsBuilder arguments = new ArgumentsBuilder()
-                            .addFileArgument(StandardArgumentDefinitions.INPUT_SHORT_NAME, inputReadCountsFile);
-                    if (annotatedIntervalsFile != null) {
-                        arguments.addFileArgument(LegacyCopyNumberArgument.ANNOTATED_INTERVALS_FILE_SHORT_NAME, annotatedIntervalsFile);
+                    for (final Integer numberOfEigenvalues : NUMBER_OF_EIGENVALUES_LIST) {
+                        final ArgumentsBuilder arguments = new ArgumentsBuilder()
+                                .addFileArgument(StandardArgumentDefinitions.INPUT_SHORT_NAME, inputReadCountsFile);
+                        if (annotatedIntervalsFile != null) {
+                            arguments.addFileArgument(CopyNumberStandardArgument.ANNOTATED_INTERVALS_FILE_SHORT_NAME, annotatedIntervalsFile);
+                        }
+                        if (ponFile != null) {
+                            arguments.addFileArgument(CopyNumberStandardArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME, ponFile);
+                        }
+                        if (numberOfEigenvalues != null) {
+                            arguments.addArgument(CopyNumberStandardArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME, numberOfEigenvalues.toString());
+                        }
+                        data.add(Arrays.asList(arguments, ponFile == null));    //set isStandardizedEqualsDenoised = true if no PoN
                     }
-                    if (ponFile != null) {
-                        arguments.addFileArgument(LegacyCopyNumberArgument.READ_COUNT_PANEL_OF_NORMALS_FILE_SHORT_NAME, ponFile);
-                    }
-                    data.add(Arrays.asList(arguments, ponFile != null));
                 }
             }
         }
@@ -52,12 +57,12 @@ public class DenoiseReadCountsIntegrationTest extends CommandLineProgramTest {
 
     @Test(dataProvider = "dataDenoiseReadCounts")
     public void testDenoiseReadCounts(final ArgumentsBuilder argumentsBuilder,
-                                      final boolean isWithPoN) {
+                                      final boolean isStandardizedEqualsDenoised) {
         final File standardizedCRFile = createTempFile("test", ".standardizedCR.tsv");
         final File denoisedCRFile = createTempFile("test", ".denoisedCR.tsv");
         final String[] arguments = argumentsBuilder
-                .addFileArgument(LegacyCopyNumberArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, standardizedCRFile)
-                .addFileArgument(LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, denoisedCRFile)
+                .addFileArgument(CopyNumberStandardArgument.STANDARDIZED_COPY_RATIOS_FILE_SHORT_NAME, standardizedCRFile)
+                .addFileArgument(CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME, denoisedCRFile)
                 .addArgument(StandardArgumentDefinitions.VERBOSITY_NAME, "INFO")
                 .getArgsArray();
         runCommandLine(arguments);
@@ -72,6 +77,6 @@ public class DenoiseReadCountsIntegrationTest extends CommandLineProgramTest {
         Assert.assertEquals(standardizedCopyRatios.getSampleName(), denoisedCopyRatios.getSampleName());
         Assert.assertEquals(standardizedCopyRatios.getIntervals(), denoisedCopyRatios.getIntervals());
         //standardized and denoised copy ratios should be the same if PoN is not provided
-        Assert.assertEquals(standardizedCopyRatios.getCopyRatioValues().equals(denoisedCopyRatios.getCopyRatioValues()), !isWithPoN);
+        Assert.assertEquals(standardizedCopyRatios.getCopyRatioValues().equals(denoisedCopyRatios.getCopyRatioValues()), isStandardizedEqualsDenoised);
     }
 }

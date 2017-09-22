@@ -15,7 +15,7 @@ import org.broadinstitute.hellbender.cmdline.programgroups.CopyNumberProgramGrou
 import org.broadinstitute.hellbender.engine.spark.SparkCommandLineProgram;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.denoising.svd.HDF5SVDReadCountPanelOfNormals;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
 import org.broadinstitute.hellbender.tools.copynumber.temporary.SimpleReadCountCollection;
 import org.broadinstitute.hellbender.tools.exome.Target;
 import org.broadinstitute.hellbender.tools.exome.TargetAnnotation;
@@ -102,8 +102,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
             doc = "Input annotated-interval file containing annotations for GC content in genomic intervals (output of AnnotateTargets).  " +
                     "If provided, explicit GC correction will be performed before performing SVD.  " +
                     "Intervals must be identical to and in the same order as those in the input read-count files.",
-            fullName = LegacyCopyNumberArgument.ANNOTATED_INTERVALS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.ANNOTATED_INTERVALS_FILE_SHORT_NAME,
+            fullName = CopyNumberStandardArgument.ANNOTATED_INTERVALS_FILE_FULL_NAME,
+            shortName = CopyNumberStandardArgument.ANNOTATED_INTERVALS_FILE_SHORT_NAME,
             optional = true
     )
     private File annotatedIntervalsFile = null;
@@ -177,8 +177,8 @@ public class CreateReadCountPanelOfNormals extends SparkCommandLineProgram {
     @Argument(
             doc = "Number of eigensamples to use for truncated SVD and to store in the panel of normals.  " +
                     "The number of samples retained after filtering will be used instead if it is smaller than this.",
-            fullName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_LONG_NAME,
-            shortName = LegacyCopyNumberArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
+            fullName = CopyNumberStandardArgument.NUMBER_OF_EIGENSAMPLES_LONG_NAME,
+            shortName = CopyNumberStandardArgument.NUMBER_OF_EIGENSAMPLES_SHORT_NAME,
             minValue = 1,
             optional = true
     )

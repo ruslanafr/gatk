@@ -1,6 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.formats;
 
-public final class LegacyCopyNumberArgument {
+public final class CopyNumberStandardArgument {
     public static final String ANNOTATED_INTERVALS_FILE_FULL_NAME = "annotatedIntervals";
     public static final String ANNOTATED_INTERVALS_FILE_SHORT_NAME = "annot";
 

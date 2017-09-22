@@ -14,7 +14,7 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentatio
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioKernelSegmenter;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
@@ -103,16 +103,16 @@ public final class ModelSegments extends SparkCommandLineProgram {
 
     @Argument(
             doc = "Input file containing denoised copy-ratio profile (output of DenoiseReadCounts).",
-            fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,
+            fullName = CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
+            shortName = CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,
             optional = true
     )
     private File inputDenoisedCopyRatiosFile = null;
 
     @Argument(
             doc = "Input file containing allelic counts (output of CollectAllelicCounts).",
-            fullName = LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_SHORT_NAME,
+            fullName = CopyNumberStandardArgument.ALLELIC_COUNTS_FILE_FULL_NAME,
+            shortName = CopyNumberStandardArgument.ALLELIC_COUNTS_FILE_SHORT_NAME,
             optional = true
     )
     private File inputAllelicCountsFile = null;
@@ -121,8 +121,8 @@ public final class ModelSegments extends SparkCommandLineProgram {
             doc = "Prefix for output files. Will also be used as the sample name in downstream plots." +
                     "(Note: if this is a file path or contains slashes (/), " +
                     "the string after the final slash will be used as the sample name in downstream plots.)",
-            fullName =  LegacyCopyNumberArgument.OUTPUT_PREFIX_LONG_NAME,
-            shortName = LegacyCopyNumberArgument.OUTPUT_PREFIX_SHORT_NAME
+            fullName =  CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME,
+            shortName = CopyNumberStandardArgument.OUTPUT_PREFIX_SHORT_NAME
     )
     private String outputPrefix;
 

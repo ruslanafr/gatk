@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /**
- * Integration test for {@link CollectAllelicCounts}.  Uses BAM and SNP files generated from hg19mini using wgsim.
+ * Integration test for {@link CollectAllelicCounts}.  Uses a BAM with sites generated from hg19mini using wgsim.
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */

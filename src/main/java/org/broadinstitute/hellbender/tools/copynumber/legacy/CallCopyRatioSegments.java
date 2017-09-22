@@ -10,7 +10,7 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.Cal
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.caller.ReCapSegCaller;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.CopyRatioCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
-import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.LegacyCopyNumberArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.File;
@@ -40,15 +40,15 @@ public final class CallCopyRatioSegments extends CommandLineProgram {
 
     @Argument(
             doc = "Input file containing denoised copy-ratio profile (output of DenoiseReadCounts).",
-            fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME
+            fullName = CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
+            shortName = CopyNumberStandardArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME
     )
     private File inputDenoisedCopyRatiosFile;
 
     @Argument(
             doc = "Input file containing copy-ratio segments (output of ModelSegments).",
-            fullName = LegacyCopyNumberArgument.SEGMENTS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.SEGMENTS_FILE_SHORT_NAME
+            fullName = CopyNumberStandardArgument.SEGMENTS_FILE_FULL_NAME,
+            shortName = CopyNumberStandardArgument.SEGMENTS_FILE_SHORT_NAME
     )
     protected File segmentsFile;
 

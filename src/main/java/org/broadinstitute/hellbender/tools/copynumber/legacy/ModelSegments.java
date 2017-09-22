@@ -104,18 +104,16 @@ public final class ModelSegments extends SparkCommandLineProgram {
     @Argument(
             doc = "Input file containing denoised copy-ratio profile (output of DenoiseReadCounts).",
             fullName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME,
-            optional = true
+            shortName = LegacyCopyNumberArgument.DENOISED_COPY_RATIOS_FILE_SHORT_NAME
     )
-    private File inputDenoisedCopyRatiosFile;
+    private File inputDenoisedCopyRatiosFile = null;
 
     @Argument(
             doc = "Input file containing allelic counts (output of CollectAllelicCounts).",
             fullName = LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_FULL_NAME,
-            shortName = LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_SHORT_NAME,
-            optional = true
+            shortName = LegacyCopyNumberArgument.ALLELIC_COUNTS_FILE_SHORT_NAME
     )
-    private File inputAllelicCountsFile;
+    private File inputAllelicCountsFile = null;
 
     @Argument(
             doc = "Prefix for output files. Will also be used as the sample name in downstream plots." +
@@ -130,7 +128,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
             doc = "Maximum number of segments allowed per chromosome.",
             fullName = MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_LONG_NAME,
             shortName = MAXIMUM_NUMBER_OF_SEGMENTS_PER_CHROMOSOME_SHORT_NAME,
-            optional = true,
             minValue = 1
     )
     private int maxNumSegmentsPerChromosome = 100;
@@ -139,7 +136,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
             doc = "Minimum total count required to include site in allele-fraction segmentation.",
             fullName = MINIMUM_TOTAL_ALLELE_COUNT_LONG_NAME,
             shortName = MINIMUM_TOTAL_ALLELE_COUNT_SHORT_NAME,
-            optional = true,
             minValue = 0
     )
     private int minTotalAlleleCount = 10;
@@ -148,7 +144,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
             doc = "Variance of Gaussian kernel for copy-ratio segmentation.  If zero, a linear kernel will be used.",
             fullName = KERNEL_VARIANCE_COPY_RATIO_LONG_NAME,
             shortName = KERNEL_VARIANCE_COPY_RATIO_SHORT_NAME,
-            optional = true,
             minValue = 0.
     )
     private double kernelVarianceCopyRatio = 0.;
@@ -170,7 +165,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
                     "Time complexity scales quadratically and space complexity scales linearly with this parameter.",
             fullName = KERNEL_APPROXIMATION_DIMENSION_LONG_NAME,
             shortName = KERNEL_APPROXIMATION_DIMENSION_SHORT_NAME,
-            optional = true,
             minValue = 1
     )
     private int kernelApproximationDimension = 100;
@@ -183,7 +177,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
                     "Duplicate values will be ignored.",
             fullName = WINDOW_SIZES_LONG_NAME,
             shortName = WINDOW_SIZES_SHORT_NAME,
-            optional = true,
             minValue = 1
     )
     private List<Integer> windowSizes = new ArrayList<>(Arrays.asList(8, 16, 32, 64, 128, 256));
@@ -196,7 +189,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
                     "Must be non-negative.",
             fullName = NUM_CHANGEPOINTS_PENALTY_FACTOR_COPY_RATIO_LONG_NAME,
             shortName = NUM_CHANGEPOINTS_PENALTY_FACTOR_COPY_RATIO_SHORT_NAME,
-            optional = true,
             minValue = 0.
     )
     private double numChangepointsPenaltyFactorCopyRatio = 1.;
@@ -209,7 +201,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
                     "Must be non-negative.",
             fullName = NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_LONG_NAME,
             shortName = NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_SHORT_NAME,
-            optional = true,
             minValue = 0.
     )
     private double numChangepointsPenaltyFactorAlleleFraction = 1.;
@@ -227,56 +218,49 @@ public final class ModelSegments extends SparkCommandLineProgram {
     @Argument(
             doc = "Total number of MCMC samples for copy-ratio model.",
             fullName = NUM_SAMPLES_COPY_RATIO_LONG_NAME,
-            shortName = NUM_SAMPLES_COPY_RATIO_SHORT_NAME,
-            optional = true
+            shortName = NUM_SAMPLES_COPY_RATIO_SHORT_NAME
     )
     private int numSamplesCopyRatio = 100;
 
     @Argument(
             doc = "Number of burn-in samples to discard for copy-ratio model.",
             fullName = NUM_BURN_IN_COPY_RATIO_LONG_NAME,
-            shortName = NUM_BURN_IN_COPY_RATIO_SHORT_NAME,
-            optional = true
+            shortName = NUM_BURN_IN_COPY_RATIO_SHORT_NAME
     )
     private int numBurnInCopyRatio = 50;
 
     @Argument(
             doc = "Total number of MCMC samples for allele-fraction model.",
             fullName = NUM_SAMPLES_ALLELE_FRACTION_LONG_NAME,
-            shortName = NUM_SAMPLES_ALLELE_FRACTION_SHORT_NAME,
-            optional = true
+            shortName = NUM_SAMPLES_ALLELE_FRACTION_SHORT_NAME
     )
     private int numSamplesAlleleFraction = 100;
 
     @Argument(
             doc = "Number of burn-in samples to discard for allele-fraction model.",
             fullName = NUM_BURN_IN_ALLELE_FRACTION_LONG_NAME,
-            shortName = NUM_BURN_IN_ALLELE_FRACTION_SHORT_NAME,
-            optional = true
+            shortName = NUM_BURN_IN_ALLELE_FRACTION_SHORT_NAME
     )
     private int numBurnInAlleleFraction = 50;
 
     @Argument(
             doc = "Number of 95% credible-interval widths to use for copy-ratio similar-segment merging.",
             fullName = INTERVAL_THRESHOLD_COPY_RATIO_LONG_NAME,
-            shortName = INTERVAL_THRESHOLD_COPY_RATIO_SHORT_NAME,
-            optional = true
+            shortName = INTERVAL_THRESHOLD_COPY_RATIO_SHORT_NAME
     )
     private double intervalThresholdCopyRatio = 4.;
 
     @Argument(
             doc = "Number of 95% credible-interval widths to use for allele-fraction similar-segment merging.",
             fullName = INTERVAL_THRESHOLD_ALLELE_FRACTION_LONG_NAME,
-            shortName = INTERVAL_THRESHOLD_ALLELE_FRACTION_SHORT_NAME,
-            optional = true
+            shortName = INTERVAL_THRESHOLD_ALLELE_FRACTION_SHORT_NAME
     )
     private double intervalThresholdAlleleFraction = 2.;
 
     @Argument(
             doc = "Maximum number of iterations allowed for similar-segment merging.",
             fullName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_LONG_NAME,
-            shortName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_SHORT_NAME,
-            optional = true
+            shortName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_SHORT_NAME
     )
     private int maxNumSimilarSegmentMergingIterations = 10;
 
@@ -285,8 +269,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
                     "(Increasing this will decrease runtime, but the final number of segments may be higher. " +
                     "Setting this to 0 will completely disable model refitting between iterations.)",
             fullName = NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_LONG_NAME,
-            shortName = NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_SHORT_NAME,
-            optional = true
+            shortName = NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_SHORT_NAME
     )
     protected int numSimilarSegmentMergingIterationsPerFit = 0;
 

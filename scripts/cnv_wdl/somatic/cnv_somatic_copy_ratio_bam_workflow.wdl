@@ -187,7 +187,7 @@ task CallCopyRatioSegments {
     }
 
     output {
-        File called_copy_ratio_segments = "${entity_id}.called"
+        File called_copy_ratio_segments = "${entity_id}.called.seg"
     }
 }
 

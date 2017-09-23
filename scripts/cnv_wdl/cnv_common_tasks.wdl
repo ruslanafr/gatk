@@ -43,14 +43,14 @@ task CollectReadCounts {
     File? padded_targets
     File bam
     File bam_idx
+    File ref_fasta
+    File ref_fasta_fai
+    File ref_fasta_dict
+    Int? wgs_bin_size
     Boolean? keep_non_autosomes
     Boolean? disable_all_read_filters
     Boolean? disable_sequence_dictionary_validation
     Boolean? keep_duplicate_reads
-    Int? wgs_bin_size
-    File ref_fasta
-    File ref_fasta_fai
-    File ref_fasta_dict
     String gatk_jar
 
     # Runtime parameters
@@ -113,6 +113,58 @@ task CollectReadCounts {
         File read_counts = read_counts_tsv_filename
         File read_counts_hdf5 = read_counts_hdf5_filename   #"" if is_wgs = false
         File intervals = intervals_filename                 #padded_targets if is_wgs = false
+    }
+}
+
+# Collect allelic counts
+task CollectAllelicCounts {
+    File common_sites
+    File bam
+    File bam_idx
+    File ref_fasta
+    File ref_fasta_fai
+    File ref_fasta_dict
+    Int minimum_base_quality
+    Boolean? disable_all_read_filters
+    Boolean? disable_sequence_dictionary_validation
+    Boolean? keep_duplicate_reads
+    String gatk_jar
+
+    # Runtime parameters
+    Int? mem
+    String gatk_docker
+    Int? preemptible_attempts
+    Int? disk_space_gb
+
+    # Sample name is derived from the bam filename
+    String base_filename = basename(bam, ".bam")
+
+    String allelic_counts_tsv_filename = "${base_filename}.readCounts.tsv"
+    String read_counts_hdf5_filename = if is_wgs then "${base_filename}.readCounts.hdf5" else ""
+    String intervals_filename = if is_wgs then "${base_filename}.readCounts.intervals.tsv" else select_first([padded_targets, ""])
+
+    command {
+        java -Xmx${default="4" mem}g -jar ${gatk_jar} CollectAllelicCounts \
+            -L ${common_sites}
+            --input ${bam} \
+            --reference ${ref_fasta} \
+            --minimumBaseQuality ${default="20" minimum_base_quality} \
+            --disableToolDefaultReadFilters ${default="false" disable_all_read_filters} \
+            --disableSequenceDictionaryValidation ${default="true" disable_sequence_dictionary_validation} \
+            $(if [ ${default="true" keep_duplicate_reads} = true ]; then echo " --disableReadFilter NotDuplicateReadFilter "; else echo ""; fi) \
+            --output ${allelic_counts_tsv_filename}
+    }
+
+    runtime {
+        docker: "${gatk_docker}"
+        memory: select_first([mem, 5]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, ceil(size(bam, "GB")) + 50]) + " HDD"
+        preemptible: select_first([preemptible_attempts, 2])
+    }
+
+    output {
+        String entity_id = base_filename
+        File allelic_counts = "${base_filename}.allelicCounts.tsv"
     }
 }
 

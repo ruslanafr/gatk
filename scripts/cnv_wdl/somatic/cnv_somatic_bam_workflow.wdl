@@ -9,21 +9,16 @@
 # - If a target file is not provided, then the WGS workflow will be run instead and the specified value of
 #   wgs_bin_size (default 10000) will be used.
 #
-# - A normal BAM (bam) is requrired for the tumor/normal workflow.  If not provided, the tumor-only workflow
-#   will be run.
-#
-# - The sites file (common_sites) is required for the allele-count workflow and should be a Picard interval list.
-#   If not provided, the allele-count workflow will not be run.
+# - The sites file (common_sites) is must be a Picard interval list.
 #
 # - Example invocation:
 #    java -jar cromwell.jar run cnv_somatic_bam_workflow.wdl myParameters.json
-#   See cnv_somatic_pair_workflow_template.json for a template json file to modify with your own parameters (please save
+#   See cnv_somatic_bam_workflow_template.json for a template json file to modify with your own parameters (please save
 #   your modified version with a different filename and do not commit to the gatk repository).
 #
 #############
 
 import "cnv_common_tasks.wdl" as CNVTasks
-import "cnv_somatic_copy_ratio_bam_workflow.wdl" as CopyRatio
 import "cnv_somatic_oncotate.wdl" as Oncotate
 
 workflow CNVSomaticBAMWorkflow {
@@ -71,7 +66,7 @@ workflow CNVSomaticBAMWorkflow {
     
     call CNVTasks.CollectAllelicCounts {
         input:
-            common_sites = select_first([common_sites, ""]),
+            common_sites = common_sites,
             bam = bam,
             bam_idx = bam_idx,
             ref_fasta = ref_fasta,

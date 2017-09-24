@@ -124,7 +124,7 @@ task CollectAllelicCounts {
     File ref_fasta
     File ref_fasta_fai
     File ref_fasta_dict
-    Int minimum_base_quality
+    Int? minimum_base_quality
     Boolean? disable_all_read_filters
     Boolean? disable_sequence_dictionary_validation
     Boolean? keep_duplicate_reads
@@ -140,8 +140,6 @@ task CollectAllelicCounts {
     String base_filename = basename(bam, ".bam")
 
     String allelic_counts_tsv_filename = "${base_filename}.readCounts.tsv"
-    String read_counts_hdf5_filename = if is_wgs then "${base_filename}.readCounts.hdf5" else ""
-    String intervals_filename = if is_wgs then "${base_filename}.readCounts.intervals.tsv" else select_first([padded_targets, ""])
 
     command {
         java -Xmx${default="4" mem}g -jar ${gatk_jar} CollectAllelicCounts \

@@ -17,7 +17,6 @@ import java.util.function.Function;
  */
 public final class AlleleFractionSegmentCollection extends TSVLocatableCollection<AlleleFractionSegment> {
     enum AlleleFractionSegmentTableColumn {
-        SAMPLE,
         CONTIG,
         START,
         END,

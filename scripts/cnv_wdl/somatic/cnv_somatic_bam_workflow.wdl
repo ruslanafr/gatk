@@ -61,7 +61,8 @@ workflow CNVSomaticBAMWorkflow {
             ref_fasta_fai = ref_fasta_fai,
             ref_fasta_dict = ref_fasta_dict,
             gatk_jar = gatk_jar,
-            gatk_docker = gatk_docker
+            gatk_docker = gatk_docker,
+            is_wgs = is_wgs
     }
     
     call CNVTasks.CollectAllelicCounts {

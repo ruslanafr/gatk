@@ -139,18 +139,18 @@ task CollectAllelicCounts {
     # Sample name is derived from the bam filename
     String base_filename = basename(bam, ".bam")
 
-    String allelic_counts_tsv_filename = "${base_filename}.readCounts.tsv"
+    String allelic_counts_filename = "${base_filename}.allelicCounts.tsv"
 
     command {
         java -Xmx${default="4" mem}g -jar ${gatk_jar} CollectAllelicCounts \
-            -L ${common_sites}
+            -L ${common_sites} \
             --input ${bam} \
             --reference ${ref_fasta} \
             --minimumBaseQuality ${default="20" minimum_base_quality} \
             --disableToolDefaultReadFilters ${default="false" disable_all_read_filters} \
             --disableSequenceDictionaryValidation ${default="true" disable_sequence_dictionary_validation} \
             $(if [ ${default="true" keep_duplicate_reads} = true ]; then echo " --disableReadFilter NotDuplicateReadFilter "; else echo ""; fi) \
-            --output ${allelic_counts_tsv_filename}
+            --output ${allelic_counts_filename}
     }
 
     runtime {
@@ -162,7 +162,7 @@ task CollectAllelicCounts {
 
     output {
         String entity_id = base_filename
-        File allelic_counts = "${base_filename}.allelicCounts.tsv"
+        File allelic_counts = allelic_counts_filename
     }
 }
 

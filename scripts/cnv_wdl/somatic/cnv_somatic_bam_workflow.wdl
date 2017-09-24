@@ -125,7 +125,7 @@ workflow CNVSomaticBAMWorkflow {
         String entity_id = CollectReadCounts.entity_id
         File read_counts = CollectReadCounts.read_counts
         File allelic_counts = CollectAllelicCounts.allelic_counts
-        File standardized_copy_ratios = DenoiseReadCounts.standardized_copy_ratio
+        File standardized_copy_ratios = DenoiseReadCounts.standardized_copy_ratios
         File denoised_copy_ratios = DenoiseReadCounts.denoised_copy_ratios
         File copy_ratio_segments = ModelSegments.copy_ratio_segments
         File allele_fraction_segments = ModelSegments.allele_fraction_segments

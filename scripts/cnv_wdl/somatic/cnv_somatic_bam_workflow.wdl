@@ -54,15 +54,14 @@ workflow CNVSomaticBAMWorkflow {
 
     call CNVTasks.CollectReadCounts {
         input:
-            padded_targets = padded_targets,
+            padded_targets = select_first([PadTargets.padded_targets, ""]),
             bam = bam,
             bam_idx = bam_idx,
             ref_fasta = ref_fasta,
             ref_fasta_fai = ref_fasta_fai,
             ref_fasta_dict = ref_fasta_dict,
             gatk_jar = gatk_jar,
-            gatk_docker = gatk_docker,
-            is_wgs = is_wgs
+            gatk_docker = gatk_docker
     }
     
     call CNVTasks.CollectAllelicCounts {

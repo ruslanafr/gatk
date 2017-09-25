@@ -22,12 +22,9 @@ public class CopyRatioSegment implements Locatable {
         this.meanLog2CopyRatio = meanLog2CopyRatio;
     }
 
-    /**
-     * @param denoisedCopyRatios in log2 space
-     */
     public CopyRatioSegment(final SimpleInterval interval,
-                            final List<Double> denoisedCopyRatios) {
-        this(interval, denoisedCopyRatios.size(), denoisedCopyRatios.stream().mapToDouble(Double::doubleValue).average().getAsDouble());
+                            final List<Double> denoisedLog2CopyRatios) {
+        this(interval, denoisedLog2CopyRatios.size(), denoisedLog2CopyRatios.stream().mapToDouble(Double::doubleValue).average().getAsDouble());
     }
 
     @Override

@@ -1079,14 +1079,9 @@ public final class ReadUtils {
             final SAMFileHeader header,
             final boolean preSorted)
     {
-        Utils.nonNull(outputFile);
-        Utils.nonNull(header);
-
-        if (null == referenceFile && outputFile.getName().endsWith(CramIO.CRAM_FILE_EXTENSION)) {
-            throw new UserException("A reference file is required for writing CRAM files");
-        }
-
-        return factory.makeWriter(header.clone(), preSorted, outputFile, referenceFile);
+        return createCommonSAMWriterFromFactory(factory,
+            (null == outputFile ? null : outputFile.toPath()), referenceFile,
+            header, preSorted);
     }
 
     /**
@@ -1112,18 +1107,11 @@ public final class ReadUtils {
         Utils.nonNull(outputPath);
         Utils.nonNull(header);
 
-        if (outputPath.toString().endsWith(CramIO.CRAM_FILE_EXTENSION)) {
-            if (null == referenceFile ) {
-                throw new UserException("A reference file is required for writing CRAM files");
-            }
-            // htsjdk doesn't currently support presorted & outputStream at the same time for CRAM :-(
-            return factory.makeCRAMWriter(header, outputPath, referenceFile);
-        } else if (outputPath.toString().endsWith(".sam")) {
-            return factory.makeSAMWriter(header, preSorted, outputPath);
-        } else {
-            // default to BAM, matching the logic in htsjdk
-            return factory.makeBAMWriter(header, preSorted, outputPath);
+        if (null == referenceFile && outputPath.toString().endsWith(CramIO.CRAM_FILE_EXTENSION)) {
+            throw new UserException("A reference file is required for writing CRAM files");
         }
+
+        return factory.makeWriter(header.clone(), preSorted, outputPath, referenceFile);
     }
 
     /**

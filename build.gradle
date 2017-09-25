@@ -95,12 +95,10 @@ jacocoTestReport {
 
 //NOTE: we ignore contracts for now
 compileJava {
-  // removing -Werror temporarily
-  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Xdiags:verbose']
+  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Werror', '-Xdiags:verbose']
 }
 compileTestJava {
-    // removing -Werror temporarily
-  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Xdiags:verbose']
+  options.compilerArgs = ['-proc:none', '-Xlint:all', '-Werror', '-Xdiags:verbose']
 }
 
 // Get the jdk files we need to run javaDoc. We need to use these during compile, testCompile,

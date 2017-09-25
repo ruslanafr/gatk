@@ -180,6 +180,7 @@ task ModelSegments {
     File denoised_copy_ratios
     File allelic_counts
     Int? max_num_segments_per_chromosome
+    Int? min_total_allele_count
     Float? kernel_variance_copy_ratio
     Float? kernel_variance_allele_fraction
     Int? kernel_approximation_dimension
@@ -199,6 +200,7 @@ task ModelSegments {
             --denoisedCopyRatios ${denoised_copy_ratios} \
             --allelicCounts ${allelic_counts} \
             --maxNumSegmentsPerChromosome ${default="50" max_num_segments_per_chromosome} \
+            --minTotalAlleleCount ${default="10" min_total_allele_count} \
             --kernelVarianceCopyRatio ${default="0.0" kernel_variance_copy_ratio} \
             --kernelVarianceAlleleFraction ${default="1.0" kernel_variance_allele_fraction} \
             --kernelApproximationDimension ${default="100" kernel_approximation_dimension} \

@@ -114,6 +114,8 @@ public final class PlotDenoisedCopyRatios extends CommandLineProgram {
         //read input files
         final CopyRatioCollection standardizedCopyRatios = new CopyRatioCollection(inputStandardizedCopyRatiosFile);
         final CopyRatioCollection denoisedCopyRatios = new CopyRatioCollection(inputDenoisedCopyRatiosFile);
+        Utils.validateArg(standardizedCopyRatios.getIntervals().equals(denoisedCopyRatios.getIntervals()),
+                "Intervals in input files must be identical.");
 
         //get sample name from input files (consistency check is performed)
         final String sampleName = getSampleName(standardizedCopyRatios, denoisedCopyRatios);
@@ -158,7 +160,7 @@ public final class PlotDenoisedCopyRatios extends CommandLineProgram {
                                  final CopyRatioCollection denoisedCopyRatios) {
         final String standardizedSampleName = standardizedCopyRatios.getSampleName();
         final String denoisedSampleName = denoisedCopyRatios.getSampleName();
-        Utils.validateArg(standardizedSampleName.equals(denoisedSampleName),"Sample names in input files do not all match.");
+        Utils.validateArg(standardizedSampleName.equals(denoisedSampleName),"Sample names in input files must be identical.");
         return standardizedSampleName;
     }
 

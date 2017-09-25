@@ -8,6 +8,7 @@ import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.programgroups.CopyNumberProgramGroup;
 import org.broadinstitute.hellbender.engine.spark.SparkCommandLineProgram;
+import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCountCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionKernelSegmenter;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionSegmentCollection;
@@ -15,6 +16,8 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioKernelSegmenter;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.CopyNumberStandardArgument;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVLocatableCollection;
+import org.broadinstitute.hellbender.tools.copynumber.legacy.multidimensional.segmentation.CRAFSegmentCollection;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
@@ -44,7 +47,7 @@ public final class ModelSegments extends SparkCommandLineProgram {
     protected static final String SEGMENTS_FILE_SUFFIX = ".seg";
     protected static final String COPY_RATIO_SEGMENTS_FILE_SUFFIX = ".cr" + SEGMENTS_FILE_SUFFIX;
     protected static final String ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX = ".af" + SEGMENTS_FILE_SUFFIX;
-    protected static final String UNION_SEGMENTS_FILE_SUFFIX = ".union" + SEGMENTS_FILE_SUFFIX;
+    protected static final String CRAF_SEGMENTS_FILE_SUFFIX = ".craf" + SEGMENTS_FILE_SUFFIX;
     protected static final String BEGIN_FIT_FILE_TAG = ".model-begin";
     protected static final String FINAL_FIT_FILE_TAG = ".model-final";
     protected static final String CR_PARAMETER_FILE_SUFFIX = ".cr.param";
@@ -74,8 +77,8 @@ public final class ModelSegments extends SparkCommandLineProgram {
     protected static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_LONG_NAME = "numChangepointsPenaltyFactorAlleleFraction";
     protected static final String NUM_CHANGEPOINTS_PENALTY_FACTOR_ALLELE_FRACTION_SHORT_NAME = "numChangeptsPenAF";
 
-    protected static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_LONG_NAME = "smallCopyRatioSegmentThreshold";
-    protected static final String SMALL_COPY_RATIO_SEGMENT_THRESHOLD_SHORT_NAME = "smallCRSegTh";
+    protected static final String NUM_COPY_RATIO_INTERVALS_SMALL_SEGMENT_THRESHOLD_LONG_NAME = "numCopyRatioIntervalsSmallSegmentThreshold";
+    protected static final String NUM_COPY_RATIO_INTERVALS_SMALL_SEGMENT_THRESHOLD_SHORT_NAME = "numCRSmallSegTh";
 
     protected static final String NUM_SAMPLES_COPY_RATIO_LONG_NAME = "numSamplesCopyRatio";
     protected static final String NUM_SAMPLES_COPY_RATIO_SHORT_NAME = "numSampCR";
@@ -215,14 +218,14 @@ public final class ModelSegments extends SparkCommandLineProgram {
     private double numChangepointsPenaltyFactorAlleleFraction = 1.;
 
     @Argument(
-            doc = "Threshold for small copy-ratio segment merging. " +
-                    "If a segment contains strictly less than this number of copy-ratio points, " +
+            doc = "Threshold number of copy-ratio intervals for small-segment merging. " +
+                    "If a segment contains strictly less than this number of copy-ratio intervals, " +
                     "it is considered small and will be merged with an adjacent segment.",
-            fullName = SMALL_COPY_RATIO_SEGMENT_THRESHOLD_LONG_NAME,
-            shortName = SMALL_COPY_RATIO_SEGMENT_THRESHOLD_SHORT_NAME,
+            fullName = NUM_COPY_RATIO_INTERVALS_SMALL_SEGMENT_THRESHOLD_LONG_NAME,
+            shortName = NUM_COPY_RATIO_INTERVALS_SMALL_SEGMENT_THRESHOLD_SHORT_NAME,
             optional = true
     )
-    private int smallCopyRatioSegmentThreshold = 3;
+    private int numCopyRatioIntervalsSmallSegmentThreshold = 3;
 
     @Argument(
             doc = "Total number of MCMC samples for copy-ratio model.",
@@ -304,39 +307,27 @@ public final class ModelSegments extends SparkCommandLineProgram {
                 (ctx.getLocalProperty("logLevel") != null) ? ctx.getLocalProperty("logLevel") : "INFO";
         ctx.setLogLevel("WARN");
 
-        //the string after the final slash in the output prefix (which may be an absolute file path) will be used as the sample name
-        final String sampleName = outputPrefix.substring(outputPrefix.lastIndexOf("/") + 1);
+        if (inputDenoisedCopyRatiosFile == null && inputAllelicCountsFile == null) {
+            throw new UserException("Must provide at least a denoised copy-ratio file or an allelic-counts file.");
+        }
 
         if (inputDenoisedCopyRatiosFile != null) {
-            readDenoisedCopyRatios();                         //TODO remove use of ReadCountCollection
+            readDenoisedCopyRatios();
             performCopyRatioSegmentation();
-            writeCopyRatioSegments();
+            writeSegments(copyRatioSegments, COPY_RATIO_SEGMENTS_FILE_SUFFIX);
         }
         
         if (inputAllelicCountsFile != null) {
             readAndFilterAllelicCounts();
             performAlleleFractionSegmentation();
-            writeAlleleFractionSegments(sampleName);
+            writeSegments(alleleFractionSegments, ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX);
         }
 
-//        //TODO legacy code is used for modelling here---replace with new models and python-based inference
-//        //make Genome from input copy ratio and allele counts; need to trivially convert new AllelicCount to legacy AllelicCount
-//        final Genome genome = new Genome(denoisedCopyRatios,
-//                allelicCounts.getAllelicCounts().stream().map(ac -> new AllelicCount(ac.getInterval(), ac.getRefReadCount(), ac.getAltReadCount())).collect(Collectors.toList()));
-//
-//        logger.info("Combining copy-ratio and allele-fraction segments...");
-//        final List<SimpleInterval> unionedSegments = SegmentUtils.unionSegments(
-//                copyRatioSegments.getIntervals(), alleleFractionSegments.getIntervals(), genome);
-//        logger.info("Number of segments after segment union: " + unionedSegments.size());
-//        final File unionedSegmentsFile = new File(outputPrefix + UNION_SEGMENTS_FILE_SUFFIX);
-//        SegmentUtils.writeSegmentFileWithNumTargetsAndNumSNPs(unionedSegmentsFile, unionedSegments, genome);
-//        logSegmentsFileWrittenMessage(unionedSegmentsFile);
-//
-//        logger.info(String.format("Merging small copy-ratio segments (threshold = %d)...", smallCopyRatioSegmentThreshold));
-//        final SegmentedGenome segmentedGenomeWithSmallSegments = new SegmentedGenome(unionedSegments, genome);
-//        final SegmentedGenome segmentedGenome = segmentedGenomeWithSmallSegments.mergeSmallSegments(smallCopyRatioSegmentThreshold);
-//        logger.info("Number of segments after small-segment merging: " + segmentedGenome.getSegments().size());
-//
+        logger.info("Combining available copy-ratio and allele-fraction segments...");
+        final CRAFSegmentCollection crafSegments = CRAFSegmentCollection.unionAndMergeSmallSegments(
+                copyRatioSegments, denoisedCopyRatios, alleleFractionSegments, filteredAllelicCounts, numCopyRatioIntervalsSmallSegmentThreshold);
+        writeSegments(crafSegments, CRAF_SEGMENTS_FILE_SUFFIX);
+
 //        //initial MCMC model fitting performed by ACNVModeller constructor
 //        final ACNVModeller modeller = new ACNVModeller(segmentedGenome,
 //                numSamplesCopyRatio, numBurnInCopyRatio, numSamplesAlleleFraction, numBurnInAlleleFraction, ctx);
@@ -350,8 +341,8 @@ public final class ModelSegments extends SparkCommandLineProgram {
 //        //write final segments and parameters to file
 //        writeACNVModeledSegmentAndParameterFiles(modeller, FINAL_FIT_FILE_TAG);
 //
-//        ctx.setLogLevel(originalLogLevel);
-//        logger.info("SUCCESS: Allelic CNV run complete for sample " + sampleName + ".");
+        ctx.setLogLevel(originalLogLevel);
+        logger.info("SUCCESS: ModelSegments run complete.");
     }
 
     private void validateArguments() {
@@ -380,12 +371,6 @@ public final class ModelSegments extends SparkCommandLineProgram {
                         numChangepointsPenaltyFactorCopyRatio, numChangepointsPenaltyFactorCopyRatio);
     }
 
-    private void writeCopyRatioSegments() {
-        final File copyRatioSegmentsFile = new File(outputPrefix + COPY_RATIO_SEGMENTS_FILE_SUFFIX);
-        copyRatioSegments.write(copyRatioSegmentsFile);
-        logSegmentsFileWrittenMessage(copyRatioSegmentsFile);
-    }
-
     private void readAndFilterAllelicCounts() {
         logger.info(String.format("Reading allelic-counts file (%s)...", inputAllelicCountsFile));
         final AllelicCountCollection unfilteredAllelicCounts = new AllelicCountCollection(inputAllelicCountsFile);
@@ -411,13 +396,10 @@ public final class ModelSegments extends SparkCommandLineProgram {
                         numChangepointsPenaltyFactorAlleleFraction, numChangepointsPenaltyFactorAlleleFraction);
     }
 
-    private void writeAlleleFractionSegments(final String sampleName) {
-        final File alleleFractionSegmentsFile = new File(outputPrefix + ALLELE_FRACTION_SEGMENTS_FILE_SUFFIX);
-        alleleFractionSegments.write(alleleFractionSegmentsFile);
-        logSegmentsFileWrittenMessage(alleleFractionSegmentsFile);
-    }
-
-    private void logSegmentsFileWrittenMessage(final File file) {
-        logger.info("Segments written to file " + file);
+    private void writeSegments(final TSVLocatableCollection<?> segments,
+                               final String fileSuffix) {
+        final File segmentsFile = new File(outputPrefix + CRAF_SEGMENTS_FILE_SUFFIX);
+        segments.write(segmentsFile);
+        logger.info(String.format("Segments written to %s.", segmentsFile));
     }
 }

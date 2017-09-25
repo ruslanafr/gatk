@@ -32,8 +32,6 @@ sed -r "s/__GATK_DOCKER__/broadinstitute\/gatk\:$HASH_TO_USE/g" ${CNV_CROMWELL_T
 sed -r "s/__GATK_DOCKER__/broadinstitute\/gatk\:$HASH_TO_USE/g" ${CNV_CROMWELL_TEST_DIR}/cnv_somatic_panel_wgs_do-gc_workflow.json >cnv_somatic_panel_wgs_do-gc_workflow_mod.json
 sed -r "s/__GATK_DOCKER__/broadinstitute\/gatk\:$HASH_TO_USE/g" ${CNV_CROMWELL_TEST_DIR}/cnv_somatic_bam_wes_workflow.json >cnv_somatic_bam_wes_workflow_mod.json
 sed -r "s/__GATK_DOCKER__/broadinstitute\/gatk\:$HASH_TO_USE/g" ${CNV_CROMWELL_TEST_DIR}/cnv_somatic_bam_wgs_workflow.json >cnv_somatic_bam_wgs_workflow_mod.json
-sed -r "s/__GATK_DOCKER__/broadinstitute\/gatk\:$HASH_TO_USE/g" ${CNV_CROMWELL_TEST_DIR}/cnv_somatic_bam_wes_tumor-only_workflow.json >cnv_somatic_bam_wes_tumor-only_workflow_mod.json
-sed -r "s/__GATK_DOCKER__/broadinstitute\/gatk\:$HASH_TO_USE/g" ${CNV_CROMWELL_TEST_DIR}/cnv_somatic_bam_wgs_tumor-only_workflow.json >cnv_somatic_bam_wgs_tumor-only_workflow_mod.json
 
 echo "Running ========"
 CROMWELL_JAR="cromwell-0.28.jar"

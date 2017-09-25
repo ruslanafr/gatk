@@ -51,7 +51,3 @@ java -jar ~/${CROMWELL_JAR} run /home/travis/build/broadinstitute/gatk/scripts/c
 java -jar ~/${CROMWELL_JAR} run /home/travis/build/broadinstitute/gatk/scripts/cnv_wdl/somatic/cnv_somatic_bam_workflow.wdl cnv_somatic_bam_wes_workflow_mod.json
 # BAM WGS
 java -jar ~/${CROMWELL_JAR} run /home/travis/build/broadinstitute/gatk/scripts/cnv_wdl/somatic/cnv_somatic_bam_workflow.wdl cnv_somatic_bam_wgs_workflow_mod.json
-# BAM WES tumor-only
-java -jar ~/${CROMWELL_JAR} run /home/travis/build/broadinstitute/gatk/scripts/cnv_wdl/somatic/cnv_somatic_bam_workflow.wdl cnv_somatic_bam_wes_tumor-only_workflow_mod.json
-# BAM WGS tumor-only
-java -jar ~/${CROMWELL_JAR} run /home/travis/build/broadinstitute/gatk/scripts/cnv_wdl/somatic/cnv_somatic_bam_workflow.wdl cnv_somatic_bam_wgs_tumor-only_workflow_mod.json

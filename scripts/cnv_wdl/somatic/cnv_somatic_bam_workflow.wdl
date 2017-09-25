@@ -54,7 +54,7 @@ workflow CNVSomaticBAMWorkflow {
 
     call CNVTasks.CollectReadCounts {
         input:
-            padded_targets = select_first([PadTargets.padded_targets, ""]),
+            padded_targets = PadTargets.padded_targets,
             bam = bam,
             bam_idx = bam_idx,
             ref_fasta = ref_fasta,

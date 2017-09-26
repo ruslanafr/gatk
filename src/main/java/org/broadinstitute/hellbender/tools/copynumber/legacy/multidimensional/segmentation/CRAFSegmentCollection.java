@@ -1,12 +1,8 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.multidimensional.segmentation;
 
 import com.google.common.primitives.Doubles;
-import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.OverlapDetector;
-import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-import org.apache.commons.math3.linear.RealMatrix;
-import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCount;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCountCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.segmentation.AlleleFractionSegmentCollection;
@@ -15,7 +11,6 @@ import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.copyratio.
 import org.broadinstitute.hellbender.tools.copynumber.legacy.coverage.segmentation.CopyRatioSegmentCollection;
 import org.broadinstitute.hellbender.tools.copynumber.legacy.formats.TSVLocatableCollection;
 import org.broadinstitute.hellbender.tools.exome.*;
-import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
@@ -23,7 +18,8 @@ import org.broadinstitute.hellbender.utils.tsv.DataLine;
 import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
 
 import java.io.File;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;

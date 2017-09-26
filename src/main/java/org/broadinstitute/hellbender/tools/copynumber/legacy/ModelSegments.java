@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * TODO
- *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
 @CommandLineProgramProperties(
@@ -227,71 +225,71 @@ public final class ModelSegments extends SparkCommandLineProgram {
     )
     private int numCopyRatioIntervalsSmallSegmentThreshold = 3;
 
-    @Argument(
-            doc = "Total number of MCMC samples for copy-ratio model.",
-            fullName = NUM_SAMPLES_COPY_RATIO_LONG_NAME,
-            shortName = NUM_SAMPLES_COPY_RATIO_SHORT_NAME,
-            optional = true
-    )
-    private int numSamplesCopyRatio = 100;
-
-    @Argument(
-            doc = "Number of burn-in samples to discard for copy-ratio model.",
-            fullName = NUM_BURN_IN_COPY_RATIO_LONG_NAME,
-            shortName = NUM_BURN_IN_COPY_RATIO_SHORT_NAME,
-            optional = true
-    )
-    private int numBurnInCopyRatio = 50;
-
-    @Argument(
-            doc = "Total number of MCMC samples for allele-fraction model.",
-            fullName = NUM_SAMPLES_ALLELE_FRACTION_LONG_NAME,
-            shortName = NUM_SAMPLES_ALLELE_FRACTION_SHORT_NAME,
-            optional = true
-    )
-    private int numSamplesAlleleFraction = 100;
-
-    @Argument(
-            doc = "Number of burn-in samples to discard for allele-fraction model.",
-            fullName = NUM_BURN_IN_ALLELE_FRACTION_LONG_NAME,
-            shortName = NUM_BURN_IN_ALLELE_FRACTION_SHORT_NAME,
-            optional = true
-    )
-    private int numBurnInAlleleFraction = 50;
-
-    @Argument(
-            doc = "Number of 95% credible-interval widths to use for copy-ratio similar-segment merging.",
-            fullName = INTERVAL_THRESHOLD_COPY_RATIO_LONG_NAME,
-            shortName = INTERVAL_THRESHOLD_COPY_RATIO_SHORT_NAME,
-            optional = true
-    )
-    private double intervalThresholdCopyRatio = 4.;
-
-    @Argument(
-            doc = "Number of 95% credible-interval widths to use for allele-fraction similar-segment merging.",
-            fullName = INTERVAL_THRESHOLD_ALLELE_FRACTION_LONG_NAME,
-            shortName = INTERVAL_THRESHOLD_ALLELE_FRACTION_SHORT_NAME,
-            optional = true
-    )
-    private double intervalThresholdAlleleFraction = 2.;
-
-    @Argument(
-            doc = "Maximum number of iterations allowed for similar-segment merging.",
-            fullName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_LONG_NAME,
-            shortName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_SHORT_NAME,
-            optional = true
-    )
-    private int maxNumSimilarSegmentMergingIterations = 10;
-
-    @Argument(
-            doc = "Number of similar-segment--merging iterations per MCMC model refit. " +
-                    "(Increasing this will decrease runtime, but the final number of segments may be higher. " +
-                    "Setting this to 0 will completely disable model refitting between iterations.)",
-            fullName = NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_LONG_NAME,
-            shortName = NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_SHORT_NAME,
-            optional = true
-    )
-    protected int numSimilarSegmentMergingIterationsPerFit = 0;
+//    @Argument(
+//            doc = "Total number of MCMC samples for copy-ratio model.",
+//            fullName = NUM_SAMPLES_COPY_RATIO_LONG_NAME,
+//            shortName = NUM_SAMPLES_COPY_RATIO_SHORT_NAME,
+//            optional = true
+//    )
+//    private int numSamplesCopyRatio = 100;
+//
+//    @Argument(
+//            doc = "Number of burn-in samples to discard for copy-ratio model.",
+//            fullName = NUM_BURN_IN_COPY_RATIO_LONG_NAME,
+//            shortName = NUM_BURN_IN_COPY_RATIO_SHORT_NAME,
+//            optional = true
+//    )
+//    private int numBurnInCopyRatio = 50;
+//
+//    @Argument(
+//            doc = "Total number of MCMC samples for allele-fraction model.",
+//            fullName = NUM_SAMPLES_ALLELE_FRACTION_LONG_NAME,
+//            shortName = NUM_SAMPLES_ALLELE_FRACTION_SHORT_NAME,
+//            optional = true
+//    )
+//    private int numSamplesAlleleFraction = 100;
+//
+//    @Argument(
+//            doc = "Number of burn-in samples to discard for allele-fraction model.",
+//            fullName = NUM_BURN_IN_ALLELE_FRACTION_LONG_NAME,
+//            shortName = NUM_BURN_IN_ALLELE_FRACTION_SHORT_NAME,
+//            optional = true
+//    )
+//    private int numBurnInAlleleFraction = 50;
+//
+//    @Argument(
+//            doc = "Number of 95% credible-interval widths to use for copy-ratio similar-segment merging.",
+//            fullName = INTERVAL_THRESHOLD_COPY_RATIO_LONG_NAME,
+//            shortName = INTERVAL_THRESHOLD_COPY_RATIO_SHORT_NAME,
+//            optional = true
+//    )
+//    private double intervalThresholdCopyRatio = 4.;
+//
+//    @Argument(
+//            doc = "Number of 95% credible-interval widths to use for allele-fraction similar-segment merging.",
+//            fullName = INTERVAL_THRESHOLD_ALLELE_FRACTION_LONG_NAME,
+//            shortName = INTERVAL_THRESHOLD_ALLELE_FRACTION_SHORT_NAME,
+//            optional = true
+//    )
+//    private double intervalThresholdAlleleFraction = 2.;
+//
+//    @Argument(
+//            doc = "Maximum number of iterations allowed for similar-segment merging.",
+//            fullName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_LONG_NAME,
+//            shortName = MAX_NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_SHORT_NAME,
+//            optional = true
+//    )
+//    private int maxNumSimilarSegmentMergingIterations = 10;
+//
+//    @Argument(
+//            doc = "Number of similar-segment--merging iterations per MCMC model refit. " +
+//                    "(Increasing this will decrease runtime, but the final number of segments may be higher. " +
+//                    "Setting this to 0 will completely disable model refitting between iterations.)",
+//            fullName = NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_LONG_NAME,
+//            shortName = NUM_SIMILAR_SEGMENT_MERGING_ITERATIONS_PER_FIT_SHORT_NAME,
+//            optional = true
+//    )
+//    protected int numSimilarSegmentMergingIterationsPerFit = 0;
 
     //initialize data/segment variables, some of which may be optional
     private CopyRatioCollection denoisedCopyRatios = null;

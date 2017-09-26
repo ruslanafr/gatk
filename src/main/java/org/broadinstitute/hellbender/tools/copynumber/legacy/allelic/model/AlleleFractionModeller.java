@@ -1,14 +1,5 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.model;
 
-import org.apache.spark.api.java.JavaSparkContext;
-import org.broadinstitute.hellbender.tools.pon.allelic.AllelicPanelOfNormals;
-import org.broadinstitute.hellbender.utils.mcmc.*;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 /**
  * TODO
  *

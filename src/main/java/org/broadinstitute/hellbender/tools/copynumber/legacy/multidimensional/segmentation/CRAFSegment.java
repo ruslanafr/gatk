@@ -3,7 +3,6 @@ package org.broadinstitute.hellbender.tools.copynumber.legacy.multidimensional.s
 import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.param.ParamUtils;
 
 import java.util.List;
 import java.util.OptionalDouble;

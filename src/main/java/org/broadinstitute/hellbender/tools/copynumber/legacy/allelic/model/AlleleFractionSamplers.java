@@ -1,13 +1,5 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.model;
 
-import org.apache.commons.math3.random.RandomGenerator;
-import org.broadinstitute.hellbender.utils.mcmc.ParameterSampler;
-import org.broadinstitute.hellbender.utils.mcmc.SliceSampler;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
 /**
  * Sampler classes for the allele-fraction model.
  *

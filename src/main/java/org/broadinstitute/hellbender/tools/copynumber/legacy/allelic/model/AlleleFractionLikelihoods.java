@@ -1,19 +1,5 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.model;
 
-import org.apache.commons.math3.special.Gamma;
-import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCount;
-import org.broadinstitute.hellbender.tools.pon.allelic.AllelicPanelOfNormals;
-import org.broadinstitute.hellbender.utils.GATKProtectedMathUtils;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
-
-import java.util.Collection;
-import java.util.stream.IntStream;
-
-import static java.lang.Math.log;
-import static java.lang.Math.sqrt;
-import static org.broadinstitute.hellbender.utils.MathUtils.log10Factorial;
-import static org.broadinstitute.hellbender.utils.MathUtils.log10ToLog;
-
 /**
  * Contains likelihood methods for the allele-fraction model.
  * See docs/CNVs/CNV-methods.pdf for a thorough description of the model.

@@ -1,15 +1,5 @@
 package org.broadinstitute.hellbender.tools.copynumber.legacy.allelic.model;
 
-import org.apache.commons.math3.exception.MaxCountExceededException;
-import org.apache.commons.math3.special.Beta;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.broadinstitute.hellbender.utils.OptimizationUtils;
-
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 /**
  * The Allele Fraction Model (after marginalizing latent parameters as described in docs/CNVs/CNV-methods.pdf)
  * contains the following parameters:

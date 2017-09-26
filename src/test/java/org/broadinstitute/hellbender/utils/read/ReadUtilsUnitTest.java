@@ -514,6 +514,14 @@ public final class ReadUtilsUnitTest extends BaseTest {
         }
         Assert.assertEquals(expectIndex, null != SamFiles.findIndex(outputFile));
         Assert.assertEquals(createMD5, md5File.exists());
+
+        // now check the contents are the same
+        try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
+            final SamReader outputReader = SamReaderFactory.makeDefault().open(outputFile)) {
+            final Iterator<SAMRecord> samRecIt = samReader.iterator();
+            final Iterator<SAMRecord> outRecIt = outputReader.iterator();
+            Assert.assertEquals(samRecIt, outRecIt);
+        }
     }
 
     @Test(dataProvider="createSAMWriter")
@@ -525,10 +533,11 @@ public final class ReadUtilsUnitTest extends BaseTest {
         final boolean expectIndex) throws Exception {
 
         try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
-            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
 
-                final Path outputPath = jimfs.getPath("samWriterTest.bam");
-                final Path md5Path = jimfs.getPath("samWriterTest.bam.md5");
+            final Path outputPath = jimfs.getPath("samWriterTest.bam");
+            final Path md5Path = jimfs.getPath("samWriterTest.bam.md5");
+
+            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
 
                 final SAMFileHeader header = samReader.getFileHeader();
                 if (expectIndex) { // ensure test condition
@@ -545,6 +554,14 @@ public final class ReadUtilsUnitTest extends BaseTest {
 
                 Assert.assertEquals(expectIndex, null != SamFiles.findIndex(outputPath));
                 Assert.assertEquals(createMD5, Files.exists(md5Path));
+            }
+
+            // now check the contents are the same
+            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
+                final SamReader outputReader = SamReaderFactory.makeDefault().open(outputPath)) {
+                final Iterator<SAMRecord> samRecIt = samReader.iterator();
+                final Iterator<SAMRecord> outRecIt = outputReader.iterator();
+                Assert.assertEquals(samRecIt, outRecIt);
             }
         }
     }

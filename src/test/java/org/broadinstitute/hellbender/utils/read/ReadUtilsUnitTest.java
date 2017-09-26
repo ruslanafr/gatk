@@ -6,7 +6,13 @@ import com.google.api.services.genomics.model.Read;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import htsjdk.samtools.*;
+import htsjdk.samtools.SamReader.PrimitiveSamReader;
+import htsjdk.samtools.cram.ref.CRAMReferenceSource;
+import htsjdk.samtools.cram.ref.ReferenceSource;
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
+import htsjdk.samtools.util.CloseableIterator;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -468,6 +474,77 @@ public final class ReadUtilsUnitTest extends BaseTest {
     @Test(dataProvider = "ReadHasNoAssignedPositionTestData")
     public void testReadHasNoAssignedPosition( final GATKRead read, final boolean expectedResult ) {
         Assert.assertEquals(ReadUtils.readHasNoAssignedPosition(read), expectedResult);
+    }
+
+    @DataProvider(name="createWritingCRAM")
+    public Object[][] createWritingCRAMData() {
+        return new Object[][] {
+            // createMD5
+            {false},
+            {true},
+        };
+    }
+
+    @Test(dataProvider="createWritingCRAM")
+    public void testWritingCRAMFile(boolean createMD5) throws IOException {
+        final File outputFile = createTempFile("samWriterTest",  ".cram");
+        final File reference = getTestFile("print_reads.fasta");
+        final File bamFile = getTestFile("print_reads.sam");
+        try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
+            final SAMFileHeader header = samReader.getFileHeader();
+
+            try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
+                (outputFile, reference, header, true, false, createMD5)) {
+                final Iterator<SAMRecord> samRecIt = samReader.iterator();
+                while (samRecIt.hasNext()) {
+                    samWriter.addAlignment(samRecIt.next());
+                }
+            }
+        }
+
+        final File md5File = new File(outputFile.getAbsolutePath() + ".md5");
+        if (md5File.exists()) {
+            md5File.deleteOnExit();
+        }
+        Assert.assertEquals(createMD5, md5File.exists());
+
+        // now check the contents are the same
+        try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
+            final CloseableIterator<SAMRecord> outRecIt = new CRAMFileReader(outputFile, new ReferenceSource(reference)).getIterator()) {
+            final Iterator<SAMRecord> samRecIt = samReader.iterator();
+            Assert.assertEquals(samRecIt, outRecIt);
+        }
+    }
+
+    @Test(dataProvider="createWritingCRAM")
+    public void testWritingCRAMPath(boolean createMD5) throws IOException {
+        try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
+            final Path outputPath = jimfs.getPath("samWriterTest.cram");
+            final File reference = getTestFile("print_reads.fasta");
+            final File bamFile = getTestFile("print_reads.sam");
+            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
+                final SAMFileHeader header = samReader.getFileHeader();
+
+                try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
+                    (outputPath, reference, header, true, false, createMD5)) {
+                    final Iterator<SAMRecord> samRecIt = samReader.iterator();
+                    while (samRecIt.hasNext()) {
+                        samWriter.addAlignment(samRecIt.next());
+                    }
+                }
+            }
+
+            final Path md5Path = jimfs.getPath(outputPath.toAbsolutePath().toString() + ".md5");
+            Assert.assertEquals(createMD5, Files.exists(md5Path));
+
+            // now check the contents are the same
+            InputStream streamOutput = Files.newInputStream(outputPath);
+            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
+                final CloseableIterator<SAMRecord> outRecIt = new CRAMFileReader(null, streamOutput, new ReferenceSource(reference)).getIterator()) {
+                final Iterator<SAMRecord> samRecIt = samReader.iterator();
+                Assert.assertEquals(samRecIt, outRecIt);
+            }
+        }
     }
 
     @DataProvider(name="createSAMWriter")

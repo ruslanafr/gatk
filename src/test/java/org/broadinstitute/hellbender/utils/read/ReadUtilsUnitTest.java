@@ -3,8 +3,13 @@ package org.broadinstitute.hellbender.utils.read;
 import com.google.api.services.genomics.model.LinearAlignment;
 import com.google.api.services.genomics.model.Position;
 import com.google.api.services.genomics.model.Read;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import htsjdk.samtools.*;
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.RandomDNA;
@@ -480,13 +485,12 @@ public final class ReadUtilsUnitTest extends BaseTest {
     }
 
     @Test(dataProvider="createSAMWriter")
-    public void testCreateSAMWriter(
+    public void testCreateLegacySAMWriter(
             final File bamFile,
             final boolean preSorted,
             final boolean createIndex,
             final boolean createMD5,
             final boolean expectIndex) throws Exception {
-
         final File outputFile = createTempFile("samWriterTest",  ".bam");
 
         try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
@@ -510,6 +514,39 @@ public final class ReadUtilsUnitTest extends BaseTest {
         }
         Assert.assertEquals(expectIndex, null != SamFiles.findIndex(outputFile));
         Assert.assertEquals(createMD5, md5File.exists());
+    }
+
+    @Test(dataProvider="createSAMWriter")
+    public void testCreatePathSAMWriter(
+        final File bamFile,
+        final boolean preSorted,
+        final boolean createIndex,
+        final boolean createMD5,
+        final boolean expectIndex) throws Exception {
+
+        try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
+            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
+
+                final Path outputPath = jimfs.getPath("samWriterTest.bam");
+                final Path md5Path = jimfs.getPath("samWriterTest.bam.md5");
+
+                final SAMFileHeader header = samReader.getFileHeader();
+                if (expectIndex) { // ensure test condition
+                    Assert.assertEquals(expectIndex, header.getSortOrder() == SAMFileHeader.SortOrder.coordinate);
+                }
+
+                try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
+                    (outputPath, null, samReader.getFileHeader(), preSorted, createIndex, createMD5)) {
+                    final Iterator<SAMRecord> samRecIt = samReader.iterator();
+                    while (samRecIt.hasNext()) {
+                        samWriter.addAlignment(samRecIt.next());
+                    }
+                }
+
+                Assert.assertEquals(expectIndex, null != SamFiles.findIndex(outputPath));
+                Assert.assertEquals(createMD5, Files.exists(md5Path));
+            }
+        }
     }
 
     @DataProvider(name="hasCRAMFileContents")

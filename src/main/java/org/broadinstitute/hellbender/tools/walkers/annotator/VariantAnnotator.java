@@ -5,8 +5,11 @@ import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.*;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
+import java.io.File;
 import java.util.*;package org.broadinstitute.gatk.tools.walkers.annotator;
 
+import org.broadinstitute.barclay.argparser.Argument;
+import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.gatk.engine.walkers.*;
 import org.broadinstitute.gatk.utils.commandline.*;
 import org.broadinstitute.gatk.engine.CommandLineGATK;
@@ -23,13 +26,10 @@ import org.broadinstitute.gatk.utils.help.HelpConstants;
 import org.broadinstitute.gatk.engine.GATKVCFUtils;
 import org.broadinstitute.gatk.utils.BaseUtils;
 import org.broadinstitute.gatk.engine.SampleUtils;
-import htsjdk.variant.vcf.*;
 import org.broadinstitute.gatk.utils.help.DocumentedGATKFeature;
-import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.writer.VariantContextWriter;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-
-import java.util.*;
+import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCollection;
+import org.broadinstitute.hellbender.engine.VariantWalker;
 
 /**
  * Annotate variant calls with context information
@@ -91,16 +91,7 @@ import java.util.*;
  * </pre>
  *
  */
-@DocumentedGATKFeature( groupName = HelpConstants.DOCS_CAT_VARMANIP, extraDocs = {CommandLineGATK.class} )
-@Requires(value={})
-@Allows(value={DataSource.READS, DataSource.REFERENCE})
-@Reference(window=@Window(start=-50,stop=50))
-@Downsample(by= DownsampleType.BY_SAMPLE, toCoverage=250)
-@By(DataSource.REFERENCE)
-public class VariantAnnotator extends RodWalker<Integer, Integer> implements AnnotatorCompatible, TreeReducible<Integer> {
-
-    @ArgumentCollection
-    protected StandardVariantContextInputArgumentCollection variantCollection = new StandardVariantContextInputArgumentCollection();
+public class VariantAnnotator extends VariantWalker {
 
     /**
      * The INFO field will be annotated with information on the most biologically significant effect
@@ -111,11 +102,10 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
     public RodBinding<VariantContext> getSnpEffRodBinding() { return snpEffFile; }
 
     /**
-     * rsIDs from this file are used to populate the ID column of the output.  Also, the DB INFO flag will be set when appropriate.
+     * The rsIDs from this file are used to populate the ID column of the output.  Also, the DB INFO flag will be set when appropriate. Note that dbSNP is not used in any way for the calculations themselves.
      */
     @ArgumentCollection
     protected DbsnpArgumentCollection dbsnp = new DbsnpArgumentCollection();
-    public RodBinding<VariantContext> getDbsnpRodBinding() { return dbsnp.dbsnp; }
 
     /**
      * If a record in the 'variant' track overlaps with a record from the provided comp track, the INFO field will be
@@ -143,20 +133,22 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
     public List<RodBinding<VariantContext>> resources = Collections.emptyList();
     public List<RodBinding<VariantContext>> getResourceRodBindings() { return resources; }
 
-    @Output(doc="File to which variants should be written")
-    protected VariantContextWriter vcfWriter = null;
+    @Argument(fullName= StandardArgumentDefinitions.OUTPUT_LONG_NAME,
+            shortName=StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
+            doc="The file to whcih variants should be written", optional=false)
+    private File outputFile;
 
     /**
      * See the --list argument to view available annotations.
      */
-    @Argument(fullName="annotation", shortName="A", doc="One or more specific annotations to apply to variant calls", required=false)
+    @Argument(fullName="annotation", shortName="A", doc="One or more specific annotations to apply to variant calls", optional=true)
     protected List<String> annotationsToUse = new ArrayList<>();
 
     /**
      * Note that this argument has higher priority than the -A or -G arguments,
      * so annotations will be excluded even if they are explicitly included with the other options.
      */
-    @Argument(fullName="excludeAnnotation", shortName="XA", doc="One or more specific annotations to exclude", required=false)
+    @Argument(fullName="excludeAnnotation", shortName="XA", doc="One or more specific annotations to exclude", optional=true)
     protected List<String> annotationsToExclude = new ArrayList<>();
 
     /**
@@ -164,7 +156,7 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
      * to view available groups. Keep in mind that RODRequiringAnnotations are not intended to be used as a group,
      * because they require specific ROD inputs.
      */
-    @Argument(fullName="group", shortName="G", doc="One or more classes/groups of annotations to apply to variant calls", required=false)
+    @Argument(fullName="group", shortName="G", doc="One or more classes/groups of annotations to apply to variant calls", optional=true)
     protected List<String> annotationGroupsToUse = new ArrayList<>();
 
     /**
@@ -178,7 +170,7 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
      * Note that if there are multiple records in the resource file that overlap the given position, one is chosen
      * randomly.
      */
-    @Argument(fullName="expression", shortName="E", doc="One or more specific expressions to apply to variant calls", required=false)
+    @Argument(fullName="expression", shortName="E", doc="One or more specific expressions to apply to variant calls", optional=true)
     protected Set<String> expressionsToUse = new ObjectOpenHashSet();
 
     /**
@@ -186,7 +178,7 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
      * (specified by --resource) to the input VCF (specified by --variant) only if the alleles are
      * concordant between input and the resource VCFs. Otherwise, always add the annotations.
      */
-    @Argument(fullName="resourceAlleleConcordance", shortName="rac", doc="Check for allele concordances when using an external resource VCF file", required=false)
+    @Argument(fullName="resourceAlleleConcordance", shortName="rac", doc="Check for allele concordances when using an external resource VCF file", optional=true)
     protected Boolean expressionAlleleConcordance = false;
 
     /**
@@ -199,14 +191,14 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
      * additional requirements, e.g. minimum number of samples or heterozygous sites only -- see the documentation
      * for individual annotations' requirements).
      */
-    @Argument(fullName="useAllAnnotations", shortName="all", doc="Use all possible annotations (not for the faint of heart)", required=false)
+    @Argument(fullName="useAllAnnotations", shortName="all", doc="Use all possible annotations (not for the faint of heart)", optional=true)
     protected Boolean USE_ALL_ANNOTATIONS = false;
 
     /**
      * Note that the --list argument requires a fully resolved and correct command-line to work. As an alternative,
      * you can use ListAnnotations (see Help Utilities).
      */
-    @Argument(fullName="list", shortName="ls", doc="List the available annotations and exit", required=false)
+    @Argument(fullName="list", shortName="ls", doc="List the available annotations and exit", optional=true)
     protected Boolean LIST = false;
 
     /**
@@ -214,17 +206,17 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
      * This argument allows you to override that behavior, and appends the new ID to the existing one. This is used
      * in conjunction with the -dbsnp argument.
      */
-    @Argument(fullName="alwaysAppendDbsnpId", shortName="alwaysAppendDbsnpId", doc="Add dbSNP ID even if one is already present", required=false)
+    @Argument(fullName="alwaysAppendDbsnpId", shortName="alwaysAppendDbsnpId", doc="Add dbSNP ID even if one is already present", optional=true)
     protected Boolean ALWAYS_APPEND_DBSNP_ID = false;
     public boolean alwaysAppendDbsnpId() { return ALWAYS_APPEND_DBSNP_ID; }
 
     /**
      * The genotype quality (GQ) threshold above which the mendelian violation ratio should be annotated.
      */
-    @Argument(fullName="MendelViolationGenotypeQualityThreshold",shortName="mvq",required=false,doc="GQ threshold for annotating MV ratio")
+    @Argument(fullName="MendelViolationGenotypeQualityThreshold",shortName="mvq",optional=true,doc="GQ threshold for annotating MV ratio")
     public double minGenotypeQualityP = 0.0;
 
-    private VariantAnnotatorEngine engine;
+    private VariantAnnotatorEngine annotatorEngine;
 
     /**
      * Prepare the output file and the list of available features.
@@ -241,22 +233,22 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
         final Set<String> samples = SampleUtils.getUniqueSamplesFromRods(getToolkit(), rodName);
 
         if ( USE_ALL_ANNOTATIONS )
-            engine = new VariantAnnotatorEngine(annotationsToExclude, this, getToolkit());
+            annotatorEngine = new VariantAnnotatorEngine(annotationsToExclude, this, getToolkit());
         else
-            engine = new VariantAnnotatorEngine(annotationGroupsToUse, annotationsToUse, annotationsToExclude, this, getToolkit());
-        engine.initializeExpressions(expressionsToUse);
-        engine.setExpressionAlleleConcordance(expressionAlleleConcordance);
+            annotatorEngine = new VariantAnnotatorEngine(annotationGroupsToUse, annotationsToUse, annotationsToExclude, this, getToolkit());
+        annotatorEngine.initializeExpressions(expressionsToUse);
+        annotatorEngine.setExpressionAlleleConcordance(expressionAlleleConcordance);
 
         // setup the header fields
         // note that if any of the definitions conflict with our new ones, then we want to overwrite the old ones
         final Set<VCFHeaderLine> hInfo = new HashSet<>();
-        hInfo.addAll(engine.getVCFAnnotationDescriptions());
+        hInfo.addAll(annotatorEngine.getVCFAnnotationDescriptions());
         for ( final VCFHeaderLine line : GATKVCFUtils.getHeaderFields(getToolkit(), rodName) ) {
             if ( isUniqueHeaderLine(line, hInfo) )
                 hInfo.add(line);
         }
         // for the expressions, pull the info header line from the header of the resource rod
-        for ( final VariantAnnotatorEngine.VAExpression expression : engine.getRequestedExpressions() ) {
+        for ( final VariantAnnotatorEngine.VAExpression expression : annotatorEngine.getRequestedExpressions() ) {
             // special case the ID field
             if ( expression.fieldName.equals("ID") ) {
                 hInfo.add(new VCFInfoHeaderLine(expression.fullName, 1, VCFHeaderLineType.String, "ID field transferred from external VCF resource"));
@@ -283,8 +275,8 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
             }
         }
 
-        engine.makeHeaderInfoMap(hInfo);
-        engine.invokeAnnotationInitializationMethods(hInfo);
+        annotatorEngine.makeHeaderInfoMap(hInfo);
+        annotatorEngine.invokeAnnotationInitializationMethods(hInfo);
 
         VCFHeader vcfHeader = new VCFHeader(hInfo, samples);
         vcfWriter.writeHeader(vcfHeader);
@@ -334,7 +326,7 @@ public class VariantAnnotator extends RodWalker<Integer, Integer> implements Ann
             stratifiedContexts = AlignmentContextUtils.splitContextBySampleName(context.getBasePileup());
             annotatedVCs = new ArrayList<>(VCs.size());
             for ( VariantContext vc : VCs )
-                annotatedVCs.add(engine.annotateContext(tracker, ref, stratifiedContexts, vc));
+                annotatedVCs.add(annotatorEngine.annotateContext(tracker, ref, stratifiedContexts, vc));
         }
 
         for ( VariantContext annotatedVC : annotatedVCs )

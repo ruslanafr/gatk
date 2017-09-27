@@ -1,35 +1,26 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
 import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.*;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-
-import java.io.File;
-import java.util.*;package org.broadinstitute.gatk.tools.walkers.annotator;
-
+import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
+import org.broadinstitute.gatk.engine.GATKVCFUtils;
 import org.broadinstitute.gatk.engine.walkers.*;
+import org.broadinstitute.gatk.tools.walkers.annotator.interfaces.*;
+import org.broadinstitute.gatk.utils.BaseUtils;
 import org.broadinstitute.gatk.utils.commandline.*;
-import org.broadinstitute.gatk.engine.CommandLineGATK;
-import org.broadinstitute.gatk.engine.arguments.DbsnpArgumentCollection;
-import org.broadinstitute.gatk.engine.arguments.StandardVariantContextInputArgumentCollection;
 import org.broadinstitute.gatk.utils.contexts.AlignmentContext;
 import org.broadinstitute.gatk.utils.contexts.AlignmentContextUtils;
 import org.broadinstitute.gatk.utils.contexts.ReferenceContext;
-import org.broadinstitute.gatk.utils.downsampling.DownsampleType;
-import org.broadinstitute.gatk.tools.walkers.annotator.interfaces.AnnotationHelpUtils;
 import org.broadinstitute.gatk.utils.refdata.RefMetaDataTracker;
-import org.broadinstitute.gatk.tools.walkers.annotator.interfaces.*;
-import org.broadinstitute.gatk.utils.help.HelpConstants;
-import org.broadinstitute.gatk.engine.GATKVCFUtils;
-import org.broadinstitute.gatk.utils.BaseUtils;
-import org.broadinstitute.gatk.engine.SampleUtils;
-import org.broadinstitute.gatk.utils.help.DocumentedGATKFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCollection;
-import org.broadinstitute.hellbender.engine.VariantWalker;
+import org.broadinstitute.hellbender.engine.*;
+
+import java.io.File;
+import java.util.*;
 
 /**
  * Annotate variant calls with context information
@@ -94,28 +85,19 @@ import org.broadinstitute.hellbender.engine.VariantWalker;
 public class VariantAnnotator extends VariantWalker {
 
     /**
-     * The INFO field will be annotated with information on the most biologically significant effect
-     * listed for each variant in the SnpEff file.
-     */
-    @Input(fullName="snpEffFile", shortName = "snpEffFile", doc="SnpEff file from which to get annotations", required=false)
-    public RodBinding<VariantContext> snpEffFile;
-    public RodBinding<VariantContext> getSnpEffRodBinding() { return snpEffFile; }
-
-    /**
      * The rsIDs from this file are used to populate the ID column of the output.  Also, the DB INFO flag will be set when appropriate. Note that dbSNP is not used in any way for the calculations themselves.
      */
     @ArgumentCollection
     protected DbsnpArgumentCollection dbsnp = new DbsnpArgumentCollection();
 
     /**
-     * If a record in the 'variant' track overlaps with a record from the provided comp track, the INFO field will be
-     * annotated as such in the output with the track name (e.g. -comp:FOO will have 'FOO' in the INFO field).
-     * Records that are filtered in the comp track will be ignored. Note that 'dbSNP' has been special-cased
-     * (see the --dbsnp argument).
+     * If a call overlaps with a record from the provided comp track, the INFO field will be annotated
+     * as such in the output with the track name (e.g. -comp:FOO will have 'FOO' in the INFO field). Records that are
+     * filtered in the comp track will be ignored. Note that 'dbSNP' has been special-cased (see the --dbsnp argument).
      */
-    @Input(fullName="comp", shortName = "comp", doc="Comparison VCF file", required=false)
-    public List<RodBinding<VariantContext>> comps = Collections.emptyList();
-    public List<RodBinding<VariantContext>> getCompRodBindings() { return comps; }
+    @Advanced
+    @Argument(fullName = "comp", shortName = "comp", doc = "Comparison VCF file(s)", optional = true)
+    public List<FeatureInput<VariantContext>> comps = Collections.emptyList();
 
     /**
      * An external resource VCF file or files from which to annotate.
@@ -221,29 +203,29 @@ public class VariantAnnotator extends VariantWalker {
     /**
      * Prepare the output file and the list of available features.
      */
-    public void initialize() {
-
-        if ( LIST ) {
-            AnnotationHelpUtils.listAnnotations();
-            System.exit(0);
-        }
+    public void onTraversalStart() {
+        //TODO figure out how to do this with barclay?
+//        if ( LIST ) {
+//            AnnotationHelpUtils.listAnnotations();
+//            System.exit(0);
+//        }
 
         // get the list of all sample names from the variant VCF input rod, if applicable
-        final List<String> rodName = Arrays.asList(variantCollection.variants.getName());
-        final Set<String> samples = SampleUtils.getUniqueSamplesFromRods(getToolkit(), rodName);
+        final  List<String> samples = getHeaderForVariants().getSampleNamesInOrder();
 
         if ( USE_ALL_ANNOTATIONS )
-            annotatorEngine = new VariantAnnotatorEngine(annotationsToExclude, this, getToolkit());
+            annotatorEngine = new VariantAnnotatorEngine(annotationsToExclude, this, comps);
         else
-            annotatorEngine = new VariantAnnotatorEngine(annotationGroupsToUse, annotationsToUse, annotationsToExclude, this, getToolkit());
-        annotatorEngine.initializeExpressions(expressionsToUse);
-        annotatorEngine.setExpressionAlleleConcordance(expressionAlleleConcordance);
+            annotatorEngine = new VariantAnnotatorEngine(annotationGroupsToUse, annotationsToUse, annotationsToExclude, this, comps);
+        //TODO add expressions?
+//        annotatorEngine.initializeExpressions(expressionsToUse);...
+//        annotatorEngine.setExpressionAlleleConcordance(expressionAlleleConcordance);
 
         // setup the header fields
         // note that if any of the definitions conflict with our new ones, then we want to overwrite the old ones
         final Set<VCFHeaderLine> hInfo = new HashSet<>();
-        hInfo.addAll(annotatorEngine.getVCFAnnotationDescriptions());
-        for ( final VCFHeaderLine line : GATKVCFUtils.getHeaderFields(getToolkit(), rodName) ) {
+        hInfo.addAll(annotatorEngine.getVCFAnnotationDescriptions(false)); //TODO allele specific annotations
+        for ( final VCFHeaderLine line : getHeaderForVariants().getLin ) {
             if ( isUniqueHeaderLine(line, hInfo) )
                 hInfo.add(line);
         }
@@ -275,8 +257,8 @@ public class VariantAnnotator extends VariantWalker {
             }
         }
 
-        annotatorEngine.makeHeaderInfoMap(hInfo);
-        annotatorEngine.invokeAnnotationInitializationMethods(hInfo);
+        //annotatorEngine.makeHeaderInfoMap(hInfo);
+       // annotatorEngine.invokeAnnotationInitializationMethods(hInfo);
 
         VCFHeader vcfHeader = new VCFHeader(hInfo, samples);
         vcfWriter.writeHeader(vcfHeader);
@@ -309,21 +291,15 @@ public class VariantAnnotator extends VariantWalker {
      * @param context  the context for the given locus
      * @return 1 if the locus was successfully processed, 0 if otherwise
      */
-    public Integer map(RefMetaDataTracker tracker, ReferenceContext ref, AlignmentContext context) {
-        if ( tracker == null )
-            return 0;
-
-        // get the variant contexts for all the variants at the location
-        Collection<VariantContext> VCs = tracker.getValues(variantCollection.variants, context.getLocation());
-        if ( VCs.isEmpty() )
-            return 0;
+    @Override
+    public void apply(final VariantContext vc, final ReadsContext readsContext, final ReferenceContext refContext, final FeatureContext fc) {
 
         Collection<VariantContext> annotatedVCs = VCs;
 
         // if the reference base is not ambiguous, we can annotate
         Map<String, AlignmentContext> stratifiedContexts;
         if ( BaseUtils.simpleBaseToBaseIndex(ref.getBase()) != -1 ) {
-            stratifiedContexts = AlignmentContextUtils.splitContextBySampleName(context.getBasePileup());
+            stratifiedContexts = AlignmentContextUtils.splitContextBySampleName(readsContext.());
             annotatedVCs = new ArrayList<>(VCs.size());
             for ( VariantContext vc : VCs )
                 annotatedVCs.add(annotatorEngine.annotateContext(tracker, ref, stratifiedContexts, vc));
@@ -335,24 +311,13 @@ public class VariantAnnotator extends VariantWalker {
         return 1;
     }
 
-    @Override
-    public Integer reduceInit() { return 0; }
-
-    @Override
-    public Integer reduce(Integer value, Integer sum) { return value + sum; }
-
-    @Override
-    public Integer treeReduce(Integer lhs, Integer rhs) {
-        return lhs + rhs;
-    }
-
     /**
      * Tell the user the number of loci processed and close out the new variants file.
-     *
-     * @param result  the number of loci seen.
      */
-    public void onTraversalDone(Integer result) {
-        logger.info("Processed " + result + " loci.\n");
+    @Override
+    public Object onTraversalSuccess() {
+//        logger.info("Processed " + result + " loci.\n");
+        return null;
     }
 }
 

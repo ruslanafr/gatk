@@ -1,6 +1,8 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.*;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.broadinstitute.barclay.argparser.Advanced;
@@ -17,7 +19,12 @@ import org.broadinstitute.gatk.utils.contexts.ReferenceContext;
 import org.broadinstitute.gatk.utils.refdata.RefMetaDataTracker;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCollection;
+import org.broadinstitute.hellbender.cmdline.argumentcollections.VariantAnnotationArgumentCollection;
 import org.broadinstitute.hellbender.engine.*;
+import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerUtils;
+import org.broadinstitute.hellbender.utils.BaseUtils;
+import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
+import org.broadinstitute.hellbender.utils.samples.Sample;
 
 import java.io.File;
 import java.util.*;
@@ -83,6 +90,7 @@ import java.util.*;
  *
  */
 public class VariantAnnotator extends VariantWalker {
+    private VariantContextWriter vcfWriter;
 
     /**
      * The rsIDs from this file are used to populate the ID column of the output.  Also, the DB INFO flag will be set when appropriate. Note that dbSNP is not used in any way for the calculations themselves.
@@ -123,23 +131,11 @@ public class VariantAnnotator extends VariantWalker {
     /**
      * See the --list argument to view available annotations.
      */
-    @Argument(fullName="annotation", shortName="A", doc="One or more specific annotations to apply to variant calls", optional=true)
-    protected List<String> annotationsToUse = new ArrayList<>();
-
-    /**
-     * Note that this argument has higher priority than the -A or -G arguments,
-     * so annotations will be excluded even if they are explicitly included with the other options.
-     */
-    @Argument(fullName="excludeAnnotation", shortName="XA", doc="One or more specific annotations to exclude", optional=true)
-    protected List<String> annotationsToExclude = new ArrayList<>();
-
-    /**
-     * If specified, all available annotations in the group will be applied. See the VariantAnnotator -list argument
-     * to view available groups. Keep in mind that RODRequiringAnnotations are not intended to be used as a group,
-     * because they require specific ROD inputs.
-     */
-    @Argument(fullName="group", shortName="G", doc="One or more classes/groups of annotations to apply to variant calls", optional=true)
-    protected List<String> annotationGroupsToUse = new ArrayList<>();
+    @ArgumentCollection
+    public VariantAnnotationArgumentCollection variantAnnotationArgumentCollection = new VariantAnnotationArgumentCollection(
+            Arrays.asList(StandardAnnotation.class.getSimpleName()),
+            Collections.emptyList(),
+            Collections.emptyList());
 
     /**
      * This option enables you to add annotations from one VCF to another.
@@ -213,10 +209,11 @@ public class VariantAnnotator extends VariantWalker {
         // get the list of all sample names from the variant VCF input rod, if applicable
         final  List<String> samples = getHeaderForVariants().getSampleNamesInOrder();
 
-        if ( USE_ALL_ANNOTATIONS )
-            annotatorEngine = new VariantAnnotatorEngine(annotationsToExclude, this, comps);
-        else
-            annotatorEngine = new VariantAnnotatorEngine(annotationGroupsToUse, annotationsToUse, annotationsToExclude, this, comps);
+        if ( USE_ALL_ANNOTATIONS ) {
+            annotatorEngine = VariantAnnotatorEngine.ofAllMinusExcluded(variantAnnotationArgumentCollection.annotationsToExclude, dbsnp.dbsnp, comps);
+        } else {
+            annotatorEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(variantAnnotationArgumentCollection, dbsnp.dbsnp, comps);
+        }
         //TODO add expressions?
 //        annotatorEngine.initializeExpressions(expressionsToUse);...
 //        annotatorEngine.setExpressionAlleleConcordance(expressionAlleleConcordance);
@@ -261,6 +258,7 @@ public class VariantAnnotator extends VariantWalker {
        // annotatorEngine.invokeAnnotationInitializationMethods(hInfo);
 
         VCFHeader vcfHeader = new VCFHeader(hInfo, samples);
+        vcfWriter = createVCFWriter(outputFile);
         vcfWriter.writeHeader(vcfHeader);
     }
 
@@ -294,21 +292,18 @@ public class VariantAnnotator extends VariantWalker {
     @Override
     public void apply(final VariantContext vc, final ReadsContext readsContext, final ReferenceContext refContext, final FeatureContext fc) {
 
-        Collection<VariantContext> annotatedVCs = VCs;
-
         // if the reference base is not ambiguous, we can annotate
         Map<String, AlignmentContext> stratifiedContexts;
         if ( BaseUtils.simpleBaseToBaseIndex(ref.getBase()) != -1 ) {
             stratifiedContexts = AlignmentContextUtils.splitContextBySampleName(readsContext.());
-            annotatedVCs = new ArrayList<>(VCs.size());
-            for ( VariantContext vc : VCs )
-                annotatedVCs.add(annotatorEngine.annotateContext(tracker, ref, stratifiedContexts, vc));
         }
-
-        for ( VariantContext annotatedVC : annotatedVCs )
+        if ( BaseUtils.simpleBaseToBaseIndex(refContext.getBase()) != -1 ) {
+            List<Sample> samplesList = vc.getSampleNamesOrderedByName();
+            ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>( vc.getSampleNamesOrderedByName(), vc.getAlleles(),
+                    AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, readsContext);)
+            VariantContext annotatedVC = annotatorEngine.annotateContext(vc, fc, refContext, stratifiedContexts, a -> true);
             vcfWriter.add(annotatedVC);
-
-        return 1;
+        }
     }
 
     /**

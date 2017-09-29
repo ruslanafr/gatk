@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.annotator;
 
+import com.google.common.collect.Lists;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
@@ -23,7 +24,10 @@ import org.broadinstitute.hellbender.cmdline.argumentcollections.VariantAnnotati
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerUtils;
 import org.broadinstitute.hellbender.utils.BaseUtils;
+import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
+import org.broadinstitute.hellbender.utils.genotyper.IndexedSampleList;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
+import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.samples.Sample;
 
 import java.io.File;
@@ -119,9 +123,8 @@ public class VariantAnnotator extends VariantWalker {
      * position, one is chosen randomly. Check for allele concordance if using --resourceAlleleConcordance, otherwise
      * the match is based on position only.
      */
-    @Input(fullName="resource", shortName = "resource", doc="External resource VCF file", required=false)
-    public List<RodBinding<VariantContext>> resources = Collections.emptyList();
-    public List<RodBinding<VariantContext>> getResourceRodBindings() { return resources; }
+    @Argument(fullName="resource", shortName = "resource", doc="External resource VCF file", optional=true)
+    public List<FeatureDataSource<VariantContext>> resources = Collections.emptyList(); //TODO this is probably not enough
 
     @Argument(fullName= StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName=StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
@@ -195,6 +198,7 @@ public class VariantAnnotator extends VariantWalker {
     public double minGenotypeQualityP = 0.0;
 
     private VariantAnnotatorEngine annotatorEngine;
+    private SampleList variantSamples;
 
     /**
      * Prepare the output file and the list of available features.
@@ -207,7 +211,8 @@ public class VariantAnnotator extends VariantWalker {
 //        }
 
         // get the list of all sample names from the variant VCF input rod, if applicable
-        final  List<String> samples = getHeaderForVariants().getSampleNamesInOrder();
+        final  List<String> samples = getHeaderForVariants().getSampleNamesInOrder(); // TODO right samples?
+        variantSamples = new IndexedSampleList(samples);
 
         if ( USE_ALL_ANNOTATIONS ) {
             annotatorEngine = VariantAnnotatorEngine.ofAllMinusExcluded(variantAnnotationArgumentCollection.annotationsToExclude, dbsnp.dbsnp, comps);
@@ -215,8 +220,7 @@ public class VariantAnnotator extends VariantWalker {
             annotatorEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(variantAnnotationArgumentCollection, dbsnp.dbsnp, comps);
         }
         //TODO add expressions?
-//        annotatorEngine.initializeExpressions(expressionsToUse);...
-//        annotatorEngine.setExpressionAlleleConcordance(expressionAlleleConcordance);
+        annotatorEngine.addExpressions(expressionsToUse, resources, expressionAlleleConcordance );
 
         // setup the header fields
         // note that if any of the definitions conflict with our new ones, then we want to overwrite the old ones
@@ -231,26 +235,26 @@ public class VariantAnnotator extends VariantWalker {
             // special case the ID field
             if ( expression.fieldName.equals("ID") ) {
                 hInfo.add(new VCFInfoHeaderLine(expression.fullName, 1, VCFHeaderLineType.String, "ID field transferred from external VCF resource"));
-                continue;
-            }
-            VCFInfoHeaderLine targetHeaderLine = null;
-            for ( final VCFHeaderLine line : GATKVCFUtils.getHeaderFields(getToolkit(), Arrays.asList(expression.binding.getName())) ) {
-                if ( line instanceof VCFInfoHeaderLine ) {
-                    final VCFInfoHeaderLine infoline = (VCFInfoHeaderLine)line;
-                    if ( infoline.getID().equals(expression.fieldName) ) {
-                        targetHeaderLine = infoline;
-                        break;
+            } else {
+                VCFInfoHeaderLine targetHeaderLine = null;
+                for (final VCFHeaderLine line : GATKVCFUtils.getHeaderFields(getToolkit(), Arrays.asList(expression.binding.getName()))) {
+                    if (line instanceof VCFInfoHeaderLine) {
+                        final VCFInfoHeaderLine infoline = (VCFInfoHeaderLine) line;
+                        if (infoline.getID().equals(expression.fieldName)) {
+                            targetHeaderLine = infoline;
+                            break;
+                        }
                     }
                 }
-            }
 
-            if ( targetHeaderLine != null ) {
-                if ( targetHeaderLine.getCountType() == VCFHeaderLineCount.INTEGER )
-                    hInfo.add(new VCFInfoHeaderLine(expression.fullName, targetHeaderLine.getCount(), targetHeaderLine.getType(), targetHeaderLine.getDescription()));
-                else
-                    hInfo.add(new VCFInfoHeaderLine(expression.fullName, targetHeaderLine.getCountType(), targetHeaderLine.getType(), targetHeaderLine.getDescription()));
-            } else {
-                hInfo.add(new VCFInfoHeaderLine(expression.fullName, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Value transferred from another external VCF resource"));
+                if (targetHeaderLine != null) {
+                    if (targetHeaderLine.getCountType() == VCFHeaderLineCount.INTEGER)
+                        hInfo.add(new VCFInfoHeaderLine(expression.fullName, targetHeaderLine.getCount(), targetHeaderLine.getType(), targetHeaderLine.getDescription()));
+                    else
+                        hInfo.add(new VCFInfoHeaderLine(expression.fullName, targetHeaderLine.getCountType(), targetHeaderLine.getType(), targetHeaderLine.getDescription()));
+                } else {
+                    hInfo.add(new VCFInfoHeaderLine(expression.fullName, VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Value transferred from another external VCF resource"));
+                }
             }
         }
 
@@ -263,12 +267,14 @@ public class VariantAnnotator extends VariantWalker {
     }
 
     public static boolean isUniqueHeaderLine(VCFHeaderLine line, Set<VCFHeaderLine> currentSet) {
-        if ( !(line instanceof VCFCompoundHeaderLine) )
+        if ( !(line instanceof VCFCompoundHeaderLine) ) {
             return true;
+        }
 
         for ( VCFHeaderLine hLine : currentSet ) {
-            if ( hLine instanceof VCFCompoundHeaderLine && ((VCFCompoundHeaderLine)line).sameLineTypeAndName((VCFCompoundHeaderLine)hLine) )
+            if ( hLine instanceof VCFCompoundHeaderLine && ((VCFCompoundHeaderLine)line).sameLineTypeAndName((VCFCompoundHeaderLine)hLine) ) {
                 return false;
+            }
         }
 
         return true;
@@ -284,24 +290,22 @@ public class VariantAnnotator extends VariantWalker {
     /**
      * For each site of interest, annotate based on the requested annotation types
      *
-     * @param tracker  the meta-data tracker
-     * @param ref      the reference base
-     * @param context  the context for the given locus
-     * @return 1 if the locus was successfully processed, 0 if otherwise
+     * @param vc
+     * @param readsContext Reads overlapping the current variant. Will be an empty, but non-null, context object
+     *                     if there is no backing source of reads data (in which case all queries on it will return
+     *                     an empty array/iterator)
+     * @param refContext
+     * @param fc
      */
     @Override
     public void apply(final VariantContext vc, final ReadsContext readsContext, final ReferenceContext refContext, final FeatureContext fc) {
 
         // if the reference base is not ambiguous, we can annotate
-        Map<String, AlignmentContext> stratifiedContexts;
-        if ( BaseUtils.simpleBaseToBaseIndex(ref.getBase()) != -1 ) {
-            stratifiedContexts = AlignmentContextUtils.splitContextBySampleName(readsContext.());
-        }
         if ( BaseUtils.simpleBaseToBaseIndex(refContext.getBase()) != -1 ) {
-            List<Sample> samplesList = vc.getSampleNamesOrderedByName();
-            ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>( vc.getSampleNamesOrderedByName(), vc.getAlleles(),
-                    AssemblyBasedCallerUtils.splitReadsBySample(samplesList, readsHeader, readsContext);)
-            VariantContext annotatedVC = annotatorEngine.annotateContext(vc, fc, refContext, stratifiedContexts, a -> true);
+            ReadLikelihoods<Allele> likelihoods = new ReadLikelihoods<>( variantSamples, new IndexedAlleleList<>(vc.getAlleles()),
+                    AssemblyBasedCallerUtils.splitReadsBySample(variantSamples, getHeaderForReads(), Lists.newArrayList(readsContext.iterator())));
+
+            VariantContext annotatedVC = annotatorEngine.annotateContext(vc, fc, refContext, likelihoods, a -> true);
             vcfWriter.add(annotatedVC);
         }
     }

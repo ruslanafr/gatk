@@ -22,7 +22,7 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDiscoveryArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.sv.discovery.AlignedContig;
 import org.broadinstitute.hellbender.tools.spark.sv.discovery.AlignmentInterval;
-import org.broadinstitute.hellbender.tools.spark.sv.utils.FileUtils;
+import org.broadinstitute.hellbender.tools.spark.sv.utils.SVFileUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import scala.Tuple2;
@@ -102,7 +102,7 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
         final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByPossibleRawTypes =
                 divertReadsByPossiblyRawTypes(contigsWithAlignmentsReconstructed, localLogger);
 
-        if ( !FileUtils.createDirToWriteTo(outputDir) )
+        if ( !SVFileUtils.createDirToWriteTo(outputDir) )
             throw new GATKException("Could not create directory " + outputDir + " to write results to.");
 
         if (writeSAMFiles) {
@@ -222,7 +222,7 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
         toolLogger.info(filteredReadNames.size() + " long reads indicating " + rawTypeString);
         final JavaRDD<SAMRecord> splitLongReads = originalContigs.filter(read -> filteredReadNames.contains(read.getName()))
                 .map(read -> read.convertToSAMRecord(headerBroadcast.getValue()));
-        FileUtils.writeSAMFile(splitLongReads.collect().iterator(), headerBroadcast.getValue(),
+        SVFileUtils.writeSAMFile(splitLongReads.collect().iterator(), headerBroadcast.getValue(),
                 outputDir+"/"+rawTypeString+".sam", false);
     }
 

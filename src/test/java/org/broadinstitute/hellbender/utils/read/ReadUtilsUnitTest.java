@@ -476,108 +476,39 @@ public final class ReadUtilsUnitTest extends BaseTest {
         Assert.assertEquals(ReadUtils.readHasNoAssignedPosition(read), expectedResult);
     }
 
-    @DataProvider(name="createWritingCRAM")
-    public Object[][] createWritingCRAMData() {
-        return new Object[][] {
-            // createMD5
-            {false},
-            {true},
-        };
-    }
-
-    @Test(dataProvider="createWritingCRAM")
-    public void testWritingCRAMFile(boolean createMD5) throws IOException {
-        final File outputFile = createTempFile("samWriterTest",  ".cram");
-        final File reference = getTestFile("print_reads.fasta");
-        final File bamFile = getTestFile("print_reads.sam");
-        try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
-            final SAMFileHeader header = samReader.getFileHeader();
-
-            try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
-                (outputFile, reference, header, true, false, createMD5)) {
-                final Iterator<SAMRecord> samRecIt = samReader.iterator();
-                while (samRecIt.hasNext()) {
-                    samWriter.addAlignment(samRecIt.next());
-                }
-            }
-        }
-
-        final File md5File = new File(outputFile.getAbsolutePath() + ".md5");
-        if (md5File.exists()) {
-            md5File.deleteOnExit();
-        }
-        Assert.assertEquals(createMD5, md5File.exists());
-
-        // now check the contents are the same
-        try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
-            final CloseableIterator<SAMRecord> outRecIt = new CRAMFileReader(outputFile, new ReferenceSource(reference)).getIterator()) {
-            final Iterator<SAMRecord> samRecIt = samReader.iterator();
-            Assert.assertEquals(samRecIt, outRecIt);
-        }
-    }
-
-    @Test(dataProvider="createWritingCRAM")
-    public void testWritingCRAMPath(boolean createMD5) throws IOException {
-        try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
-            final Path outputPath = jimfs.getPath("samWriterTest.cram");
-            final File reference = getTestFile("print_reads.fasta");
-            final File bamFile = getTestFile("print_reads.sam");
-            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
-                final SAMFileHeader header = samReader.getFileHeader();
-
-                try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
-                    (outputPath, reference, header, true, false, createMD5)) {
-                    final Iterator<SAMRecord> samRecIt = samReader.iterator();
-                    while (samRecIt.hasNext()) {
-                        samWriter.addAlignment(samRecIt.next());
-                    }
-                }
-            }
-
-            final Path md5Path = jimfs.getPath(outputPath.toAbsolutePath().toString() + ".md5");
-            Assert.assertEquals(createMD5, Files.exists(md5Path));
-
-            // now check the contents are the same
-            InputStream streamOutput = Files.newInputStream(outputPath);
-            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
-                final CloseableIterator<SAMRecord> outRecIt = new CRAMFileReader(null, streamOutput, new ReferenceSource(reference)).getIterator()) {
-                final Iterator<SAMRecord> samRecIt = samReader.iterator();
-                Assert.assertEquals(samRecIt, outRecIt);
-            }
-        }
-    }
-
     @DataProvider(name="createSAMWriter")
     public Object[][] createSAMWriterData() {
         return new Object[][] {
                 // Note: We expect to silently fail to create an index if createIndex is true but sort order is not coord.
-                {getTestFile("query_sorted.bam"),     false,  true, true, false},
-                {getTestFile("coordinate_sorted.bam"),false,  true, true, true},
-                {getTestFile("query_sorted.bam"),     true,   true, true, false},
-                {getTestFile("coordinate_sorted.bam"),true,   true, true, true},
-                {getTestFile("query_sorted.bam"),     true,   true, false, false},
-                {getTestFile("coordinate_sorted.bam"),true,   true, false, true},
-                {getTestFile("coordinate_sorted.bam"),true,   false, false, false}
-        };
+            {getTestFile("print_reads.sam"),     getTestFile("print_reads.fasta"), ".cram", false,  true, true, false},
+            {getTestFile("query_sorted.bam"),     null, ".bam", false,  true, true, false},
+            {getTestFile("coordinate_sorted.bam"),null, ".bam", false,  true, true, true},
+            {getTestFile("query_sorted.bam"),     null, ".bam", true,   true, true, false},
+            {getTestFile("coordinate_sorted.bam"),null, ".bam", true,   true, true, true},
+            {getTestFile("query_sorted.bam"),     null, ".bam", true,   true, false, false},
+            {getTestFile("coordinate_sorted.bam"),null, ".bam", true,   true, false, true},
+            {getTestFile("coordinate_sorted.bam"),null, ".bam", true,   false, false, false}        };
     }
 
     @Test(dataProvider="createSAMWriter")
     public void testCreateLegacySAMWriter(
             final File bamFile,
+            final File referenceFile,
+            final String outputExtension,
             final boolean preSorted,
             final boolean createIndex,
             final boolean createMD5,
             final boolean expectIndex) throws Exception {
-        final File outputFile = createTempFile("samWriterTest",  ".bam");
+        final File outputFile = createTempFile("samWriterTest",  outputExtension);
 
-        try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
+        try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile)) {
              final SAMFileHeader header = samReader.getFileHeader();
             if (expectIndex) { // ensure test condition
                 Assert.assertEquals(expectIndex, header.getSortOrder() == SAMFileHeader.SortOrder.coordinate);
             }
 
             try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
-                            (outputFile, null, samReader.getFileHeader(), preSorted, createIndex, createMD5)) {
+                            (outputFile, referenceFile, samReader.getFileHeader(), preSorted, createIndex, createMD5)) {
                 final Iterator<SAMRecord> samRecIt = samReader.iterator();
                 while (samRecIt.hasNext()) {
                     samWriter.addAlignment(samRecIt.next());
@@ -593,8 +524,8 @@ public final class ReadUtilsUnitTest extends BaseTest {
         Assert.assertEquals(createMD5, md5File.exists());
 
         // now check the contents are the same
-        try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
-            final SamReader outputReader = SamReaderFactory.makeDefault().open(outputFile)) {
+        try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile);
+            final SamReader outputReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(outputFile)) {
             final Iterator<SAMRecord> samRecIt = samReader.iterator();
             final Iterator<SAMRecord> outRecIt = outputReader.iterator();
             Assert.assertEquals(samRecIt, outRecIt);
@@ -604,6 +535,8 @@ public final class ReadUtilsUnitTest extends BaseTest {
     @Test(dataProvider="createSAMWriter")
     public void testCreatePathSAMWriter(
         final File bamFile,
+        final File referenceFile,
+        final String outputExtension,
         final boolean preSorted,
         final boolean createIndex,
         final boolean createMD5,
@@ -611,10 +544,10 @@ public final class ReadUtilsUnitTest extends BaseTest {
 
         try (FileSystem jimfs = Jimfs.newFileSystem(Configuration.unix())) {
 
-            final Path outputPath = jimfs.getPath("samWriterTest.bam");
-            final Path md5Path = jimfs.getPath("samWriterTest.bam.md5");
+            final Path outputPath = jimfs.getPath("samWriterTest" + outputExtension);
+            final Path md5Path = jimfs.getPath("samWriterTest" + outputExtension + ".md5");
 
-            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile)) {
+            try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile)) {
 
                 final SAMFileHeader header = samReader.getFileHeader();
                 if (expectIndex) { // ensure test condition
@@ -622,7 +555,7 @@ public final class ReadUtilsUnitTest extends BaseTest {
                 }
 
                 try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
-                    (outputPath, null, samReader.getFileHeader(), preSorted, createIndex, createMD5)) {
+                    (outputPath, referenceFile, samReader.getFileHeader(), preSorted, createIndex, createMD5)) {
                     final Iterator<SAMRecord> samRecIt = samReader.iterator();
                     while (samRecIt.hasNext()) {
                         samWriter.addAlignment(samRecIt.next());
@@ -634,8 +567,8 @@ public final class ReadUtilsUnitTest extends BaseTest {
             }
 
             // now check the contents are the same
-            try (final SamReader samReader = SamReaderFactory.makeDefault().open(bamFile);
-                final SamReader outputReader = SamReaderFactory.makeDefault().open(outputPath)) {
+            try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile);
+                final SamReader outputReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(outputPath)) {
                 final Iterator<SAMRecord> samRecIt = samReader.iterator();
                 final Iterator<SAMRecord> outRecIt = outputReader.iterator();
                 Assert.assertEquals(samRecIt, outRecIt);

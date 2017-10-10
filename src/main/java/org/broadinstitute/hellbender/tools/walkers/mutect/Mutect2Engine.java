@@ -31,6 +31,7 @@ import org.broadinstitute.hellbender.utils.pileup.PileupElement;
 import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
+import org.broadinstitute.hellbender.utils.realignmentfilter.Realigner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
@@ -71,6 +72,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
     private Optional<HaplotypeBAMWriter> haplotypeBAMWriter;
     private VariantAnnotatorEngine annotationEngine;
     private final SmithWatermanAligner aligner;
+    private final Optional<Realigner> realigner;
 
     private AssemblyRegionTrimmer trimmer = new AssemblyRegionTrimmer();
 
@@ -99,6 +101,8 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         referenceReader = AssemblyBasedCallerUtils.createReferenceReader(reference);
         aligner = SmithWatermanAligner.getAligner(MTAC.smithWatermanImplementation);
         initialize(createBamOutIndex, createBamOutMD5);
+        realigner = MTAC.realignmentFilterArgumentCollection.bwaMemIndexImage == null ? Optional.empty() :
+                Optional.of(new Realigner(MTAC.realignmentFilterArgumentCollection));
     }
 
     private void initialize(final boolean createBamOutIndex, final boolean createBamOutBamMD5) {
@@ -118,7 +122,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
         assemblyEngine = AssemblyBasedCallerUtils.createReadThreadingAssembler(MTAC);
         likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(MTAC.likelihoodArgs);
-        genotypingEngine = new SomaticGenotypingEngine(samplesList, MTAC, MTAC.tumorSampleName, MTAC.normalSampleName);
+        genotypingEngine = new SomaticGenotypingEngine(samplesList, MTAC);
         genotypingEngine.setAnnotationEngine(annotationEngine);
         haplotypeBAMWriter = AssemblyBasedCallerUtils.createBamWriter(MTAC, createBamOutIndex, createBamOutBamMD5, header);
 
@@ -319,6 +323,9 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         if (!MTAC.genotypePonSites && !featureContext.getValues(MTAC.pon, new SimpleInterval(context.getContig(), (int) context.getPosition(), (int) context.getPosition())).isEmpty()) {
             return new ActivityProfileState(refInterval, 0.0);
         }
+
+
+        // TODO: apply realigner here
 
         return new ActivityProfileState( refInterval, 1.0, ActivityProfileState.Type.NONE, null);
     }

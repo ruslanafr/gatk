@@ -5,7 +5,9 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.annotations.VisibleForTesting;
+import htsjdk.samtools.SAMSequenceDictionary;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import scala.Tuple2;
 
@@ -103,7 +105,8 @@ public class ChimericAlignment {
      */
     @VisibleForTesting
     public ChimericAlignment(final AlignmentInterval intervalWithLowerCoordOnContig, final AlignmentInterval intervalWithHigherCoordOnContig,
-                             final List<String> insertionMappings, final String sourceContigName) {
+                             final List<String> insertionMappings, final String sourceContigName,
+                             final SAMSequenceDictionary referenceDictionary) {
 
         this.sourceContigName = sourceContigName;
 
@@ -116,18 +119,20 @@ public class ChimericAlignment {
         if (mappedToSameChr) {
             final boolean involvesRefIntervalSwitch = involvesRefPositionSwitch(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig);
             this.isForwardStrandRepresentation = isForwardStrandRepresentation(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig,
-                    this.strandSwitch, involvesRefIntervalSwitch);
+                                                                                this.strandSwitch, involvesRefIntervalSwitch);
         } else {
             if (strandSwitch == StrandSwitch.NO_SWITCH) {
                 this.isForwardStrandRepresentation = regionWithLowerCoordOnContig.forwardStrand;
             } else {
-                this.isForwardStrandRepresentation = true; // TODO: 9/8/17 placeholder, get it correct later
+                this.isForwardStrandRepresentation = IntervalUtils.compareContigs(intervalWithLowerCoordOnContig.referenceSpan,
+                        intervalWithHigherCoordOnContig.referenceSpan, referenceDictionary) < 0;
             }
         }
 
         this.insertionMappings = insertionMappings;
     }
 
+    // =================================================================================================================
     //////////// BELOW ARE CODE PATH USED FOR INSERTION, DELETION, AND DUPLICATION (INV OR NOT) AND INVERSION, AND ARE TESTED ONLY FOR THAT PURPOSE
 
     /**
@@ -174,7 +179,8 @@ public class ChimericAlignment {
                 }
             }
 
-            final ChimericAlignment chimericAlignment = new ChimericAlignment(current, next, insertionMappings, alignedContig.contigName);
+            final SAMSequenceDictionary referenceDictionary = null; // don't need this for its intended cases, which are all same CHR mapping
+            final ChimericAlignment chimericAlignment = new ChimericAlignment(current, next, insertionMappings, alignedContig.contigName, referenceDictionary);
             if (!chimericAlignment.isNotSimpleTranslocation())
                 throw new GATKException.ShouldNeverReachHereException("Mapped assembled contigs are sent down the wrong path: " +
                         "contig suggesting \"translocation\" is sent down the insert/deletion path.\n" + alignedContig.toString());

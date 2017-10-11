@@ -99,12 +99,12 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
         Assert.assertEquals(roundTrip, novelAdjacencyReferenceLocations1);
     }
 
-    private static NovelAdjacencyReferenceLocations getBreakpoints(final String contigName, final String insertionMapping) throws IOException{
+    private static NovelAdjacencyReferenceLocations getBreakpoints(final String contigName, final String insertionMapping) {
         final AlignmentInterval region1 = new AlignmentInterval(new SimpleInterval("20", 10000, 10100), 1, 100, TextCigarCodec.decode("100M"), true, 60, 0, 100, AlnModType.NONE);
         final AlignmentInterval region2 = new AlignmentInterval(new SimpleInterval("20", 20100, 20200), 101, 200, TextCigarCodec.decode("100M"), false, 60, 0, 100, AlnModType.NONE);
         final ArrayList<String> insertionMappings = new ArrayList<>();
         insertionMappings.add(insertionMapping);
-        final ChimericAlignment breakpoint = new ChimericAlignment(region1, region2, insertionMappings, contigName);
+        final ChimericAlignment breakpoint = new ChimericAlignment(region1, region2, insertionMappings, contigName, SVDiscoveryTestDataProvider.seqDict);
         return new NovelAdjacencyReferenceLocations(breakpoint, SVDiscoveryTestDataProvider.makeDummySequence(200, (byte)'A'));
     }
 
@@ -112,11 +112,11 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
     // Tests for inversion
     // -----------------------------------------------------------------------------------------------
     @Test(groups = "sv")
-    public void testGetBreakpoints_5to3Inversion_withSimpleInsertion() throws IOException {
+    public void testGetBreakpoints_5to3Inversion_withSimpleInsertion() {
 
         final NovelAdjacencyReferenceLocations breakpoints = SVDiscoveryTestDataProvider.forSimpleInversionWithNovelInsertion._3();
         seeIfItWorks(breakpoints, StrandSwitch.FORWARD_TO_REVERSE,
-                new SimpleInterval("21", 108569294, 108569294), new SimpleInterval("21", 108569364, 108569364),
+                new SimpleInterval("21", 69294, 69294), new SimpleInterval("21", 69364, 69364),
                 null, "", "T", 0, 0, null);
     }
 
@@ -135,7 +135,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
      *  @see SVDiscoveryTestDataProvider#forSimpleInversionWithHomology(ByteArrayOutputStream)
      */
     @Test(groups = "sv")
-    public void testSimpleInversionWithHomologyBreakpointsIdentification_allFourRepresentations() throws IOException {
+    public void testSimpleInversionWithHomologyBreakpointsIdentification_allFourRepresentations() {
 
         final byte[] homology = "ACACA".getBytes();
 
@@ -188,7 +188,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
     public void testGetBreakpoints_5to3Inversion_simple() throws IOException {
         final AlignmentInterval region1 = new AlignmentInterval(new SimpleInterval("20", 101, 200), 1, 100, TextCigarCodec.decode("100M100S"), true, 60, 0, 100, AlnModType.NONE);
         final AlignmentInterval region2 = new AlignmentInterval(new SimpleInterval("20", 501, 600), 101, 200, TextCigarCodec.decode("100S100M"), false, 60, 0, 100, AlnModType.NONE);
-        final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1");
+        final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1", SVDiscoveryTestDataProvider.seqDict);
         final Tuple2<SimpleInterval, SimpleInterval> breakpoints = NovelAdjacencyReferenceLocations.leftJustifyBreakpoints(chimericAlignment, DEFAULT_BREAKPOINT_COMPLICATIONS);
         Assert.assertEquals(breakpoints._1(), new SimpleInterval("20", 200, 200));
         Assert.assertEquals(breakpoints._2(), new SimpleInterval("20", 600, 600));
@@ -198,7 +198,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
     public void testGetBreakpoints_5to3Inversion_withSimpleHomology() throws IOException {
         final AlignmentInterval region1 = new AlignmentInterval(new SimpleInterval("20", 101, 205), 1, 105, TextCigarCodec.decode("105M100S"), true, 60, 0, 100, AlnModType.NONE);
         final AlignmentInterval region2 = new AlignmentInterval(new SimpleInterval("20", 501, 605), 96, 200, TextCigarCodec.decode("105M100S"), false, 60, 0, 100, AlnModType.NONE);
-        final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1");
+        final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1", SVDiscoveryTestDataProvider.seqDict);
         final BreakpointComplications homologyComplications = new BreakpointComplications("ACACA", "",
                 DEFAULT_BREAKPOINT_COMPLICATIONS.hasDuplicationAnnotation(), DEFAULT_BREAKPOINT_COMPLICATIONS.getDupSeqRepeatUnitRefSpan(), DEFAULT_BREAKPOINT_COMPLICATIONS.getDupSeqRepeatNumOnRef(), DEFAULT_BREAKPOINT_COMPLICATIONS.getDupSeqRepeatNumOnCtg(), null, null, DEFAULT_BREAKPOINT_COMPLICATIONS.getCigarStringsForDupSeqOnCtg(), DEFAULT_BREAKPOINT_COMPLICATIONS.isDupAnnotIsFromOptimization(), null);
         final Tuple2<SimpleInterval, SimpleInterval> breakpoints = NovelAdjacencyReferenceLocations.leftJustifyBreakpoints(chimericAlignment, homologyComplications);
@@ -213,7 +213,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
     public void testGetBreakpoints_ExpectException() throws IOException {
         final AlignmentInterval region1 = new AlignmentInterval(new SimpleInterval("21", 100001, 100100), 1 ,100, TextCigarCodec.decode("100M"), true, 60, 0, 100, AlnModType.NONE);
         final AlignmentInterval region2 = new AlignmentInterval(new SimpleInterval("21", 100101, 100200), 101 ,200, TextCigarCodec.decode("100M"), true, 60, 0, 100, AlnModType.NONE);
-        final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1");
+        final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1", SVDiscoveryTestDataProvider.seqDict);
         new BreakpointComplications(chimericAlignment, SVDiscoveryTestDataProvider.makeDummySequence(200, (byte)'A'));
     }
 
@@ -333,7 +333,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
      * @see SVDiscoveryTestDataProvider#forComplexTandemDuplication()
      */
     @Test(groups = "sv")
-    public void testGetBreakpoints_tandemDuplication_complex() throws IOException {
+    public void testGetBreakpoints_tandemDuplication_complex() {
 
         final String leftRefFlank       = "TGCCAGGTTACATGGCAAAGAGGGTAGATAT";                                                                    // 31
         final String rightRefFlank      = "TGGTGCAAATGCCATTTATGCTCCTCTCCACCCATATCC";                                                            // 39
@@ -434,7 +434,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
      * @throws Exception
      */
     @Test(enabled = false)
-    public void testGetAssembledBreakpointsFromAlignmentIntervals() throws Exception {
+    public void testGetAssembledBreakpointsFromAlignmentIntervals() {
         final byte[] contigSequence = "GACGAACGATTTGACTTTAATATGAAATGTTTTATGTGGGCTATAAAATTATCCAAACTCGACACAGGACATTTTGAGCTTATTTCCAAATCATCTGGCCTTCATCTACCCACTGGAACTATTACTCTGCTGGGTCCTCATGGAAACATATCTTTCAGCCCTAACAATGAGACTACAGACATCTACGTCCCCAACACAACAGCTAAAAAGCAGTAGAATGTCAGAAAGGCTATCCACTTAGCCCTTGGCTGACAGGCCCCACTGAGCATCCTTTGCGAAGTCCATTTACTAGCTAATTCATAATTTACACAAGGCATTCAGACATAGCAGCTAAGATATAAAACATTTATCAACACAGGGACTAGTTTGTCATTTTAAAATAATTATGTTTAAGTAAGCCAATAAAGTCTATCTTCTCCAATTTACTTATTGAGCTTTATGAGGCAATTTAAGTCCCGATTTTGGGGGGTATGTATGAAAGGAGAGCATGGAAATGCCATTTGCTCCCTGAAGTTTTTATCTTTTTTTTTTTGAGATAGAGTCTTGTGTTTTCTGTGGAGTACATGAGTATGCATCAAAGCTAACAACGCCCACTGCCCTGTTAGTCAAATACCTTTGA".getBytes();
         final AlignmentInterval region1 = new AlignmentInterval(new SimpleInterval("21", 118873207, 118873739), 1, 532, TextCigarCodec.decode("532M87S"), true, 60, 0, 100, AlnModType.NONE);
         final AlignmentInterval region2 = new AlignmentInterval(new SimpleInterval("20", 175705642, 175705671), 519, 547, TextCigarCodec.decode("518S29M72S"), false, 3, 0, 100, AlnModType.NONE);

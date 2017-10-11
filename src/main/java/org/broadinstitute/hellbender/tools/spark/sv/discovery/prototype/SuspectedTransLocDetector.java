@@ -21,7 +21,7 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
     @Override
     public void inferSvAndWriteVCF(final JavaRDD<AlignedContig> localAssemblyContigs, final String vcfOutputFileName,
                                    final Broadcast<ReferenceMultiSource> broadcastReference,
-                                   final Broadcast<SAMSequenceDictionary> sequenceDictionaryBroadcast,
+                                   final Broadcast<SAMSequenceDictionary> referenceDictionaryBroadcast,
                                    final Logger toolLogger) {
         localAssemblyContigs.cache();
         toolLogger.info(localAssemblyContigs.count() + " chimeras indicating strand-switch-less breakpoints");
@@ -32,7 +32,7 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
                                 SimpleStrandSwitchVariantDetector.splitPairStrongEnoughEvidenceForCA(tig.alignmentIntervals.get(0),
                                         tig.alignmentIntervals.get(1), SimpleStrandSwitchVariantDetector.MORE_RELAXED_ALIGNMENT_MIN_MQ,
                                         0))
-                        .mapToPair(SuspectedTransLocDetector::convertAlignmentIntervalsToChimericAlignment).cache();
+                        .mapToPair(tig -> convertAlignmentIntervalsToChimericAlignment(tig, referenceDictionaryBroadcast.getValue())).cache();
 
         final JavaRDD<VariantContext> annotatedBNDs =
                 chimeraAndSequence
@@ -48,10 +48,11 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
 //                sequenceDictionaryBroadcast.getValue(), annotatedBNDs, toolLogger);
     }
 
-    private static Tuple2<ChimericAlignment, byte[]> convertAlignmentIntervalsToChimericAlignment(final AlignedContig contig) {
+    private static Tuple2<ChimericAlignment, byte[]> convertAlignmentIntervalsToChimericAlignment(final AlignedContig contig,
+                                                                                                  final SAMSequenceDictionary referenceDictionary) {
         // TODO: 9/9/17 this default empty insertion mapping treatment is temporary and should be fixed later
         return new Tuple2<>(new ChimericAlignment(contig.alignmentIntervals.get(0), contig.alignmentIntervals.get(1),
-                EMPTY_INSERTION_MAPPINGS, contig.contigName), contig.contigSequence);
+                EMPTY_INSERTION_MAPPINGS, contig.contigName, referenceDictionary), contig.contigSequence);
     }
 
     private static Tuple2<NovelAdjacencyReferenceLocations, Tuple2<Tuple2<BreakEndVariantType, BreakEndVariantType>, Iterable<ChimericAlignment>>>

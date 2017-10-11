@@ -33,7 +33,8 @@ final class InsDelVariantDetector implements VariantDetectorFromLocalAssemblyCon
                 localAssemblyContigs
                         .mapToPair(tig -> convertAlignmentIntervalToChimericAlignment(tig,
                                 StructuralVariationDiscoveryArgumentCollection.
-                                        DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection.DEFAULT_MIN_ALIGNMENT_LENGTH));
+                                        DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection.DEFAULT_MIN_ALIGNMENT_LENGTH,
+                                refSequenceDictionaryBroadcast.getValue()));
 
         // usual business as in DiscoverVariantsFromContigAlignmentsSAMSpark#discoverVariantsAndWriteVCF()
         final JavaRDD<VariantContext> annotatedVariants =
@@ -53,7 +54,8 @@ final class InsDelVariantDetector implements VariantDetectorFromLocalAssemblyCon
      * badly mapped (MQ < 60) 1st alignment is no longer skipped.
      */
     private static Tuple2<byte[], List<ChimericAlignment>> convertAlignmentIntervalToChimericAlignment (final AlignedContig contig,
-                                                                                                        final int minAlignmentBlockSize) {
+                                                                                                        final int minAlignmentBlockSize,
+                                                                                                        final SAMSequenceDictionary referenceDictionary) {
 
         final List<AlignmentInterval> alignmentIntervals = contig.alignmentIntervals;
         final Iterator<AlignmentInterval> iterator = alignmentIntervals.iterator();
@@ -71,7 +73,7 @@ final class InsDelVariantDetector implements VariantDetectorFromLocalAssemblyCon
                 }
             }
 
-            final ChimericAlignment ca = new ChimericAlignment(current, next, insertionMappings, contig.contigName);
+            final ChimericAlignment ca = new ChimericAlignment(current, next, insertionMappings, contig.contigName, referenceDictionary);
             if (!ca.isNotSimpleTranslocation())
                 throw new GATKException.ShouldNeverReachHereException("Mapped assembled contigs are sent down the wrong path: " +
                         "contig suggesting \"translocation\" is sent down the insert/deletion path.\n" + contig.toString());

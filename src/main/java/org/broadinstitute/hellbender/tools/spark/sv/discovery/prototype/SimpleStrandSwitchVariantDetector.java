@@ -56,13 +56,13 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
         final SAMSequenceDictionary referenceSequenceDictionary = refSequenceDictionaryBroadcast.getValue();
 
         final JavaRDD<VariantContext> simpleStrandSwitchBkpts =
-                dealWithSimpleStrandSwitchBkpts(invDupAndStrandSwitchBreakpoints._2, broadcastReference, toolLogger);
+                dealWithSimpleStrandSwitchBkpts(invDupAndStrandSwitchBreakpoints._2, broadcastReference, refSequenceDictionaryBroadcast, toolLogger);
 
         SVVCFWriter.writeVCF(simpleStrandSwitchBkpts.collect(), vcfOutputFileName.replace(".vcf", "_simpleSS.vcf"), referenceSequenceDictionary, toolLogger);
         simpleStrandSwitchBkpts.unpersist();
 
         final JavaRDD<VariantContext> invDups =
-                dealWithSuspectedInvDup(invDupAndStrandSwitchBreakpoints._1, broadcastReference, toolLogger);
+                dealWithSuspectedInvDup(invDupAndStrandSwitchBreakpoints._1, broadcastReference, refSequenceDictionaryBroadcast, toolLogger);
         SVVCFWriter.writeVCF(invDups.collect(), vcfOutputFileName.replace(".vcf", "_invDup.vcf"), referenceSequenceDictionary, toolLogger);
     }
 
@@ -73,7 +73,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
      *                                  mapped to the same chr with strand switch is invalid
      */
     private static Tuple2<ChimericAlignment, byte[]> convertAlignmentIntervalsToChimericAlignment
-    (final AlignedContig contigWith2AIMappedToSameChrAndStrandSwitch) {
+    (final AlignedContig contigWith2AIMappedToSameChrAndStrandSwitch, final SAMSequenceDictionary referenceDictionary) {
         Utils.validateArg(SvDiscoverFromLocalAssemblyContigAlignmentsSpark.isLikelyInvBreakpointOrInsInv(contigWith2AIMappedToSameChrAndStrandSwitch),
                 "assumption that input aligned assembly contig has 2 alignments mapped to the same chr with strand switch is invalid.\n" +
                         contigWith2AIMappedToSameChrAndStrandSwitch.toString());
@@ -83,7 +83,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
 
         // TODO: 8/28/17 this default empty insertion mapping treatment is temporary and should be fixed later
         return new Tuple2<>(new ChimericAlignment(intervalOne, intervalTwo, EMPTY_INSERTION_MAPPINGS,
-                contigWith2AIMappedToSameChrAndStrandSwitch.contigName), contigWith2AIMappedToSameChrAndStrandSwitch.contigSequence);
+                contigWith2AIMappedToSameChrAndStrandSwitch.contigName, referenceDictionary), contigWith2AIMappedToSameChrAndStrandSwitch.contigSequence);
     }
 
     /**
@@ -113,6 +113,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
     // workflow manager for simple strand-switch alignment contigs
     private JavaRDD<VariantContext> dealWithSimpleStrandSwitchBkpts(final JavaRDD<AlignedContig> contigs,
                                                                     final Broadcast<ReferenceMultiSource> broadcastReference,
+                                                                    final Broadcast<SAMSequenceDictionary> referenceDictionaryBroadcast,
                                                                     final Logger toolLogger) {
 
         final JavaPairRDD<ChimericAlignment, byte[]> simpleStrandSwitchBkpts =
@@ -120,7 +121,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
                         .filter(tig ->
                                 splitPairStrongEnoughEvidenceForCA(tig.alignmentIntervals.get(0), tig.alignmentIntervals.get(1),
                                         MORE_RELAXED_ALIGNMENT_MIN_MQ,  MORE_RELAXED_ALIGNMENT_MIN_LENGTH))
-                        .mapToPair(SimpleStrandSwitchVariantDetector::convertAlignmentIntervalsToChimericAlignment).cache();
+                        .mapToPair(tig -> convertAlignmentIntervalsToChimericAlignment(tig, referenceDictionaryBroadcast.getValue())).cache();
 
         toolLogger.info(simpleStrandSwitchBkpts.count() + " chimeras indicating simple strand-switch breakpoints.");
 
@@ -154,6 +155,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
 
     private JavaRDD<VariantContext> dealWithSuspectedInvDup(final JavaRDD<AlignedContig> contigs,
                                                             final Broadcast<ReferenceMultiSource> broadcastReference,
+                                                            final Broadcast<SAMSequenceDictionary> referenceDictionaryBroadcast,
                                                             final Logger toolLogger) {
 
         final JavaPairRDD<ChimericAlignment, byte[]> invDupSuspects =
@@ -161,7 +163,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
                         .filter(tig ->
                                 splitPairStrongEnoughEvidenceForCA(tig.alignmentIntervals.get(0), tig.alignmentIntervals.get(1),
                                         MORE_RELAXED_ALIGNMENT_MIN_MQ,  MORE_RELAXED_ALIGNMENT_MIN_LENGTH))
-                        .mapToPair(SimpleStrandSwitchVariantDetector::convertAlignmentIntervalsToChimericAlignment).cache();
+                        .mapToPair(tig -> convertAlignmentIntervalsToChimericAlignment(tig, referenceDictionaryBroadcast.getValue())).cache();
 
         toolLogger.info(invDupSuspects.count() + " chimera indicating inverted duplication");
 

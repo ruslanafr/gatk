@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.annotations.VisibleForTesting;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import scala.Tuple2;
 
@@ -71,6 +72,13 @@ public class ChimericAlignment {
         return Arrays.asList(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig);
     }
 
+    Tuple2<SimpleInterval, SimpleInterval> getCoordSortedReferenceSpans() {
+        if (involvesRefPositionSwitch(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig))
+            return new Tuple2<>(regionWithHigherCoordOnContig.referenceSpan, regionWithLowerCoordOnContig.referenceSpan);
+        else
+            return new Tuple2<>(regionWithLowerCoordOnContig.referenceSpan, regionWithHigherCoordOnContig.referenceSpan);
+    }
+
     protected ChimericAlignment(final Kryo kryo, final Input input) {
 
         this.sourceContigName = input.readString();
@@ -104,14 +112,24 @@ public class ChimericAlignment {
 
         this.strandSwitch = determineStrandSwitch(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig);
 
-        final boolean involvesRefIntervalSwitch = involvesRefPositionSwitch(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig);
-        this.isForwardStrandRepresentation = isForwardStrandRepresentation(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig,
-                this.strandSwitch, involvesRefIntervalSwitch);
+        final boolean mappedToSameChr = intervalWithLowerCoordOnContig.referenceSpan.getContig().equals(intervalWithHigherCoordOnContig.referenceSpan.getContig());
+        if (mappedToSameChr) {
+            final boolean involvesRefIntervalSwitch = involvesRefPositionSwitch(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig);
+            this.isForwardStrandRepresentation = isForwardStrandRepresentation(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig,
+                    this.strandSwitch, involvesRefIntervalSwitch);
+        } else {
+            if (strandSwitch == StrandSwitch.NO_SWITCH) {
+                this.isForwardStrandRepresentation = regionWithLowerCoordOnContig.forwardStrand;
+            } else {
+                this.isForwardStrandRepresentation = true; // TODO: 9/8/17 placeholder, get it correct later
+            }
+        }
 
         this.insertionMappings = insertionMappings;
     }
 
-    // TODO: 12/14/16 Skipping simple translocation events
+    //////////// BELOW ARE CODE PATH USED FOR INSERTION, DELETION, AND DUPLICATION (INV OR NOT) AND INVERSION, AND ARE TESTED ONLY FOR THAT PURPOSE
+
     /**
      * Parse all alignment records for a single locally-assembled contig and generate chimeric alignments if available.
      * Applies certain filters to skip the input alignment regions that are:
@@ -156,10 +174,11 @@ public class ChimericAlignment {
                 }
             }
 
-            final boolean isNotSimpleTranslocation = isNotSimpleTranslocation(current, next,
-                    determineStrandSwitch(current, next), involvesRefPositionSwitch(current, next));
-            if (isNotSimpleTranslocation)
-                results.add(new ChimericAlignment(current, next, insertionMappings, alignedContig.contigName));
+            final ChimericAlignment chimericAlignment = new ChimericAlignment(current, next, insertionMappings, alignedContig.contigName);
+            if (!chimericAlignment.isNotSimpleTranslocation())
+                throw new GATKException.ShouldNeverReachHereException("Mapped assembled contigs are sent down the wrong path: " +
+                        "contig suggesting \"translocation\" is sent down the insert/deletion path.\n" + alignedContig.toString());
+            results.add(chimericAlignment);
 
             current = next;
         }
@@ -169,7 +188,7 @@ public class ChimericAlignment {
 
     // TODO: 11/22/16 it might also be suitable to consider the reference context this alignment region is mapped to
     //       and not simply apply a hard filter (need to think about how to test)
-    static boolean mapQualTooLow(final AlignmentInterval next) {
+    private static boolean mapQualTooLow(final AlignmentInterval next) {
         return next.mapQual < CHIMERIC_ALIGNMENTS_HIGHMQ_THRESHOLD;
     }
 
@@ -200,6 +219,23 @@ public class ChimericAlignment {
             return StrandSwitch.NO_SWITCH;
         } else {
             return first.forwardStrand ? StrandSwitch.FORWARD_TO_REVERSE : StrandSwitch.REVERSE_TO_FORWARD;
+        }
+    }
+
+    /**
+     * An SV event could be detected from a contig that seem originate from the forward or reverse strand of the reference,
+     * besides the annotation that the alignment flanking regions might flank either side of the two breakpoints.
+     */
+    @VisibleForTesting
+    static boolean isForwardStrandRepresentation(final AlignmentInterval regionWithLowerCoordOnContig,
+                                                 final AlignmentInterval regionWithHigherCoordOnContig,
+                                                 final StrandSwitch strandSwitch,
+                                                 final boolean involvesReferenceIntervalSwitch) {
+
+        if (strandSwitch == StrandSwitch.NO_SWITCH) {
+            return regionWithLowerCoordOnContig.forwardStrand && regionWithHigherCoordOnContig.forwardStrand;
+        } else {
+            return !involvesReferenceIntervalSwitch;
         }
     }
 
@@ -237,35 +273,10 @@ public class ChimericAlignment {
                         || involvesReferenceIntervalSwitch == !regionWithLowerCoordOnContig.forwardStrand);
     }
 
-    /**
-     * An SV event could be detected from a contig that seem originate from the forward or reverse strand of the reference,
-     * besides the annotation that the alignment flanking regions might flank either side of the two breakpoints.
-     */
-    @VisibleForTesting
-    static boolean isForwardStrandRepresentation(final AlignmentInterval regionWithLowerCoordOnContig,
-                                                 final AlignmentInterval regionWithHigherCoordOnContig,
-                                                 final StrandSwitch strandSwitch,
-                                                 final boolean involvesReferenceIntervalSwitch) {
-
-        if (strandSwitch == StrandSwitch.NO_SWITCH) {
-            return regionWithLowerCoordOnContig.forwardStrand && regionWithHigherCoordOnContig.forwardStrand;
-        } else {
-            return !involvesReferenceIntervalSwitch;
-        }
-    }
-
     public boolean isNotSimpleTranslocation() {
         return isNotSimpleTranslocation(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig, strandSwitch,
                                         involvesRefPositionSwitch(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig));
     }
-
-    Tuple2<SimpleInterval, SimpleInterval> getCoordSortedReferenceSpans() {
-        if (involvesRefPositionSwitch(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig))
-            return new Tuple2<>(regionWithHigherCoordOnContig.referenceSpan, regionWithLowerCoordOnContig.referenceSpan);
-        else
-            return new Tuple2<>(regionWithLowerCoordOnContig.referenceSpan, regionWithHigherCoordOnContig.referenceSpan);
-    }
-
 
     public String onErrStringRep() {
         return sourceContigName +

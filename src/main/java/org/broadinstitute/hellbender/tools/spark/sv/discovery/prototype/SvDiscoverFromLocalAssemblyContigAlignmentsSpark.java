@@ -111,20 +111,23 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
         }
 
         final Broadcast<ReferenceMultiSource> referenceMultiSourceBroadcast = ctx.broadcast(getReference());
-        dispatchJobs( contigsByPossibleRawTypes, referenceMultiSourceBroadcast, discoverStageArgs.fastaReference);
+        final SAMSequenceDictionary referenceSequenceDictionary = new ReferenceMultiSource((com.google.cloud.dataflow.sdk.options.PipelineOptions)null,
+                discoverStageArgs.fastaReference, ReferenceWindowFunctions.IDENTITY_FUNCTION).getReferenceSequenceDictionary(null);
+        final Broadcast<SAMSequenceDictionary> sequenceDictionaryBroadcast = ctx.broadcast(referenceSequenceDictionary);
+        dispatchJobs( contigsByPossibleRawTypes, referenceMultiSourceBroadcast, sequenceDictionaryBroadcast);
     }
 
     private void dispatchJobs(final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByPossibleRawTypes,
                               final Broadcast<ReferenceMultiSource> referenceMultiSourceBroadcast,
-                              final String fastaReference) {
+                              final Broadcast<SAMSequenceDictionary> sequenceDictionaryBroadcast) {
 
         new InsDelVariantDetector()
                 .inferSvAndWriteVCF(contigsByPossibleRawTypes.get(RawTypes.InsDel), outputDir+"/"+ RawTypes.InsDel.name()+".vcf",
-                        referenceMultiSourceBroadcast, fastaReference, localLogger);
+                        referenceMultiSourceBroadcast, sequenceDictionaryBroadcast, localLogger);
 
         new SimpleStrandSwitchVariantDetector()
                 .inferSvAndWriteVCF(contigsByPossibleRawTypes.get(RawTypes.Inv), outputDir+"/"+ RawTypes.Inv.name()+".vcf",
-                        referenceMultiSourceBroadcast, fastaReference, localLogger);
+                        referenceMultiSourceBroadcast, sequenceDictionaryBroadcast, localLogger);
     }
 
     private enum RawTypes {

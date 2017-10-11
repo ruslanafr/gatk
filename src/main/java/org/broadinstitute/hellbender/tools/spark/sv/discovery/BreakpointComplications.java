@@ -135,6 +135,7 @@ public final class BreakpointComplications {
         return hasDuplicationAnnotation && dupSeqStrandOnCtg.stream().noneMatch(s -> s.equals(Strand.NEGATIVE));
     }
 
+    // =================================================================================================================
     @VisibleForTesting
     BreakpointComplications() {
 

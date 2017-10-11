@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class SVVCFWriter {
 
     /**
-     * FASTA and Broadcast references are both required because 2bit Broadcast references currently order their
+     * {@code referenceSequenceDictionary} is required because 2bit Broadcast references currently order their
      * sequence dictionaries in a scrambled order, see https://github.com/broadinstitute/gatk/issues/2037.
      */
     public static void writeVCF(final List<VariantContext> localVariants, final String vcfFileName,

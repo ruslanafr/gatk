@@ -255,7 +255,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
     (final AlignedContig contigWith2AIMappedToSameChrAndStrandSwitch) {
         Utils.validateArg(SvDiscoverFromLocalAssemblyContigAlignmentsSpark.isLikelyInvBreakpointOrInsInv(contigWith2AIMappedToSameChrAndStrandSwitch),
                 "assumption that input aligned assembly contig has 2 alignments mapped to the same chr with strand switch is invalid.\n" +
-                        SvDiscoverFromLocalAssemblyContigAlignmentsSpark.onErrorStringRepForAlignedContig(contigWith2AIMappedToSameChrAndStrandSwitch));
+                        contigWith2AIMappedToSameChrAndStrandSwitch.toString());
 
         final AlignmentInterval intervalOne = contigWith2AIMappedToSameChrAndStrandSwitch.alignmentIntervals.get(0),
                                 intervalTwo = contigWith2AIMappedToSameChrAndStrandSwitch.alignmentIntervals.get(1);

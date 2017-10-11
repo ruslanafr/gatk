@@ -39,7 +39,7 @@ final class InsDelVariantDetector implements VariantDetectorFromLocalAssemblyCon
         // usual business as in DiscoverVariantsFromContigAlignmentsSAMSpark#discoverVariantsAndWriteVCF()
         final JavaRDD<VariantContext> annotatedVariants =
                 chimericAlignments
-                        .flatMapToPair(DiscoverVariantsFromContigAlignmentsSAMSpark::discoverNovelAdjacencyFromChimericAlignments)
+                        .flatMapToPair(pair -> DiscoverVariantsFromContigAlignmentsSAMSpark.discoverNovelAdjacencyFromChimericAlignments(pair, refSequenceDictionaryBroadcast.getValue()))
                         .groupByKey()
                         .mapToPair(noveltyAndEvidence -> DiscoverVariantsFromContigAlignmentsSAMSpark.inferType(noveltyAndEvidence._1, noveltyAndEvidence._2))
                         .map(noveltyTypeAndEvidence -> DiscoverVariantsFromContigAlignmentsSAMSpark.annotateVariant(noveltyTypeAndEvidence._1,

@@ -126,7 +126,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
         toolLogger.info(simpleStrandSwitchBkpts.count() + " chimeras indicating simple strand-switch breakpoints.");
 
         return simpleStrandSwitchBkpts
-                .mapToPair(pair -> new Tuple2<>(new NovelAdjacencyReferenceLocations(pair._1, pair._2), pair._1))
+                .mapToPair(pair -> new Tuple2<>(new NovelAdjacencyReferenceLocations(pair._1, pair._2, referenceDictionaryBroadcast.getValue()), pair._1))
                 .groupByKey()
                 .mapToPair(noveltyAndEvidence -> inferBNDType(noveltyAndEvidence, broadcastReference.getValue()))
                 .flatMap(noveltyTypeAndEvidence ->
@@ -168,7 +168,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
         toolLogger.info(invDupSuspects.count() + " chimera indicating inverted duplication");
 
         return invDupSuspects
-                .mapToPair(pair -> new Tuple2<>(new NovelAdjacencyReferenceLocations(pair._1, pair._2), new Tuple2<>(pair._1, pair._2)))
+                .mapToPair(pair -> new Tuple2<>(new NovelAdjacencyReferenceLocations(pair._1, pair._2, referenceDictionaryBroadcast.getValue()), new Tuple2<>(pair._1, pair._2)))
                 .groupByKey()
                 .flatMapToPair(SimpleStrandSwitchVariantDetector::inferInvDupRange)
                 .map(noveltyTypeAndAltSeqAndEvidence ->

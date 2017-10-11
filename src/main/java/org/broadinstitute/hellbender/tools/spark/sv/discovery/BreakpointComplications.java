@@ -175,7 +175,7 @@ public final class BreakpointComplications {
         //  under two basic types of SV's: inversion (strand switch necessary) and "translocation" (no strand switch necessary)
         final boolean suggestsSimpleTranslocation = !chimericAlignment.isNotSimpleTranslocation();
         if (suggestsSimpleTranslocation) {
-
+            initForSuspectedTranslocation(chimericAlignment, contigSeq);
         } else if (chimericAlignment.strandSwitch != StrandSwitch.NO_SWITCH) { // TODO: 9/9/17 the case involves an inversion, could be retired once same chr strand-switch BND calls are evaluated.
             if (isLikelyInvertedDuplication(chimericAlignment.regionWithLowerCoordOnContig, chimericAlignment.regionWithHigherCoordOnContig))
                 initForInvDup(chimericAlignment, contigSeq);
@@ -184,6 +184,15 @@ public final class BreakpointComplications {
         } else {
             initForInsDel(chimericAlignment, contigSeq);
         }
+    }
+
+    // =================================================================================================================
+
+    private void initForSuspectedTranslocation(final ChimericAlignment chimericAlignment, final byte[] contigSeq) {
+        homologyForwardStrandRep = getHomology(chimericAlignment.regionWithLowerCoordOnContig,
+                chimericAlignment.regionWithHigherCoordOnContig, contigSeq);
+        insertedSequenceForwardStrandRep = getInsertedSequence(chimericAlignment.regionWithLowerCoordOnContig,
+                chimericAlignment.regionWithHigherCoordOnContig, contigSeq);
     }
 
     // =================================================================================================================

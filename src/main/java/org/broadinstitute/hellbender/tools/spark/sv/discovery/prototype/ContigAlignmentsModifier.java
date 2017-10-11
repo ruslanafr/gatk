@@ -18,7 +18,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-final class ContigAlignmentsModifier {
+public final class ContigAlignmentsModifier {
 
     /**
      * Removes overlap between input {@code contig}'s two alignments.

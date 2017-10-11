@@ -105,7 +105,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
         final ArrayList<String> insertionMappings = new ArrayList<>();
         insertionMappings.add(insertionMapping);
         final ChimericAlignment breakpoint = new ChimericAlignment(region1, region2, insertionMappings, contigName, SVDiscoveryTestDataProvider.seqDict);
-        return new NovelAdjacencyReferenceLocations(breakpoint, SVDiscoveryTestDataProvider.makeDummySequence(200, (byte)'A'));
+        return new NovelAdjacencyReferenceLocations(breakpoint, SVDiscoveryTestDataProvider.makeDummySequence(200, (byte)'A'), SVDiscoveryTestDataProvider.seqDict);
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -178,7 +178,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
         Assert.assertEquals(chimericAlignment.insertionMappings.size(), 1);
         final String expectedInsertionMappingsString = String.join(AlignmentInterval.PACKED_STRING_REP_SEPARATOR, "484", "525", "20:23103196-23103238", "-", "483S42M968S", "60", "2", "100", "O");
         Assert.assertEquals(chimericAlignment.insertionMappings.get(0), expectedInsertionMappingsString);
-        final NovelAdjacencyReferenceLocations breakpoints = new NovelAdjacencyReferenceLocations(chimericAlignment, contigSequence);
+        final NovelAdjacencyReferenceLocations breakpoints = new NovelAdjacencyReferenceLocations(chimericAlignment, contigSequence, SVDiscoveryTestDataProvider.seqDict);
         Assert.assertTrue(breakpoints.complication.getHomologyForwardStrandRep().isEmpty());
         Assert.assertEquals(breakpoints.complication.getInsertedSequenceForwardStrandRep(), "TGAGAGTTGGCCCGAACACTGCTGGATTCCACTTCA");
     }
@@ -189,7 +189,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
         final AlignmentInterval region1 = new AlignmentInterval(new SimpleInterval("20", 101, 200), 1, 100, TextCigarCodec.decode("100M100S"), true, 60, 0, 100, AlnModType.NONE);
         final AlignmentInterval region2 = new AlignmentInterval(new SimpleInterval("20", 501, 600), 101, 200, TextCigarCodec.decode("100S100M"), false, 60, 0, 100, AlnModType.NONE);
         final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1", SVDiscoveryTestDataProvider.seqDict);
-        final Tuple2<SimpleInterval, SimpleInterval> breakpoints = NovelAdjacencyReferenceLocations.leftJustifyBreakpoints(chimericAlignment, DEFAULT_BREAKPOINT_COMPLICATIONS);
+        final Tuple2<SimpleInterval, SimpleInterval> breakpoints = NovelAdjacencyReferenceLocations.leftJustifyBreakpoints(chimericAlignment, DEFAULT_BREAKPOINT_COMPLICATIONS, SVDiscoveryTestDataProvider.seqDict);
         Assert.assertEquals(breakpoints._1(), new SimpleInterval("20", 200, 200));
         Assert.assertEquals(breakpoints._2(), new SimpleInterval("20", 600, 600));
     }
@@ -201,7 +201,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
         final ChimericAlignment chimericAlignment = new ChimericAlignment(region1, region2, Collections.emptyList(), "1", SVDiscoveryTestDataProvider.seqDict);
         final BreakpointComplications homologyComplications = new BreakpointComplications("ACACA", "",
                 DEFAULT_BREAKPOINT_COMPLICATIONS.hasDuplicationAnnotation(), DEFAULT_BREAKPOINT_COMPLICATIONS.getDupSeqRepeatUnitRefSpan(), DEFAULT_BREAKPOINT_COMPLICATIONS.getDupSeqRepeatNumOnRef(), DEFAULT_BREAKPOINT_COMPLICATIONS.getDupSeqRepeatNumOnCtg(), null, null, DEFAULT_BREAKPOINT_COMPLICATIONS.getCigarStringsForDupSeqOnCtg(), DEFAULT_BREAKPOINT_COMPLICATIONS.isDupAnnotIsFromOptimization(), null);
-        final Tuple2<SimpleInterval, SimpleInterval> breakpoints = NovelAdjacencyReferenceLocations.leftJustifyBreakpoints(chimericAlignment, homologyComplications);
+        final Tuple2<SimpleInterval, SimpleInterval> breakpoints = NovelAdjacencyReferenceLocations.leftJustifyBreakpoints(chimericAlignment, homologyComplications, SVDiscoveryTestDataProvider.seqDict);
         Assert.assertEquals(breakpoints._1(), new SimpleInterval("20", 200, 200));
         Assert.assertEquals(breakpoints._2(), new SimpleInterval("20", 605, 605));
     }
@@ -446,7 +446,7 @@ public class NovelAdjacencyReferenceLocationsUnitTest extends BaseTest{
         Assert.assertEquals(chimericAlignment.sourceContigName, "asm00001:tig0001");
         Assert.assertEquals(chimericAlignment.regionWithLowerCoordOnContig, region1);
         Assert.assertEquals(chimericAlignment.regionWithHigherCoordOnContig, region3);
-        final NovelAdjacencyReferenceLocations breakpoints = new NovelAdjacencyReferenceLocations(chimericAlignment, contigSequence);
+        final NovelAdjacencyReferenceLocations breakpoints = new NovelAdjacencyReferenceLocations(chimericAlignment, contigSequence, SVDiscoveryTestDataProvider.seqDict);
         Assert.assertTrue(breakpoints.complication.getHomologyForwardStrandRep().isEmpty());
         Assert.assertEquals(breakpoints.complication.getInsertedSequenceForwardStrandRep(), "GAGATAGAGTC");
     }

@@ -199,7 +199,7 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
                 alignedContigs.filter(alignedContig -> alignedContig.alignmentIntervals.size()>1)                                     // filter out any contigs that has less than two alignment records
                         .mapToPair(alignedContig -> new Tuple2<>(alignedContig.contigSequence,                                        // filter a contig's alignment and massage into ordered collection of chimeric alignments
                                 ChimericAlignment.parseOneContig(alignedContig, DEFAULT_MIN_ALIGNMENT_LENGTH)))
-                        .flatMapToPair(DiscoverVariantsFromContigAlignmentsSAMSpark::discoverNovelAdjacencyFromChimericAlignments)    // a filter-passing contig's alignments may or may not produce novel adjacency
+                        .flatMapToPair(pair -> discoverNovelAdjacencyFromChimericAlignments(pair, referenceSequenceDictionary))       // a filter-passing contig's alignments may or may not produce novel adjacency
                         .groupByKey()                                                                                                 // group the same novel adjacency produced by different contigs together
                         .mapToPair(noveltyAndEvidence -> inferType(noveltyAndEvidence._1, noveltyAndEvidence._2))                     // type inference based on novel adjacency and evidence alignments
                         .map(noveltyTypeAndEvidence ->
@@ -270,9 +270,9 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
      * Given contig alignments, emit novel adjacency not present on the reference to which the locally-assembled contigs were aligned.
      */
     public static Iterator<Tuple2<NovelAdjacencyReferenceLocations, ChimericAlignment>>
-    discoverNovelAdjacencyFromChimericAlignments(final Tuple2<byte[], List<ChimericAlignment>> ticSeqAndChimeras) {
-        return Utils.stream(ticSeqAndChimeras._2)
-                .map(ca -> new Tuple2<>(new NovelAdjacencyReferenceLocations(ca, ticSeqAndChimeras._1), ca)).iterator();
+    discoverNovelAdjacencyFromChimericAlignments(final Tuple2<byte[], List<ChimericAlignment>> tigSeqAndChimeras, final SAMSequenceDictionary referenceDictionary) {
+        return Utils.stream(tigSeqAndChimeras._2)
+                .map(ca -> new Tuple2<>(new NovelAdjacencyReferenceLocations(ca, tigSeqAndChimeras._1, referenceDictionary), ca)).iterator();
     }
 
     // TODO: 7/6/17 interface to be changed in the new implementation, where a set of NRAL's associated with a single contig is considered together.
@@ -283,8 +283,7 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
             final NovelAdjacencyReferenceLocations novelAdjacency,
             final Iterable<ChimericAlignment> chimericAlignments) {
         return new Tuple2<>(novelAdjacency,
-                new Tuple2<>(SvTypeInference.inferFromNovelAdjacency(novelAdjacency),
-                        chimericAlignments));
+                new Tuple2<>(SvTypeInference.inferFromNovelAdjacency(novelAdjacency), chimericAlignments));
     }
 
     /**

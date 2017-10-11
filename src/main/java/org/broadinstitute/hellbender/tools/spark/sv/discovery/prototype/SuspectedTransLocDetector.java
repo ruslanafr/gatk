@@ -36,7 +36,7 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
 
         final JavaRDD<VariantContext> annotatedBNDs =
                 chimeraAndSequence
-                        .mapToPair(pair -> new Tuple2<>(new NovelAdjacencyReferenceLocations(pair._1, pair._2), pair._1))
+                        .mapToPair(pair -> new Tuple2<>(new NovelAdjacencyReferenceLocations(pair._1, pair._2, referenceDictionaryBroadcast.getValue()), pair._1))
                         .groupByKey()
                         .mapToPair(noveltyAndEvidence -> inferBNDType(noveltyAndEvidence, broadcastReference.getValue()))
                         .flatMap(noveltyTypeAndEvidence ->

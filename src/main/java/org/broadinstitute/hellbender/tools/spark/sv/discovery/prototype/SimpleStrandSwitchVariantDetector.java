@@ -15,7 +15,10 @@ import org.broadinstitute.hellbender.utils.Utils;
 import scala.Tuple2;
 import scala.Tuple3;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 
@@ -137,19 +140,14 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
 
         final NovelAdjacencyReferenceLocations novelAdjacency = noveltyAndEvidence._1;
         final Iterable<ChimericAlignment> chimericAlignments = noveltyAndEvidence._2;
-        final BreakEndVariantType bkpt_1, bkpt_2;
         if (novelAdjacency.strandSwitch == StrandSwitch.FORWARD_TO_REVERSE) {
-            bkpt_1 = new BreakEndVariantType.INV55BND(novelAdjacency, true, reference);
-            bkpt_2 = new BreakEndVariantType.INV55BND(novelAdjacency, false, reference);
+            return new Tuple2<>(novelAdjacency, new Tuple2<>(BreakEndVariantType.INV55BND.getOrderedMates(novelAdjacency, reference), chimericAlignments));
         } else if (novelAdjacency.strandSwitch == StrandSwitch.REVERSE_TO_FORWARD) {
-            bkpt_1 = new BreakEndVariantType.INV33BND(novelAdjacency, true, reference);
-            bkpt_2 = new BreakEndVariantType.INV33BND(novelAdjacency, false, reference);
+            return new Tuple2<>(novelAdjacency, new Tuple2<>(BreakEndVariantType.INV33BND.getOrderedMates(novelAdjacency, reference), chimericAlignments));
         } else {
             throw new GATKException("Wrong type of novel adjacency sent to wrong analysis pathway: no strand-switch being sent to strand-switch path. \n" +
                     Utils.stream(chimericAlignments).map(ChimericAlignment::onErrStringRep).collect(Collectors.toList()));
         }
-
-        return new Tuple2<>(novelAdjacency, new Tuple2<>(new Tuple2<>(bkpt_1, bkpt_2), chimericAlignments));
     }
 
     // =================================================================================================================

@@ -23,17 +23,15 @@ final class ContigAlignmentsModifier {
     /**
      * Removes overlap between input {@code contig}'s two alignments.
      * If the two alignment intervals are NOT overlapping, return the original aligned contig.
-     * @throws IllegalArgumentException if input contig doesn't has exactly 2 alignments (a development artifact for now).
      */
-    static AlignedContig removeOverlap(final AlignedContig contig, final SAMSequenceDictionary dictionary) {
-        Utils.validateArg(contig.alignmentIntervals.size()==2,
-                "assertion that input contig has 2 alignment is violated.\n" + contig.toString());
+    public static List<AlignmentInterval> removeOverlap(final AlignmentInterval one, final AlignmentInterval two,
+                                                        final SAMSequenceDictionary dictionary) {
 
-        final AlignmentInterval one = contig.alignmentIntervals.get(0),
-                                two = contig.alignmentIntervals.get(1);
+        final AlignmentInterval reconstructedOne, reconstructedTwo;
         final int overlapOnRead = AlignmentInterval.overlapOnContig(one, two);
         if (overlapOnRead == 0) {
-            return contig;
+            reconstructedOne = one;
+            reconstructedTwo = two;
         } else {
             final boolean oneYieldToTwo;
             if (one.referenceSpan.getContig().equals(two.referenceSpan.getContig())) {
@@ -41,7 +39,7 @@ final class ContigAlignmentsModifier {
                     // jumpStart is for "the starting reference location of a jump that linked two alignment intervals", and
                     // jumpLandingRefLoc is for "that jump's landing reference location"
                     final int jumpStartRefLoc = one.referenceSpan.getEnd(),
-                              jumpLandingRefLoc = two.referenceSpan.getStart();
+                            jumpLandingRefLoc = two.referenceSpan.getStart();
                     oneYieldToTwo = jumpStartRefLoc <= jumpLandingRefLoc == one.forwardStrand;
                 } else {
                     oneYieldToTwo = one.forwardStrand;
@@ -49,7 +47,7 @@ final class ContigAlignmentsModifier {
             } else {
                 oneYieldToTwo = IntervalUtils.compareContigs(one.referenceSpan, two.referenceSpan, dictionary) > 0;
             }
-            final AlignmentInterval reconstructedOne, reconstructedTwo;
+
             if (oneYieldToTwo) {
                 reconstructedOne = clipAlignmentInterval(one, overlapOnRead, true);
                 reconstructedTwo = two;
@@ -57,9 +55,9 @@ final class ContigAlignmentsModifier {
                 reconstructedOne = one;
                 reconstructedTwo = clipAlignmentInterval(two, overlapOnRead, false);
             }
-            return new AlignedContig(contig.contigName, contig.contigSequence, Arrays.asList(reconstructedOne, reconstructedTwo),
-                                     contig.hasEquallyGoodAlnConfigurations);
+
         }
+        return Arrays.asList(reconstructedOne, reconstructedTwo);
     }
 
     /**

@@ -10,7 +10,6 @@ import org.broadinstitute.hellbender.engine.datasources.ReferenceMultiSource;
 import org.broadinstitute.hellbender.tools.spark.sv.discovery.*;
 import scala.Tuple2;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -55,7 +54,7 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
                 EMPTY_INSERTION_MAPPINGS, contig.contigName), contig.contigSequence);
     }
 
-    private static Tuple2<NovelAdjacencyReferenceLocations, Tuple2<List<SvType>, Iterable<ChimericAlignment>>>
+    private static Tuple2<NovelAdjacencyReferenceLocations, Tuple2<Tuple2<BreakEndVariantType, BreakEndVariantType>, Iterable<ChimericAlignment>>>
     inferBNDType(final Tuple2<NovelAdjacencyReferenceLocations, Iterable<ChimericAlignment>> noveltyAndEvidence,
                  final ReferenceMultiSource reference) {
 
@@ -73,6 +72,6 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
 //                    Utils.stream(chimericAlignments).map(ChimericAlignment::onErrStringRep).collect(Collectors.toList()));
 //        }
 
-        return new Tuple2<>(novelAdjacency, new Tuple2<>(Arrays.asList(bkpt_1, bkpt_2), chimericAlignments));
+        return new Tuple2<>(novelAdjacency, new Tuple2<>(new Tuple2<>(bkpt_1, bkpt_2), chimericAlignments));
     }
 }

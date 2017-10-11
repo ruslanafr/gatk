@@ -41,7 +41,7 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
         //             then split the input reads into two classes--those judged by IsLikelyInvertedDuplication are likely invdup and those aren't
         //             finally send the two split reads down different path, one for invdup and one for BND records
         final Tuple2<JavaRDD<AlignedContig>, JavaRDD<AlignedContig>> split =
-                RDDUtils.split(contigs.map(ContigAlignmentsModifier::removeOverlap),
+                RDDUtils.split(contigs.map(tig -> ContigAlignmentsModifier.removeOverlap(tig, refSequenceDictionaryBroadcast.getValue())),
                         contig -> BreakpointComplications.isLikelyInvertedDuplication(contig.alignmentIntervals.get(0),
                                 contig.alignmentIntervals.get(1)), true);
 
@@ -86,10 +86,10 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
      *  2) either alignment may consume only a "short" part of the contig, or if assuming that the alignment consumes
      *     roughly the same amount of ref bases and read bases, has isAlignment that is too short
      */
-    private static boolean splitPairStrongEnoughEvidenceForCA(final AlignmentInterval intervalOne,
-                                                              final AlignmentInterval intervalTwo,
-                                                              final int mapQThresholdInclusive,
-                                                              final int alignmentLengthThresholdInclusive) {
+    static boolean splitPairStrongEnoughEvidenceForCA(final AlignmentInterval intervalOne,
+                                                      final AlignmentInterval intervalTwo,
+                                                      final int mapQThresholdInclusive,
+                                                      final int alignmentLengthThresholdInclusive) {
 
         if (intervalOne.mapQual < mapQThresholdInclusive || intervalTwo.mapQual < mapQThresholdInclusive)
             return false;

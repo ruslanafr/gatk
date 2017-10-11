@@ -15,7 +15,6 @@ import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariationSparkProgramGroup;
 import org.broadinstitute.hellbender.engine.datasources.ReferenceMultiSource;
-import org.broadinstitute.hellbender.engine.datasources.ReferenceWindowFunctions;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
@@ -31,6 +30,7 @@ import scala.Tuple2;
 
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 
@@ -111,10 +111,8 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
         }
 
         final Broadcast<ReferenceMultiSource> referenceMultiSourceBroadcast = ctx.broadcast(getReference());
-        final SAMSequenceDictionary referenceSequenceDictionary = new ReferenceMultiSource((com.google.cloud.dataflow.sdk.options.PipelineOptions)null,
-                discoverStageArgs.fastaReference, ReferenceWindowFunctions.IDENTITY_FUNCTION).getReferenceSequenceDictionary(null);
-        final Broadcast<SAMSequenceDictionary> sequenceDictionaryBroadcast = ctx.broadcast(referenceSequenceDictionary);
-        dispatchJobs( contigsByPossibleRawTypes, referenceMultiSourceBroadcast, sequenceDictionaryBroadcast);
+        final Broadcast<SAMSequenceDictionary> sequenceDictionaryBroadcast = ctx.broadcast(header.getSequenceDictionary());
+        dispatchJobs(contigsByPossibleRawTypes, referenceMultiSourceBroadcast, sequenceDictionaryBroadcast);
     }
 
     private void dispatchJobs(final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByPossibleRawTypes,
@@ -171,10 +169,15 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
                 "assumption that input contig's 2 alignments map to the same chr is violated. \n" +
                         contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch.toString());
 
-        final AlignmentInterval intervalOne = contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch.alignmentIntervals.get(0),
-                                intervalTwo = contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch.alignmentIntervals.get(1);
+        final AlignmentInterval one = contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch.alignmentIntervals.get(0),
+                                two = contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch.alignmentIntervals.get(1);
+        if (one.referenceSpan.contains(two.referenceSpan) || two.referenceSpan.contains(one.referenceSpan))
+            return false;
+        final List<AlignmentInterval> deOverlappedTempAlignments =
+                ContigAlignmentsModifier.removeOverlap(one, two, null);
 
-        return intervalOne.referenceSpan.getStart() > intervalTwo.referenceSpan.getStart() == intervalOne.forwardStrand;
+        return deOverlappedTempAlignments.get(0).referenceSpan.getStart() > deOverlappedTempAlignments.get(1).referenceSpan.getStart()
+                == deOverlappedTempAlignments.get(0).forwardStrand;
     }
 
     private static boolean isLikelyCpx(final AlignedContig contigWithOnlyOneConfig) {

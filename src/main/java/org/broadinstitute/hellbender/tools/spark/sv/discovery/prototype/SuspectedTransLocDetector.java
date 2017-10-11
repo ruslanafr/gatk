@@ -7,11 +7,14 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.broadcast.Broadcast;
 import org.broadinstitute.hellbender.engine.datasources.ReferenceMultiSource;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.spark.sv.discovery.*;
+import org.broadinstitute.hellbender.tools.spark.sv.utils.SVVCFWriter;
+import org.broadinstitute.hellbender.utils.Utils;
 import scala.Tuple2;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssemblyContigAlignments {
 
@@ -38,14 +41,14 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
                 chimeraAndSequence
                         .mapToPair(pair -> new Tuple2<>(new NovelAdjacencyReferenceLocations(pair._1, pair._2, referenceDictionaryBroadcast.getValue()), pair._1))
                         .groupByKey()
-                        .mapToPair(noveltyAndEvidence -> inferBNDType(noveltyAndEvidence, broadcastReference.getValue()))
+                        .mapToPair(noveltyAndEvidence -> inferBNDType(noveltyAndEvidence, broadcastReference.getValue(), referenceDictionaryBroadcast.getValue()))
                         .flatMap(noveltyTypeAndEvidence ->
                                 AnnotatedVariantProducer
                                         .produceAnnotatedBNDmatesVcFromNovelAdjacency(noveltyTypeAndEvidence._1,
                                                 noveltyTypeAndEvidence._2._1, noveltyTypeAndEvidence._2._2, broadcastReference).iterator());
 
-//        SVVCFWriter.writeVCF(vcfOutputFileName.replace(".vcf", "_transBND.vcf"),
-//                sequenceDictionaryBroadcast.getValue(), annotatedBNDs, toolLogger);
+        SVVCFWriter.writeVCF(annotatedBNDs.collect(), vcfOutputFileName.replace(".vcf", "_transBND.vcf"),
+                            referenceDictionaryBroadcast.getValue(), toolLogger);
     }
 
     private static Tuple2<ChimericAlignment, byte[]> convertAlignmentIntervalsToChimericAlignment(final AlignedContig contig,
@@ -57,22 +60,12 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
 
     private static Tuple2<NovelAdjacencyReferenceLocations, Tuple2<Tuple2<BreakEndVariantType, BreakEndVariantType>, Iterable<ChimericAlignment>>>
     inferBNDType(final Tuple2<NovelAdjacencyReferenceLocations, Iterable<ChimericAlignment>> noveltyAndEvidence,
-                 final ReferenceMultiSource reference) {
+                 final ReferenceMultiSource reference, final SAMSequenceDictionary referenceDictionary) {
 
         final NovelAdjacencyReferenceLocations novelAdjacency = noveltyAndEvidence._1;
         final Iterable<ChimericAlignment> chimericAlignments = noveltyAndEvidence._2;
-        final BreakEndVariantType bkpt_1 = null, bkpt_2 = null;
-//        if (novelAdjacency.strandSwitch == StrandSwitch.FORWARD_TO_REVERSE) {
-//            bkpt_1 = new BreakEndVariantType.INV55BND(novelAdjacency, true, reference);
-//            bkpt_2 = new BreakEndVariantType.INV55BND(novelAdjacency, false, reference);
-//        } else if (novelAdjacency.strandSwitch == StrandSwitch.REVERSE_TO_FORWARD) {
-//            bkpt_1 = new BreakEndVariantType.INV33BND(novelAdjacency, true, reference);
-//            bkpt_2 = new BreakEndVariantType.INV33BND(novelAdjacency, false, reference);
-//        } else {
-//            throw new GATKException("Wrong type of novel adjacency sent to wrong analysis pathway: no strand-switch being sent to strand-switch path. \n" +
-//                    Utils.stream(chimericAlignments).map(ChimericAlignment::onErrStringRep).collect(Collectors.toList()));
-//        }
-
-        return new Tuple2<>(novelAdjacency, new Tuple2<>(new Tuple2<>(bkpt_1, bkpt_2), chimericAlignments));
+        return new Tuple2<>(novelAdjacency,
+                new Tuple2<>(BreakEndVariantType.TransLocBND.getOrderedMates(novelAdjacency, reference, referenceDictionary),
+                        chimericAlignments));
     }
 }

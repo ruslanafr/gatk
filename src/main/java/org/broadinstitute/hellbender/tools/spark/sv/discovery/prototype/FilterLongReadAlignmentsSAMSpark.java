@@ -247,7 +247,10 @@ public final class FilterLongReadAlignmentsSAMSpark extends GATKSparkTool {
                 .orElseThrow(() -> new GATKException("Cannot find best-scoring configuration on alignments of contig: " + alignedContig.contigName));
 
         return IntStream.range(0, allConfigurations.size())
-                .filter(i -> scores.get(i) >= maxScore)
+                .filter(i -> {
+                    final Double s = scores.get(i);
+                    return s >= maxScore || maxScore - s <= Math.ulp(s); // sometimes, not sure what happened, two configurations with would-be-same-scores have differ by a Math.ulp(appear-to-be-lower)
+                })
                 .mapToObj(allConfigurations::get).collect(Collectors.toList());
     }
 

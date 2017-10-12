@@ -9,7 +9,6 @@ import org.broadinstitute.hellbender.utils.test.BaseTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 

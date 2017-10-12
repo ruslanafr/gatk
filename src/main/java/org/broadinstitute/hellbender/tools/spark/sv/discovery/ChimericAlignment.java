@@ -255,20 +255,14 @@ public class ChimericAlignment {
         return regionWithHigherCoordOnContig.referenceSpan.getStart() < regionWithLowerCoordOnContig.referenceSpan.getStart();
     }
 
-    // TODO: 12/15/16 simple translocations are defined here and at this time as inter-chromosomal ones and
-    //                intra-chromosomal translocations that involve strand switch
-    //                to get the 2nd case right, we need evidence flanking both sides of the inversion, and that could be difficult
-    // TODO: 1/17/17 this is used for filtering out possible translocations that we are not currently handling,
-    //                but it overkills some insertions where the inserted sequence maps to chromosomes other than that of the flanking regions
     /**
-     * Determine if the two regions indicate a inter-chromosomal translocation or intra-chromosomal translocation that
-     * DOES NOT involve a strand switch.
+     * See {@link #isNotSimpleTranslocation()} for logic.
      */
     @VisibleForTesting
-    public static boolean isNotSimpleTranslocation(final AlignmentInterval regionWithLowerCoordOnContig,
-                                                   final AlignmentInterval regionWithHigherCoordOnContig,
-                                                   final StrandSwitch strandSwitch,
-                                                   final boolean involvesReferenceIntervalSwitch) {
+    static boolean isNotSimpleTranslocation(final AlignmentInterval regionWithLowerCoordOnContig,
+                                            final AlignmentInterval regionWithHigherCoordOnContig,
+                                            final StrandSwitch strandSwitch,
+                                            final boolean involvesReferenceIntervalSwitch) {
         // logic is: must be the same reference chromosome for it not to be an inter-chromosomal translocation
         //           and when regions are mapped to the same reference chromosome, there cannot be reference position swap
         final boolean sameChromosome = regionWithLowerCoordOnContig.referenceSpan.getContig()
@@ -279,6 +273,18 @@ public class ChimericAlignment {
                         || involvesReferenceIntervalSwitch == !regionWithLowerCoordOnContig.forwardStrand);
     }
 
+    /**
+     * Determine if the chimeric alignment indicates a simple translocation.
+     * Simple translocations are defined here and at this time as:
+     *  <li>inter-chromosomal translocations, i.e. novel adjacency between different reference chromosomes, or</li>
+     *  <li>intra-chromosomal translocation that DOES NOT involve a strand switch, i.e.
+     *      novel adjacency between reference locations on the same chromosome involving NO strand switch but reference interval order switch</li>
+     * <p>
+     * A caveat is that this does not cover the case when the novel adjacency suggested by the CA is between
+     * two reference locations on the same chromosome, but involves a strand switch,
+     * which could be a translocation or inversion breakpoint.
+     * But to fully resolve this case, we need other types of evidence, hence should not be the task of this function.
+     */
     public boolean isNotSimpleTranslocation() {
         return isNotSimpleTranslocation(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig, strandSwitch,
                                         involvesRefPositionSwitch(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig));

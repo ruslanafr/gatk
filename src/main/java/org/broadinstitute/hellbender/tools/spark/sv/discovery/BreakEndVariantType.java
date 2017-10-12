@@ -74,10 +74,6 @@ public abstract class BreakEndVariantType extends SvType {
                 throw new GATKException("Could not read reference for extracting reference bases.", ioex);
             }
         }
-
-        static SimpleInterval getTheOtherRefLoc(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc) {
-            return forUpstreamLoc ? narl.leftJustifiedRightRefLoc : narl.leftJustifiedLeftRefLoc;
-        }
     }
 
     public static final class INV55BND extends StrandSwitchBND {
@@ -90,7 +86,7 @@ public abstract class BreakEndVariantType extends SvType {
             super(getIDString(narl, forUpstreamLoc),
                     Collections.singletonMap(GATKSVVCFConstants.INV55, ""),
                     extractBasesForAltAllele(narl, forUpstreamLoc, reference), true,
-                    getTheOtherRefLoc(narl, forUpstreamLoc), true, forUpstreamLoc);
+                    getMateRefLoc(narl, forUpstreamLoc), true, forUpstreamLoc);
         }
 
         public static Tuple2<BreakEndVariantType, BreakEndVariantType> getOrderedMates(final NovelAdjacencyReferenceLocations narl,
@@ -121,7 +117,7 @@ public abstract class BreakEndVariantType extends SvType {
             super(getIDString(narl, forUpstreamLoc),
                     Collections.singletonMap(GATKSVVCFConstants.INV33, ""),
                     extractBasesForAltAllele(narl, forUpstreamLoc, reference), false,
-                    getTheOtherRefLoc(narl, forUpstreamLoc), false, forUpstreamLoc);
+                    getMateRefLoc(narl, forUpstreamLoc), false, forUpstreamLoc);
         }
 
         public static Tuple2<BreakEndVariantType, BreakEndVariantType> getOrderedMates(final NovelAdjacencyReferenceLocations narl,
@@ -168,7 +164,7 @@ public abstract class BreakEndVariantType extends SvType {
             } else {
                 if (narl.strandSwitch == StrandSwitch.NO_SWITCH) {
                     final boolean isFirstOfPartner = IntervalUtils.compareContigs(narl.leftJustifiedLeftRefLoc,
-                            narl.leftJustifiedRightRefLoc, referenceDictionary) < 0;
+                                                                                  narl.leftJustifiedRightRefLoc, referenceDictionary) < 0;
                     bkpt_1 = new BreakEndVariantType.TransLocBND(narl, true, reference, referenceDictionary,
                             isFirstOfPartner, !isFirstOfPartner);
                     bkpt_2 = new BreakEndVariantType.TransLocBND(narl, false, reference, referenceDictionary,

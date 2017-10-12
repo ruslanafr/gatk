@@ -90,7 +90,7 @@ public final class BreakpointComplications {
         return homologyForwardStrandRep;
     }
 
-    public String getInsertedSequenceForwardStrandRep() {
+    String getInsertedSequenceForwardStrandRep() {
         return insertedSequenceForwardStrandRep;
     }
 

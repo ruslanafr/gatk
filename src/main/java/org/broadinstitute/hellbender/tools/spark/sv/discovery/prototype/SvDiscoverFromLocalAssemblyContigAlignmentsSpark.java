@@ -89,40 +89,86 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
     @Override
     protected void runTool(final JavaSparkContext ctx) {
 
-        final JavaRDD<GATKRead> reads = getReads();
-        final SAMFileHeader headerForReads = getHeaderForReads();
-        final SAMSequenceDictionary refSequenceDictionary = headerForReads.getSequenceDictionary();
+        final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByPossibleRawTypes =
+                preprocess(getReads(), ctx.broadcast(getHeaderForReads()),
+                        nonCanonicalChromosomeNamesFile, outputDir, writeSAMFiles, localLogger);
 
+        dispatchJobs(contigsByPossibleRawTypes, ctx.broadcast(getReference()), getHeaderForReads(), outputDir, localLogger);
+    }
+
+    enum RawTypes {
+        Ambiguous, Inv, InsDel, DispersedDupOrMEI, Cpx;
+    }
+
+    //==================================================================================================================
+
+    private static EnumMap<RawTypes, JavaRDD<AlignedContig>> preprocess(final JavaRDD<GATKRead> reads,
+                                                                        final Broadcast<SAMFileHeader> headerBroadcast,
+                                                                        final String nonCanonicalChromosomeNamesFile,
+                                                                        final String outputDir, final boolean writeSAMFiles,
+                                                                        final Logger toolLogger) {
         // filter alignments and split the gaps
         final JavaRDD<AlignedContig> contigsWithAlignmentsReconstructed =
-                FilterLongReadAlignmentsSAMSpark.filterByScore(reads, headerForReads, nonCanonicalChromosomeNamesFile, localLogger)
+                FilterLongReadAlignmentsSAMSpark.filterByScore(reads, headerBroadcast.getValue(), nonCanonicalChromosomeNamesFile, toolLogger)
                         .filter(lr -> lr.alignmentIntervals.size()>1).cache();
 
         // divert the long reads by their possible type of SV
         final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByPossibleRawTypes =
-                divertReadsByPossiblyRawTypes(contigsWithAlignmentsReconstructed, localLogger);
+                divertReadsByPossiblyRawTypes(contigsWithAlignmentsReconstructed, toolLogger);
 
         if ( !FileUtils.createDirToWriteTo(outputDir) )
             throw new GATKException("Could not create directory " + outputDir + " to write results to.");
 
-        if (writeSAMFiles) {
-            final Broadcast<SAMFileHeader> headerBroadcast = ctx.broadcast(headerForReads);
-            contigsByPossibleRawTypes.forEach((k, v) -> writeSAM(v, k.name(), reads, headerBroadcast, outputDir, localLogger));
-        }
+        if (writeSAMFiles)
+            contigsByPossibleRawTypes.forEach((k, v) -> writeSAM(v, k.name(), reads, headerBroadcast, outputDir, toolLogger));
 
-        final Broadcast<ReferenceMultiSource> referenceMultiSourceBroadcast = ctx.broadcast(getReference());
-
-        new InsDelVariantDetector()
-                .inferSvAndWriteVCF(contigsByPossibleRawTypes.get(RawTypes.InsDel), outputDir+"/"+RawTypes.InsDel.name()+".vcf",
-                        referenceMultiSourceBroadcast, refSequenceDictionary, localLogger);
-
-        new SimpleStrandSwitchVariantDetector()
-                .inferSvAndWriteVCF(contigsByPossibleRawTypes.get(RawTypes.Inv), outputDir+"/"+RawTypes.Inv.name()+".vcf",
-                        referenceMultiSourceBroadcast, refSequenceDictionary, localLogger);
+        return contigsByPossibleRawTypes;
     }
 
-    private enum RawTypes {
-        Ambiguous, Inv, InsDel, DispersedDupOrMEI, Cpx;
+    static EnumMap<RawTypes, JavaRDD<AlignedContig>> divertReadsByPossiblyRawTypes(final JavaRDD<AlignedContig> contigsWithAlignmentsReconstructed,
+                                                                                   final Logger toolLogger) {
+
+        final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByRawTypes = new EnumMap<>(RawTypes.class);
+
+        // long reads with more than 1 best configurations
+        contigsByRawTypes.put(RawTypes.Ambiguous,
+                contigsWithAlignmentsReconstructed.filter(tig -> tig.hasEquallyGoodAlnConfigurations));
+
+        // long reads with only 1 best configuration
+        final JavaRDD<AlignedContig> contigsWithOnlyOneBestConfig =
+                contigsWithAlignmentsReconstructed.filter(lr -> !lr.hasEquallyGoodAlnConfigurations).cache();
+
+        // divert away those likely suggesting cpx sv (more than 2 alignments after gap split, or 2 alignments to diff chr)
+        contigsByRawTypes.put(RawTypes.Cpx,
+                contigsWithOnlyOneBestConfig.filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isLikelyCpx));
+
+        // long reads with only 1 best configuration and having only 2 alignments mapped to the same chromosome
+        final JavaRDD<AlignedContig> contigsWithOnlyOneBestConfigAnd2AIToSameChr =
+                contigsWithOnlyOneBestConfig
+                        .filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::hasOnly2Alignments)
+                        .filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isSameChromosomeMapping).cache();
+
+        // divert away those with strand switch
+        contigsByRawTypes.put(RawTypes.Inv,
+                contigsWithOnlyOneBestConfigAnd2AIToSameChr.filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isLikelyInvBreakpointOrInsInv));
+
+        // 2 AI, same chr, no strand switch, then only 2 cases left
+        final JavaRDD<AlignedContig> contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch =
+                contigsWithOnlyOneBestConfigAnd2AIToSameChr.filter(tig -> !isLikelyInvBreakpointOrInsInv(tig)).cache();
+
+        // case 1: dispersed duplication, or MEI (that is, reference blocks seemingly switched their orders)
+        contigsByRawTypes.put(RawTypes.DispersedDupOrMEI,
+                contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch.filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isSuggestingRefBlockOrderSwitch));
+
+        // case 2: no order switch: ins, del, or tandem dup
+        contigsByRawTypes.put(RawTypes.InsDel,
+                contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch.filter(tig -> !isSuggestingRefBlockOrderSwitch(tig)));
+
+        contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch.unpersist();
+        contigsWithOnlyOneBestConfigAnd2AIToSameChr.unpersist();
+        contigsWithOnlyOneBestConfig.unpersist();
+
+        return contigsByRawTypes;
     }
 
     private static boolean hasOnly2Alignments(final AlignedContig contigWithOnlyOneConfig) {
@@ -168,58 +214,12 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
         return !hasOnly2Alignments(contigWithOnlyOneConfig) || !isSameChromosomeMapping(contigWithOnlyOneConfig);
     }
 
-    private static EnumMap<RawTypes, JavaRDD<AlignedContig>> divertReadsByPossiblyRawTypes(final JavaRDD<AlignedContig> contigsWithAlignmentsReconstructed,
-                                                                                           final Logger toolLogger) {
-
-        final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByRawTypes = new EnumMap<>(RawTypes.class);
-
-        // long reads with more than 1 best configurations
-        contigsByRawTypes.put(RawTypes.Ambiguous,
-                contigsWithAlignmentsReconstructed.filter(tig -> tig.hasEquallyGoodAlnConfigurations));
-
-        // long reads with only 1 best configuration
-        final JavaRDD<AlignedContig> contigsWithOnlyOneBestConfig =
-                contigsWithAlignmentsReconstructed.filter(lr -> !lr.hasEquallyGoodAlnConfigurations).cache();
-
-        // divert away those likely suggesting cpx sv (more than 2 alignments after gap split, or 2 alignments to diff chr)
-        contigsByRawTypes.put(RawTypes.Cpx,
-                contigsWithOnlyOneBestConfig.filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isLikelyCpx));
-
-        // long reads with only 1 best configuration and having only 2 alignments mapped to the same chromosome
-        final JavaRDD<AlignedContig> contigsWithOnlyOneBestConfigAnd2AIToSameChr =
-                contigsWithOnlyOneBestConfig
-                        .filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::hasOnly2Alignments)
-                        .filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isSameChromosomeMapping).cache();
-
-        // divert away those with strand switch
-        contigsByRawTypes.put(RawTypes.Inv,
-                contigsWithOnlyOneBestConfigAnd2AIToSameChr.filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isLikelyInvBreakpointOrInsInv));
-
-        // 2 AI, same chr, no strand switch, then only 2 cases left
-        final JavaRDD<AlignedContig> contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch =
-                contigsWithOnlyOneBestConfigAnd2AIToSameChr.filter(tig -> !isLikelyInvBreakpointOrInsInv(tig)).cache();
-
-        // case 1: dispersed duplication, or MEI (that is, reference blocks seemingly switched their orders)
-        contigsByRawTypes.put(RawTypes.DispersedDupOrMEI,
-                contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch.filter(SvDiscoverFromLocalAssemblyContigAlignmentsSpark::isSuggestingRefBlockOrderSwitch));
-
-        // case 2: no order switch: ins, del, or tandem dup
-        contigsByRawTypes.put(RawTypes.InsDel,
-                contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch.filter(tig -> !isSuggestingRefBlockOrderSwitch(tig)));
-
-        contigsWithOnlyOneBestConfigAnd2AIToSameChrWithoutStrandSwitch.unpersist();
-        contigsWithOnlyOneBestConfigAnd2AIToSameChr.unpersist();
-        contigsWithOnlyOneBestConfig.unpersist();
-
-        return contigsByRawTypes;
-    }
-
-    private static void writeSAM(final JavaRDD<AlignedContig> filteredContigs, final String rawTypeString,
-                                 final JavaRDD<GATKRead> originalContigs, final Broadcast<SAMFileHeader> headerBroadcast,
-                                 final String outputDir, final Logger toolLogger) {
+    static void writeSAM(final JavaRDD<AlignedContig> filteredContigs, final String rawTypeString,
+                         final JavaRDD<GATKRead> originalContigs, final Broadcast<SAMFileHeader> headerBroadcast,
+                         final String outputDir, final Logger toolLogger) {
 
         final Set<String> filteredReadNames = new HashSet<>( filteredContigs.map(tig -> tig.contigName).distinct().collect() );
-        toolLogger.info(filteredReadNames.size() + " long reads indicating " + rawTypeString);
+        if (toolLogger!=null) toolLogger.info(filteredReadNames.size() + " long reads indicating " + rawTypeString);
         final JavaRDD<SAMRecord> splitLongReads = originalContigs.filter(read -> filteredReadNames.contains(read.getName()))
                 .map(read -> read.convertToSAMRecord(headerBroadcast.getValue()));
         FileUtils.writeSAMFile(splitLongReads.collect().iterator(), headerBroadcast.getValue(),
@@ -230,5 +230,21 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
         return FilterLongReadAlignmentsSAMSpark.formatContigInfo(
                 new Tuple2<>(contig.contigName ,
                         contig.alignmentIntervals.stream().map(AlignmentInterval::toPackedString).collect(Collectors.toList())));
+    }
+
+    //==================================================================================================================
+
+    private static void dispatchJobs(final EnumMap<RawTypes, JavaRDD<AlignedContig>> contigsByPossibleRawTypes,
+                                     final Broadcast<ReferenceMultiSource> referenceBroadcast,
+                                     final SAMFileHeader headerForReads, final String outputDir,final Logger localLogger) {
+        final SAMSequenceDictionary refSequenceDictionary = headerForReads.getSequenceDictionary();
+
+        new InsDelVariantDetector()
+                .inferSvAndWriteVCF(contigsByPossibleRawTypes.get(RawTypes.InsDel), outputDir +"/"+ RawTypes.InsDel.name()+".vcf",
+                        referenceBroadcast, refSequenceDictionary, localLogger);
+
+        new SimpleStrandSwitchVariantDetector()
+                .inferSvAndWriteVCF(contigsByPossibleRawTypes.get(RawTypes.Inv), outputDir +"/"+ RawTypes.Inv.name()+".vcf",
+                        referenceBroadcast, refSequenceDictionary, localLogger);
     }
 }

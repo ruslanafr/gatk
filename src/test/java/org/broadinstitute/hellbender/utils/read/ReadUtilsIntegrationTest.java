@@ -7,16 +7,18 @@ import htsjdk.samtools.SamFiles;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
-import org.broadinstitute.hellbender.utils.io.IOUtils;
-import org.broadinstitute.hellbender.utils.test.BaseTest;
+import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
+import org.broadinstitute.hellbender.utils.test.BaseCloudTest;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-public class ReadUtilsIntegrationTest extends BaseTest {
+public class ReadUtilsIntegrationTest extends BaseCloudTest {
 
 
   @DataProvider(name="createSAMWriter")
@@ -47,45 +49,54 @@ public class ReadUtilsIntegrationTest extends BaseTest {
       final boolean createMD5,
       final boolean expectIndex) throws Exception {
 
+    final Path outputPath = BucketUtils.getPathOnGcs(getGCPTestStaging() + "samWriterTest" + outputExtension);
+    final Path md5Path = BucketUtils.getPathOnGcs(getGCPTestStaging() + "samWriterTest" + outputExtension + ".md5");
+    deleteWithAssociates(outputPath);
 
-      final Path outputPath = IOUtils
-          .getPath(getGCPTestStaging() + "samWriterTest" + outputExtension);
-      final Path md5Path = IOUtils
-          .getPath(getGCPTestStaging() + "samWriterTest" + outputExtension + ".md5");
+    try {
+      try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile)) {
 
-      try {
-        try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile)) {
-
-          final SAMFileHeader header = samReader.getFileHeader();
-          if (expectIndex) { // ensure test condition
-            Assert.assertEquals(expectIndex, header.getSortOrder() == SAMFileHeader.SortOrder.coordinate);
-          }
-
-          try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
-              (outputPath, referenceFile, samReader.getFileHeader(), preSorted, createIndex, createMD5)) {
-            final Iterator<SAMRecord> samRecIt = samReader.iterator();
-            while (samRecIt.hasNext()) {
-              samWriter.addAlignment(samRecIt.next());
-            }
-          }
-
-          Assert.assertEquals(expectIndex, null != SamFiles.findIndex(outputPath));
-          Assert.assertEquals(createMD5, Files.exists(md5Path));
+        final SAMFileHeader header = samReader.getFileHeader();
+        if (expectIndex) { // ensure test condition
+          Assert.assertEquals(expectIndex, header.getSortOrder() == SAMFileHeader.SortOrder.coordinate);
         }
 
-        // now check the contents are the same
-        try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile);
-            final SamReader outputReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(outputPath)) {
+        try (final SAMFileWriter samWriter = ReadUtils.createCommonSAMWriter
+            (outputPath, referenceFile, samReader.getFileHeader(), preSorted, createIndex, createMD5)) {
           final Iterator<SAMRecord> samRecIt = samReader.iterator();
-          final Iterator<SAMRecord> outRecIt = outputReader.iterator();
-          Assert.assertEquals(samRecIt, outRecIt);
+          while (samRecIt.hasNext()) {
+            samWriter.addAlignment(samRecIt.next());
+          }
         }
-      } finally {
-        Files.deleteIfExists(outputPath);
-        Files.deleteIfExists(md5Path);
+
+        Assert.assertEquals(expectIndex, null != SamFiles.findIndex(outputPath));
+        Assert.assertEquals(createMD5, Files.exists(md5Path));
       }
+
+      // now check the contents are the same
+      try (final SamReader samReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(bamFile);
+          final SamReader outputReader = SamReaderFactory.makeDefault().referenceSequence(referenceFile).open(outputPath)) {
+        final Iterator<SAMRecord> samRecIt = samReader.iterator();
+        final Iterator<SAMRecord> outRecIt = outputReader.iterator();
+        Assert.assertEquals(samRecIt, outRecIt);
+      }
+    } finally {
+      deleteWithAssociates(outputPath);
+    }
   }
 
+  private void deleteWithAssociates(Path p) throws IOException {
+    if (null == p) {
+      return;
+    }
+    Path md5 = p.getParent().resolve(p.getFileName().toString() + ".md5");
+    Files.deleteIfExists(md5);
+    Path index = SamFiles.findIndex(p);
+    if (null != index) {
+      Files.deleteIfExists(index);
+    }
+    Files.deleteIfExists(p);
+  }
 
 
 }

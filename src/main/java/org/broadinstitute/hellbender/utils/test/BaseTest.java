@@ -133,7 +133,8 @@ public abstract class BaseTest {
     }
 
     /**
-     * A writable GCS path where java files can be cached and temporary test files can be written
+     * A writable GCS path where java files can be cached and temporary test files can be written,
+     * of the form gs://bucket/, or gs://bucket/path/.
      * @return HELLBENDER_TEST_STAGING env. var if defined, throws otherwise.
      */
     public static String getGCPTestStaging() {

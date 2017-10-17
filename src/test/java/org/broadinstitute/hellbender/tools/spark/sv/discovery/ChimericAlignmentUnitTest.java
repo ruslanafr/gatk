@@ -150,6 +150,56 @@ public class ChimericAlignmentUnitTest extends BaseTest {
         testData = SVDiscoveryTestDataProvider.forComplexTanDup_2to3_noPseudoHom_minus;
         data.add(new Object[]{testData._1(), testData._2(), StrandSwitch.NO_SWITCH, false, false, false});
 
+        ////////// ABOVE ARE FOR SIMPLE VARIANTS: INS/DEL, DUP EXPANSION, DUP CONTRACTION, INVERSION, BELOW ARE FOR TRANSLOCATION SUSPECTS AND INV DUP
+
+        // inverted duplication
+        final SAMFileHeader header = ArtificialReadUtils.createArtificialSamHeader(21, 1, 46709983);
+        SAMRecord one =
+                ArtificialReadUtils.createArtificialRead(header, "asm017968:tig00020", 20, 25625477,
+                        "CCTTTCTATTCTAACATTATTGACCCACTACAATAAAATTAAGTATACTTTAGGCTGGGCATGGTGGTTTACACCTGTAATCCCAACACTTTGGGAGGCCGAGGCGGGTGG".getBytes(),
+                        ArtificialReadUtils.createRandomReadQuals(111), "212H111M").convertToSAMRecord(header);
+        one.setSupplementaryAlignmentFlag(true);
+        one.setMappingQuality(60);
+        one.setReadNegativeStrandFlag(true);
+        one.setAttribute("NM", 0);
+        one.setAttribute("AS", 111);
+
+        SAMRecord two = ArtificialReadUtils.createArtificialRead(header, "asm017968:tig00020", 20, 25625379,
+                "CCACCCGCCTCGGCCTCCCAAAGTGTTGGGATTACAGGTGTAAACCACCATGCCCAGCCTAAAGTATACTTAATTTTATTGTAGTGGGTCAATAATGTTAGAATAGAAAGGAGAATCAGAAGAGAGAAAAGAAACAGATGATCTTATGAATCCCCAATTTATATCCCCCAATTAAGGCATCTCTTTCTTCTGTCTCCCTATATCCCTTTCTATTCTAACATTATTGACCCACTACAATAAAATTAAGTATACTTTAGGCTGGGCATGGTGGTTTACACCTGTAATCCCAACACTTTGGGAGGCCGAGGCGGGTGGATCACTTG".getBytes(),
+                ArtificialReadUtils.createRandomReadQuals(323), "106S217M").convertToSAMRecord(header);
+        two.setMappingQuality(60);
+        two.setAttribute("NM", 0);
+        two.setAttribute("AS", 217);
+
+        AlignmentInterval intervalOne = new AlignmentInterval(one);
+        AlignmentInterval intervalTwo = new AlignmentInterval(two);
+
+        data.add(new Object[]{intervalOne, intervalTwo, StrandSwitch.REVERSE_TO_FORWARD, false, false, true});
+
+        intervalOne = new AlignmentInterval(new SimpleInterval("chr20", 48513458, 48513545), 1, 88, TextCigarCodec.decode("88M227H"), true, 39, 1, 83, AlnModType.NONE);
+        intervalTwo = new AlignmentInterval(new SimpleInterval("chr20", 48513297, 48513579), 84, 365, TextCigarCodec.decode("83S282M"), false, 60, 0, 282, AlnModType.NONE);
+        data.add(new Object[]{intervalOne, intervalTwo, StrandSwitch.FORWARD_TO_REVERSE, true, false, true});
+
+
+        // same-chr translocation suspect, forward and reverse representation
+        intervalOne = new AlignmentInterval(new SimpleInterval("chr20", 61015129, 61015272), 1, 144, TextCigarCodec.decode("144M148H"), true, 60, 1, 139, AlnModType.NONE);
+        intervalTwo = new AlignmentInterval(new SimpleInterval("chr20", 60992732, 60992880), 144, 292, TextCigarCodec.decode("143S149M"), true, 60, 0, 149, AlnModType.NONE);
+        data.add(new Object[]{intervalOne, intervalTwo, StrandSwitch.NO_SWITCH, true, true, false});
+
+        intervalOne = new AlignmentInterval(new SimpleInterval("chr20", 28861368, 28861775), 1, 409, TextCigarCodec.decode("387M1I21M623H"), false, 60, 22, 286, AlnModType.NONE);
+        intervalTwo = new AlignmentInterval(new SimpleInterval("chr20", 28896473, 28897229), 276, 1032, TextCigarCodec.decode("275S757M"), false, 60, 1, 752, AlnModType.NONE);
+        data.add(new Object[]{intervalOne, intervalTwo, StrandSwitch.NO_SWITCH, false, true, false});
+
+//        // diff-chr translocation suspect without SS
+//        intervalOne = new AlignmentInterval(new SimpleInterval("chr21", 24923683, 24923715), 1, 33, TextCigarCodec.decode("33M130H"), true, 60, 0, 33, AlnModType.NONE);
+//        intervalTwo = new AlignmentInterval(new SimpleInterval("chr20", 11590055, 11590197), 21, 163, TextCigarCodec.decode("20S143M"), true, 60, 3, 128, AlnModType.NONE);
+//        data.add(new Object[]{intervalOne, intervalTwo, StrandSwitch.NO_SWITCH, true, true, false});
+//
+//        // diff-chr translocation suspect with SS
+//        intervalOne = new AlignmentInterval(new SimpleInterval("chr21", 5374092, 5374748), 1, 656, TextCigarCodec.decode("656M322S"), true, 60, 14, 586, AlnModType.NONE);
+//        intervalTwo = new AlignmentInterval(new SimpleInterval("chr20", 28764673, 28765145), 506, 978, TextCigarCodec.decode("473M505H"), false, 60, 16, 393, AlnModType.NONE);
+//        data.add(new Object[]{intervalOne, intervalTwo, StrandSwitch.FORWARD_TO_REVERSE, true, true, false});
+
 
         return data.toArray(new Object[data.size()][]);
     }

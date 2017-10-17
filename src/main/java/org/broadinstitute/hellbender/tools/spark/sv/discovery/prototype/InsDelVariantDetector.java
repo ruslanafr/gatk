@@ -59,7 +59,7 @@ final class InsDelVariantDetector implements VariantDetectorFromLocalAssemblyCon
         final List<String> insertionMappings = new ArrayList<>();
         while ( iterator.hasNext() ) {
             final AlignmentInterval next = iterator.next();
-            if (ChimericAlignment.nextAlignmentMayBeNovelInsertion(current, next, minAlignmentBlockSize)) {
+            if (ChimericAlignment.nextAlignmentMayBeInsertion(current, next, minAlignmentBlockSize)) {
                 if (iterator.hasNext()) {
                     insertionMappings.add(next.toPackedString());
                     continue;

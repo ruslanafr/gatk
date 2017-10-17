@@ -29,8 +29,6 @@ public final class PrintReadsSparkIntegrationTest extends CommandLineProgramTest
 
     private static final File TEST_DATA_DIR = getTestDataDir();
 
-    private String clusterName;
-
     @Override
     public String getTestedClassName() {
         return PrintReadsSpark.class.getSimpleName();
@@ -68,8 +66,7 @@ public final class PrintReadsSparkIntegrationTest extends CommandLineProgramTest
      * and the project name and credential file it points to must be present.
      */
     @Test(dataProvider = "gcsTestingData", groups = "bucket")
-    public void testGCSInputsAndOutputs(final String gcsInput, final String outputExtension,
-        final boolean outputToGCS, final File expectedOutput) {
+    public void testGCSInputsAndOutputs(final String gcsInput, final String outputExtension, final boolean outputToGCS) {
         final String gcsInputPath = getGCPTestInputPath() + gcsInput;
         final String outputPrefix = outputToGCS ? getGCPTestStaging() : "testGCSInputsAndOutputs";
         final String outputPath = BucketUtils.getTempFilePath(outputPrefix, outputExtension);

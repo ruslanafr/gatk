@@ -20,7 +20,7 @@ import java.nio.file.Files;
 import java.util.Collections;
 
 /**
- * tests that actuall run spark tools on dataproc
+ * tests that actually run spark tools on dataproc
  */
 public class DataprocIntegrationTest extends CommandLineProgramTest{
     private String clusterName;

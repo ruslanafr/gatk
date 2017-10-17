@@ -14,13 +14,21 @@ public final class DataprocTestUtils {
     private DataprocTestUtils(){}
 
     /**
+     * @return the value of the GCLOUD environment variable if present, or "gcloud"
+     */
+    public static String getGCloudPath(){
+        final String gcloudEnv = System.getenv("GCLOUD");
+        return gcloudEnv == null ? "gcloud" : gcloudEnv;
+    }
+
+    /**
      * create a minimal dataproc cluster which will shutdown automatically after 10 minutes of idling or 30 minutes
      * @return the name of the cluster
      */
     public static String createTestCluster() {
         final String clusterName = "gatk-test-" + UUID.randomUUID();
         final String[] command = new String[]{
-                "gcloud", "beta", "dataproc", "clusters", "create",
+                getGCloudPath(), "beta", "dataproc", "clusters", "create",
                 "--max-idle", "10m",
                 "--max-age", "30m",
                 "--num-workers", "2",

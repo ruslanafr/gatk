@@ -141,14 +141,8 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
 
         final NovelAdjacencyReferenceLocations novelAdjacency = noveltyAndEvidence._1;
         final Iterable<ChimericAlignment> chimericAlignments = noveltyAndEvidence._2;
-        if (novelAdjacency.strandSwitch == StrandSwitch.FORWARD_TO_REVERSE) {
-            return new Tuple2<>(novelAdjacency, new Tuple2<>(BreakEndVariantType.INV55BND.getOrderedMates(novelAdjacency, reference), chimericAlignments));
-        } else if (novelAdjacency.strandSwitch == StrandSwitch.REVERSE_TO_FORWARD) {
-            return new Tuple2<>(novelAdjacency, new Tuple2<>(BreakEndVariantType.INV33BND.getOrderedMates(novelAdjacency, reference), chimericAlignments));
-        } else {
-            throw new GATKException("Wrong type of novel adjacency sent to wrong analysis pathway: no strand-switch being sent to strand-switch path. \n" +
-                    Utils.stream(chimericAlignments).map(ChimericAlignment::onErrStringRep).collect(Collectors.toList()));
-        }
+        return new Tuple2<>(novelAdjacency,
+                new Tuple2<>(BreakEndVariantType.InvSuspectBND.getOrderedMates(novelAdjacency, reference), chimericAlignments));
     }
 
     // =================================================================================================================

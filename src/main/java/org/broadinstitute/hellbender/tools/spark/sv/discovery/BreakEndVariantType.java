@@ -6,7 +6,6 @@ import htsjdk.variant.variantcontext.Allele;
 import org.apache.commons.lang3.ArrayUtils;
 import org.broadinstitute.hellbender.engine.datasources.ReferenceMultiSource;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.tools.spark.sv.utils.GATKSVVCFConstants;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import scala.Tuple2;
@@ -15,8 +14,13 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
+import static org.broadinstitute.hellbender.tools.spark.sv.utils.GATKSVVCFConstants.*;
+
 public abstract class BreakEndVariantType extends SvType {
 
+    /**
+     * Technically, a BND-formatted variant should have two VCF records, for mates, hence we also have this field.
+     */
     protected final boolean isTheUpstreamMate;
 
     public final boolean isTheUpstreamMate() {
@@ -27,9 +31,26 @@ public abstract class BreakEndVariantType extends SvType {
         return forUpstreamLoc ? narl.leftJustifiedRightRefLoc : narl.leftJustifiedLeftRefLoc;
     }
 
+    protected static String getIDString(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc) {
+        return BREAKEND_STR + INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
+                narl.leftJustifiedLeftRefLoc.getContig() + INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
+                narl.leftJustifiedLeftRefLoc.getEnd() + INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
+                narl.leftJustifiedRightRefLoc.getContig() + INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
+                narl.leftJustifiedRightRefLoc.getStart() + INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
+                (forUpstreamLoc ? "1" : "2");
+    }
+
+
     @Override
     public final String toString() {
-        return GATKSVVCFConstants.BREAKEND_STR;
+        return BREAKEND_STR;
+    }
+
+    private static Allele constructAltAllele(final byte[] bases, final boolean bracketPointsLeft, final SimpleInterval novelAdjRefLoc,
+                                             final boolean basesFirst) {
+        final String s = bracketPointsLeft ? "]" + novelAdjRefLoc.getContig() + ":" + novelAdjRefLoc.getStart() + "]"
+                : "[" + novelAdjRefLoc.getContig() + ":" + novelAdjRefLoc.getStart() + "[";
+        return Allele.create( basesFirst ? new String(bases) + s  : s + new String(bases) );
     }
 
     // see VCF spec 4.2 or 4.3 for BND format ALT allele field for SV
@@ -40,21 +61,51 @@ public abstract class BreakEndVariantType extends SvType {
         this.isTheUpstreamMate = isTheUpstreamMate;
     }
 
-    private static Allele constructAltAllele(final byte[] bases, final boolean bracketPointsLeft, final SimpleInterval novelAdjRefLoc,
-                                             final boolean basesFirst) {
-        final String s = bracketPointsLeft ? "]" + novelAdjRefLoc.getContig() + ":" + novelAdjRefLoc.getStart() + "]"
-                                           : "[" + novelAdjRefLoc.getContig() + ":" + novelAdjRefLoc.getStart() + "[";
-        return Allele.create( basesFirst ? new String(bases) + s  : s + new String(bases) );
-    }
+    //==================================================================================================================
+    public static final class InvSuspectBND extends BreakEndVariantType {
+        /**
+         * for breakends, there's a concept of partner (see VCF spec) relationship between two reference bases.
+         * This indicates if the breakpoint, for an inversion suspect specifically, represents (one of the two) bases
+         * that is the left of the pair.
+         */
+        private static final Map<String, String> INV55_FLAG = Collections.singletonMap(INV55, "");
+        private static final Map<String, String> INV33_FLAG = Collections.singletonMap(INV33, "");
 
-    static abstract class StrandSwitchBND extends BreakEndVariantType {
-
-        StrandSwitchBND(final String id, final Map<String, String> typeSpecificExtraAttributes,
-                        final byte[] bases, final boolean bracketPointsLeft, final SimpleInterval novelAdjRefLoc,
-                        final boolean basesFirst, boolean isTheUpstreamMate){
-            super(id, typeSpecificExtraAttributes, bases, bracketPointsLeft, novelAdjRefLoc, basesFirst, isTheUpstreamMate);
+        private InvSuspectBND(final String id, final byte[] bases, final SimpleInterval novelAdjRefLoc,
+                              final boolean bracketPointsLeft, final boolean basesFirst, boolean isTheUpstreamMate) {
+            super(id, (bracketPointsLeft && basesFirst) ? INV55_FLAG: INV33_FLAG,
+                    bases, bracketPointsLeft, novelAdjRefLoc, basesFirst, isTheUpstreamMate);
         }
 
+        public static Tuple2<BreakEndVariantType, BreakEndVariantType> getOrderedMates(final NovelAdjacencyReferenceLocations narl,
+                                                                                       final ReferenceMultiSource reference) {
+
+            final BreakEndVariantType bkpt_1, bkpt_2;
+            if (narl.strandSwitch == StrandSwitch.FORWARD_TO_REVERSE) { // INV55, leftHalfInPartnerPair
+                bkpt_1 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, true),
+                        extractBasesForAltAllele(narl, true, reference),
+                        getMateRefLoc(narl, true),
+                        true, true, true);
+                bkpt_2 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, false),
+                        extractBasesForAltAllele(narl, false, reference),
+                        getMateRefLoc(narl, false),
+                        true, true, false);
+            } else if (narl.strandSwitch == StrandSwitch.REVERSE_TO_FORWARD){
+                bkpt_1 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, true),
+                        extractBasesForAltAllele(narl, true, reference),
+                        getMateRefLoc(narl, true),
+                        false, false, true);
+                bkpt_2 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, false),
+                        extractBasesForAltAllele(narl, false, reference),
+                        getMateRefLoc(narl, false),
+                        false, false, false);
+            } else {
+                throw new GATKException("Wrong type of novel adjacency sent to wrong analysis pathway: no strand-switch being sent to strand-switch path. \n" +
+                        narl.toString());
+            }
+
+            return new Tuple2<>(bkpt_1, bkpt_2);
+        }
 
         static byte[] extractBasesForAltAllele(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc,
                                                final ReferenceMultiSource reference) {
@@ -76,71 +127,10 @@ public abstract class BreakEndVariantType extends SvType {
         }
     }
 
-    public static final class INV55BND extends StrandSwitchBND {
-
-        /**
-         * Technically, a strand switch breakpoint should have two VCF records, hence we also have {@code forUpstreamLoc}.
-         */
-        private INV55BND(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc,
-                         final ReferenceMultiSource reference) {
-            super(getIDString(narl, forUpstreamLoc),
-                    Collections.singletonMap(GATKSVVCFConstants.INV55, ""),
-                    extractBasesForAltAllele(narl, forUpstreamLoc, reference), true,
-                    getMateRefLoc(narl, forUpstreamLoc), true, forUpstreamLoc);
-        }
-
-        public static Tuple2<BreakEndVariantType, BreakEndVariantType> getOrderedMates(final NovelAdjacencyReferenceLocations narl,
-                                                                                       final ReferenceMultiSource reference) {
-            final BreakEndVariantType bkpt_1 = new BreakEndVariantType.INV55BND(narl, true, reference);
-            final BreakEndVariantType bkpt_2 = new BreakEndVariantType.INV55BND(narl, false, reference);
-            return new Tuple2<>(bkpt_1, bkpt_2);
-        }
-
-        private static String getIDString(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc) {
-
-            return GATKSVVCFConstants.BREAKEND_STR + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    GATKSVVCFConstants.INV55 + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedLeftRefLoc.getContig() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedLeftRefLoc.getEnd() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedRightRefLoc.getStart() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    (forUpstreamLoc ? "1" : "2") ;
-        }
-    }
-
-    public static final class INV33BND extends StrandSwitchBND {
-
-        /**
-         * Technically, a strand switch breakpoint should have two VCF records, hence we also have {@code forUpstreamLoc}.
-         */
-        private INV33BND(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc,
-                         final ReferenceMultiSource reference) {
-            super(getIDString(narl, forUpstreamLoc),
-                    Collections.singletonMap(GATKSVVCFConstants.INV33, ""),
-                    extractBasesForAltAllele(narl, forUpstreamLoc, reference), false,
-                    getMateRefLoc(narl, forUpstreamLoc), false, forUpstreamLoc);
-        }
-
-        public static Tuple2<BreakEndVariantType, BreakEndVariantType> getOrderedMates(final NovelAdjacencyReferenceLocations narl,
-                                                                                       final ReferenceMultiSource reference) {
-            final BreakEndVariantType bkpt_1 = new BreakEndVariantType.INV33BND(narl, true, reference);
-            final BreakEndVariantType bkpt_2 = new BreakEndVariantType.INV33BND(narl, false, reference);
-            return new Tuple2<>(bkpt_1, bkpt_2);
-        }
-
-        private static String getIDString(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc) {
-
-            return GATKSVVCFConstants.BREAKEND_STR + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    GATKSVVCFConstants.INV33 + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedLeftRefLoc.getContig() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedLeftRefLoc.getEnd() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedRightRefLoc.getStart() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    (forUpstreamLoc ? "1" : "2") ;
-        }
-    }
-
+    //==================================================================================================================
     /**
-     * Generic variant type for suspected "translocations", including what could be a breakpoint for a duplication or
-     * an inter-chromosome novel adjacency.
+     * Generic variant type for suspected "translocations", including what could be a breakpoint for
+     * a dispersed duplication or an inter-chromosome novel adjacency.
      */
     public static final class TransLocBND extends BreakEndVariantType {
         private static Map<String, String> emptyMap = Collections.emptyMap();
@@ -177,15 +167,6 @@ public abstract class BreakEndVariantType extends SvType {
                 }
             }
             return new Tuple2<>(bkpt_1, bkpt_2);
-        }
-
-        private static String getIDString(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc) {
-            return GATKSVVCFConstants.BREAKEND_STR + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedLeftRefLoc.getContig() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedLeftRefLoc.getEnd() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedRightRefLoc.getContig() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    narl.leftJustifiedRightRefLoc.getStart() + GATKSVVCFConstants.INTERVAL_VARIANT_ID_FIELD_SEPARATOR +
-                    (forUpstreamLoc ? "1" : "2");
         }
 
         static byte[] extractBasesForAltAllele(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc,

@@ -10,14 +10,11 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 
 public final class SmithWatermanIntelAligner implements SmithWatermanAligner {
 
-    //private static final SmithWatermanIntelAligner ALIGNER = new SmithWatermanIntelAligner();
 
     /**
      * return the stateless singleton instance of SmithWatermanIntelAligner
      */
-    //public static SmithWatermanIntelAligner getInstance() {
-    //    return ALIGNER;
-    //}
+
 
     private final SWAlignerNativeBinding SmithWaterman = new IntelSmithWaterman();
 
@@ -30,7 +27,7 @@ public final class SmithWatermanIntelAligner implements SmithWatermanAligner {
     /**
      * Create a new SW native pairwise aligner
      */
-    public SmithWatermanIntelAligner() {
+    public SmithWatermanIntelAligner() throws UserException.HardwareFeatureException {
         final boolean isSupported = SmithWaterman.load(null);
         if (!isSupported) {
             throw new UserException.HardwareFeatureException("Machine does not support AVX SmithWaterman.");

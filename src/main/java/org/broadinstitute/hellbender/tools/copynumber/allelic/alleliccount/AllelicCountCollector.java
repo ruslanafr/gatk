@@ -9,6 +9,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.param.ParamUtils;
 import org.broadinstitute.hellbender.utils.pileup.ReadPileup;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -26,9 +27,11 @@ public final class AllelicCountCollector {
 
     public static final List<Nucleotide> BASES = Collections.unmodifiableList(Arrays.asList(Nucleotide.A, Nucleotide.C, Nucleotide.G, Nucleotide.T));
 
-    private final AllelicCountCollection allelicCounts = new AllelicCountCollection();
+    private final String sampleName;
+    private final List<AllelicCount> allelicCounts = new ArrayList<>();
 
-    public AllelicCountCollector() {
+    public AllelicCountCollector(final String sampleName) {
+        this.sampleName = Utils.nonNull(sampleName);
     }
 
     /**
@@ -58,9 +61,9 @@ public final class AllelicCountCollector {
                 .filter(r -> r.getQual() >= minBaseQuality)
                 .forEach(r -> nucleotideCounter.add(r.getBase()));
 
-        final int totalBaseCount = BASES.stream().mapToInt(b -> (int) nucleotideCounter.get(b)).sum(); //only include total ACGT counts in binomial test (exclude N, etc.)
+        final int totalBaseCount = BASES.stream().mapToInt(b -> (int) nucleotideCounter.get(b)).sum();  //only include total ACGT counts (exclude N, etc.)
         final int refReadCount = (int) nucleotideCounter.get(refBase);
-        final int altReadCount = totalBaseCount - refReadCount;                                 //we take alt = total - ref instead of the actual alt count
+        final int altReadCount = totalBaseCount - refReadCount;                                         //we take alt = total - ref instead of the actual alt count
         final Nucleotide altBase = altReadCount == 0 ? Nucleotide.N : inferAltFromPileupBaseCounts(nucleotideCounter, refBase);
 
         allelicCounts.add(new AllelicCount(
@@ -74,7 +77,7 @@ public final class AllelicCountCollector {
      * @return a <em>reference</em> to the AllelicCountCollection
      */
     public AllelicCountCollection getAllelicCounts() {
-        return allelicCounts;
+        return new AllelicCountCollection(sampleName, allelicCounts);
     }
 
     /**

@@ -72,10 +72,11 @@ public class ChimericAlignment {
     }
 
     Tuple2<SimpleInterval, SimpleInterval> getCoordSortedReferenceSpans() {
-        if (involvesRefPositionSwitch(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig))
-            return new Tuple2<>(regionWithHigherCoordOnContig.referenceSpan, regionWithLowerCoordOnContig.referenceSpan);
-        else
+        if (isForwardStrandRepresentation) {
             return new Tuple2<>(regionWithLowerCoordOnContig.referenceSpan, regionWithHigherCoordOnContig.referenceSpan);
+        } else {
+            return new Tuple2<>(regionWithHigherCoordOnContig.referenceSpan, regionWithLowerCoordOnContig.referenceSpan);
+        }
     }
 
     /**
@@ -99,8 +100,7 @@ public class ChimericAlignment {
      * But to fully resolve this case, we need other types of evidence, hence should not be the task of this function.
      */
     public boolean isNotSimpleTranslocation() {
-        return isNotSimpleTranslocation(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig, strandSwitch,
-                involvesRefPositionSwitch(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig));
+        return !isLikelySimpleTranslocation(regionWithLowerCoordOnContig, regionWithHigherCoordOnContig, strandSwitch);
     }
 
     //==================================================================================================================
@@ -137,9 +137,8 @@ public class ChimericAlignment {
 
         this.strandSwitch = determineStrandSwitch(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig);
 
-        final boolean involvesRefIntervalSwitch = involvesRefPositionSwitch(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig);
-        this.isForwardStrandRepresentation = isForwardStrandRepresentation(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig,
-                this.strandSwitch, involvesRefIntervalSwitch);
+        this.isForwardStrandRepresentation =
+                isForwardStrandRepresentation(intervalWithLowerCoordOnContig, intervalWithHigherCoordOnContig, strandSwitch);
 
         this.insertionMappings = insertionMappings;
     }
@@ -154,11 +153,13 @@ public class ChimericAlignment {
      * note down the mapping & alignment information of that region and skip it
      * @param alignedContig          made of (sorted {alignmentIntervals}, sequence) of a potentially-signalling locally-assembled contig
      * @param uniqueRefSpanThreshold for an alignment interval to be used to construct a ChimericAlignment,
-     *                               how long a unique--i.e. the same ref span is not covered by other alignment intervals--alignment on the reference must it have
+     * @param filterAlignmentByMqOrLength
+     * @param filterWhollyContainedAlignments
      */
     @VisibleForTesting
-    public static List<ChimericAlignment> parseOneContig(final AlignedContig alignedContig,
-                                                         final int uniqueRefSpanThreshold) {
+    public static List<ChimericAlignment> parseOneContig(final AlignedContig alignedContig, final int uniqueRefSpanThreshold,
+                                                         final boolean filterAlignmentByMqOrLength,
+                                                         final boolean filterWhollyContainedAlignments) {
 
         if (alignedContig.alignmentIntervals.size() < 2) {
             return new ArrayList<>();
@@ -168,8 +169,10 @@ public class ChimericAlignment {
 
         // fast forward to the first alignment region with high MapQ
         AlignmentInterval current = iterator.next();
-        while (mapQualTooLow(current) && iterator.hasNext()) {
-            current = iterator.next();
+        if (filterAlignmentByMqOrLength) {
+            while (mapQualTooLow(current, CHIMERIC_ALIGNMENTS_HIGHMQ_THRESHOLD) && iterator.hasNext()) {
+                current = iterator.next();
+            }
         }
 
         final List<ChimericAlignment> results = new ArrayList<>(alignedContig.alignmentIntervals.size() - 1);
@@ -178,9 +181,10 @@ public class ChimericAlignment {
         // then iterate over the AR's in pair to identify CA's.
         while ( iterator.hasNext() ) {
             final AlignmentInterval next = iterator.next();
-            if (firstAlignmentIsTooShort(current, next, uniqueRefSpanThreshold)) {
+            if (filterAlignmentByMqOrLength && firstAlignmentIsTooShort(current, next, uniqueRefSpanThreshold)) {
                 continue;
-            } else if (nextAlignmentMayBeInsertion(current, next, uniqueRefSpanThreshold)) {
+            } else if (nextAlignmentMayBeInsertion(current, next, uniqueRefSpanThreshold,
+                    CHIMERIC_ALIGNMENTS_HIGHMQ_THRESHOLD, filterWhollyContainedAlignments)) {
                 if (iterator.hasNext()) {
                     insertionMappings.add(next.toPackedString());
                     continue;
@@ -189,10 +193,9 @@ public class ChimericAlignment {
                 }
             }
 
-            final boolean isNotSimpleTranslocation = isNotSimpleTranslocation(current, next,
-                    determineStrandSwitch(current, next), involvesRefPositionSwitch(current, next));
-            if (isNotSimpleTranslocation)
-                results.add(new ChimericAlignment(current, next, insertionMappings, alignedContig.contigName));
+            final ChimericAlignment chimericAlignment = new ChimericAlignment(current, next, insertionMappings, alignedContig.contigName);
+            if (chimericAlignment.isNotSimpleTranslocation() && !isLikelyInvertedDuplication(current, next))
+                results.add(chimericAlignment);
 
             current = next;
         }
@@ -203,8 +206,8 @@ public class ChimericAlignment {
     //==================================================================================================================
     // TODO: 11/22/16 it might also be suitable to consider the reference context this alignment region is mapped to
     //       and not simply apply a hard filter (need to think about how to test)
-    private static boolean mapQualTooLow(final AlignmentInterval next) {
-        return next.mapQual < CHIMERIC_ALIGNMENTS_HIGHMQ_THRESHOLD;
+    private static boolean mapQualTooLow(final AlignmentInterval aln, final int mapQThresholdInclusive) {
+        return aln.mapQual < mapQThresholdInclusive;
     }
 
     /**
@@ -221,15 +224,17 @@ public class ChimericAlignment {
      */
     @VisibleForTesting
     public static boolean nextAlignmentMayBeInsertion(final AlignmentInterval current, final AlignmentInterval next,
-                                                      final Integer minAlignLength) {
-        return mapQualTooLow(next) ||                                           // inserted sequence might have low mapping quality
-                firstAlignmentIsTooShort(next, current, minAlignLength) ||      // inserted sequence might be very small
-                current.referenceSpan.contains(next.referenceSpan) ||   // one might completely contain the other
-                next.referenceSpan.contains(current.referenceSpan);
+                                                      final Integer minAlignLength, final Integer mapQThresholdInclusive,
+                                                      final boolean filterWhollyContained) {
+        // not unique: inserted sequence may have low mapping quality (low reference uniqueness) or may be very small (low read uniqueness)
+        final boolean isNotUnique = mapQualTooLow(next, mapQThresholdInclusive) || firstAlignmentIsTooShort(next, current, minAlignLength);
+        return isNotUnique
+                ||
+                (filterWhollyContained && (current.referenceSpan.contains(next.referenceSpan) || next.referenceSpan.contains(current.referenceSpan)));
     }
 
     @VisibleForTesting
-    public static StrandSwitch determineStrandSwitch(final AlignmentInterval first, final AlignmentInterval second) {
+    static StrandSwitch determineStrandSwitch(final AlignmentInterval first, final AlignmentInterval second) {
         if (first.forwardStrand == second.forwardStrand) {
             return StrandSwitch.NO_SWITCH;
         } else {
@@ -244,42 +249,37 @@ public class ChimericAlignment {
     @VisibleForTesting
     static boolean isForwardStrandRepresentation(final AlignmentInterval regionWithLowerCoordOnContig,
                                                  final AlignmentInterval regionWithHigherCoordOnContig,
-                                                 final StrandSwitch strandSwitch,
-                                                 final boolean involvesReferenceIntervalSwitch) {
+                                                 final StrandSwitch strandSwitch) {
 
-        if (strandSwitch == StrandSwitch.NO_SWITCH) {
-            return regionWithLowerCoordOnContig.forwardStrand && regionWithHigherCoordOnContig.forwardStrand;
-        } else {
-            return !involvesReferenceIntervalSwitch;
+        switch (strandSwitch) {
+            case NO_SWITCH: return regionWithLowerCoordOnContig.forwardStrand;
+            case FORWARD_TO_REVERSE: return regionWithLowerCoordOnContig.referenceSpan.getEnd() < regionWithHigherCoordOnContig.referenceSpan.getEnd();
+            case REVERSE_TO_FORWARD: return regionWithLowerCoordOnContig.referenceSpan.getStart() < regionWithHigherCoordOnContig.referenceSpan.getStart();
+            default: throw new IllegalArgumentException("Seeing unexpected strand switch case: " + strandSwitch.name());
         }
     }
 
     /**
-     * Determine if the region that maps to a lower coordinate on the contig also maps to a lower coordinate on the reference.
+     * See {@link #isNotSimpleTranslocation()} for logic.
      */
     @VisibleForTesting
-    public static boolean involvesRefPositionSwitch(final AlignmentInterval regionWithLowerCoordOnContig,
-                                                    final AlignmentInterval regionWithHigherCoordOnContig) {
+    static boolean isLikelySimpleTranslocation(final AlignmentInterval regionWithLowerCoordOnContig,
+                                               final AlignmentInterval regionWithHigherCoordOnContig,
+                                               final StrandSwitch strandSwitch) {
 
-        return regionWithHigherCoordOnContig.referenceSpan.getStart() < regionWithLowerCoordOnContig.referenceSpan.getStart();
-    }
+        if (!regionWithLowerCoordOnContig.referenceSpan.getContig()
+                .equals(regionWithHigherCoordOnContig.referenceSpan.getContig()))
+            return true;
 
-    /**
-     * See {@link #isNotSimpleTranslocation()} for definition of "simple translocation"
-     */
-    @VisibleForTesting
-    public static boolean isNotSimpleTranslocation(final AlignmentInterval regionWithLowerCoordOnContig,
-                                                   final AlignmentInterval regionWithHigherCoordOnContig,
-                                                   final StrandSwitch strandSwitch,
-                                                   final boolean involvesReferenceIntervalSwitch) {
-        // logic is: must be the same reference chromosome for it not to be an inter-chromosomal translocation
-        //           and when regions are mapped to the same reference chromosome, there cannot be reference position swap
-        final boolean sameChromosome = regionWithLowerCoordOnContig.referenceSpan.getContig()
-                                       .equals(regionWithHigherCoordOnContig.referenceSpan.getContig());
-        return sameChromosome
-                &&
-                (strandSwitch!=StrandSwitch.NO_SWITCH
-                        || involvesReferenceIntervalSwitch == !regionWithLowerCoordOnContig.forwardStrand);
+        if (strandSwitch.equals(StrandSwitch.NO_SWITCH)) {
+            if (regionWithLowerCoordOnContig.forwardStrand) {
+                return regionWithLowerCoordOnContig.referenceSpan.getStart() > regionWithHigherCoordOnContig.referenceSpan.getStart();
+            } else {
+                return regionWithLowerCoordOnContig.referenceSpan.getEnd() < regionWithHigherCoordOnContig.referenceSpan.getEnd();
+            }
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -287,6 +287,8 @@ public class ChimericAlignment {
      */
     @VisibleForTesting
     public static boolean isLikelyInvertedDuplication(final AlignmentInterval one, final AlignmentInterval two) {
+        if (one.forwardStrand == two.forwardStrand)
+            return false;
         return 2 * AlignmentInterval.overlapOnRefSpan(one, two) >
                 Math.min(one.endInAssembledContig - one.startInAssembledContig,
                         two.endInAssembledContig - two.startInAssembledContig) + 1;

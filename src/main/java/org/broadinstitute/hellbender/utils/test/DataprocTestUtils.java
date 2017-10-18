@@ -48,7 +48,7 @@ public final class DataprocTestUtils {
      */
     public static void launchGatkTool(final String tool, final List<String> args, final String clusterName){
             final List<String> command = new ArrayList<>();
-            command.add("gatk-launch");
+            command.add("./gatk-launch");
             command.add(tool);
             command.addAll(args);
             command.add("--");

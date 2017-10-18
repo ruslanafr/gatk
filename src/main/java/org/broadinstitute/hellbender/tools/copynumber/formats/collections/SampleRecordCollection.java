@@ -1,9 +1,11 @@
 package org.broadinstitute.hellbender.tools.copynumber.formats.collections;
 
 import com.google.common.collect.ImmutableList;
+import htsjdk.samtools.SAMFileHeader;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.copynumber.formats.NamedSample;
-import org.broadinstitute.hellbender.tools.copynumber.formats.NamedSampleFile;
+import org.broadinstitute.hellbender.tools.copynumber.formats.Sample;
+import org.broadinstitute.hellbender.tools.copynumber.formats.SampleMetadataReader;
+import org.broadinstitute.hellbender.tools.copynumber.formats.SampleMetadata;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.tsv.*;
@@ -17,52 +19,56 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Represents an immutable collection of records associated with a sample name, a set of
+ * Represents an immutable collection of records associated with a sample, a set of
  * mandatory column headers given by a {@link TableColumnCollection}, and lambdas for
  * reading and writing records.
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
-public abstract class NamedSampleCollection<T> implements NamedSample {
-    private final String sampleName;
+public abstract class SampleRecordCollection<T> implements Sample {
+    public static final String COMMENT_PREFIX = "@";
+
+    private final SampleMetadata sampleMetadata;
     private final ImmutableList<T> records;
     private final TableColumnCollection mandatoryColumns;
     private final Function<DataLine, T> dataLineToRecordFunction;
     private final BiConsumer<T, DataLine> recordAndDataLineBiConsumer;
 
     /**
-     * Constructor given the sample name, the list of records, the mandatory column headers,
+     * Constructor given the sample metadata, the list of records, the mandatory column headers,
      * and the lambdas for reading and writing records.
      */
-    NamedSampleCollection(final String sampleName,
-                          final List<T> records,
-                          final TableColumnCollection mandatoryColumns,
-                          final Function<DataLine, T> dataLineToRecordFunction,
-                          final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
-        this.sampleName = Utils.nonNull(sampleName);
+    SampleRecordCollection(final SampleMetadata sampleMetadata,
+                           final List<T> records,
+                           final TableColumnCollection mandatoryColumns,
+                           final Function<DataLine, T> dataLineToRecordFunction,
+                           final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
+        this.sampleMetadata = Utils.nonNull(sampleMetadata);
         this.records = ImmutableList.copyOf(Utils.nonNull(records));
-        this.mandatoryColumns = Utils.nonNull(mandatoryColumns);
+        Utils.nonNull(mandatoryColumns);
+        Utils.nonEmpty(mandatoryColumns.names());
+        this.mandatoryColumns = mandatoryColumns;
         this.dataLineToRecordFunction = Utils.nonNull(dataLineToRecordFunction);
         this.recordAndDataLineBiConsumer = Utils.nonNull(recordAndDataLineBiConsumer);
     }
 
     /**
      * Constructor given an input file, the mandatory column headers, and the lambdas for reading and writing records.
-     * The sample name is read from a comment string in the file and the list of records is read using
+     * The sample metadata is read from comment strings in the file and the list of records is read using
      * the column headers and the appropriate lambda.
      */
-    NamedSampleCollection(final File inputFile,
-                          final TableColumnCollection mandatoryColumns,
-                          final Function<DataLine, T> dataLineToRecordFunction,
-                          final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
+    SampleRecordCollection(final File inputFile,
+                           final TableColumnCollection mandatoryColumns,
+                           final Function<DataLine, T> dataLineToRecordFunction,
+                           final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
         IOUtils.canReadFile(inputFile);
         this.mandatoryColumns = Utils.nonNull(mandatoryColumns);
         this.dataLineToRecordFunction = Utils.nonNull(dataLineToRecordFunction);
         this.recordAndDataLineBiConsumer = Utils.nonNull(recordAndDataLineBiConsumer);
 
-        try (final TSVReader reader = new TSVReader(inputFile)) {
+        try (final SampleTSVReader reader = new SampleTSVReader(inputFile)) {
             TableUtils.checkMandatoryColumns(reader.columns(), mandatoryColumns, UserException.BadInput::new);
-            sampleName = reader.readSampleName();
+            sampleMetadata = reader.readSampleMetadata();
             records = reader.stream().collect(Collectors.collectingAndThen(Collectors.toList(), ImmutableList::copyOf));
         } catch (final IOException | UncheckedIOException e) {
             throw new UserException.CouldNotReadInputFile(inputFile, e);
@@ -70,8 +76,8 @@ public abstract class NamedSampleCollection<T> implements NamedSample {
     }
 
     @Override
-    public final String getSampleName() {
-        return sampleName;
+    public final SampleMetadata getSampleMetadata() {
+        return sampleMetadata;
     }
 
     public final int size() {
@@ -89,8 +95,8 @@ public abstract class NamedSampleCollection<T> implements NamedSample {
      * Writes the sample name in a comment string and the records to file.
      */
     public void write(final File outputFile) {
-        try (final TSVWriter writer = new TSVWriter(outputFile, sampleName)) {
-            writer.writeSampleName();
+        try (final SampleTSVWriter writer = new SampleTSVWriter(outputFile, sampleMetadata)) {
+            writer.writeSampleMetadata();
             writer.writeAllRecords(records);
         } catch (final IOException e) {
             throw new UserException.CouldNotCreateOutputFile(outputFile, e);
@@ -106,48 +112,50 @@ public abstract class NamedSampleCollection<T> implements NamedSample {
             return false;
         }
 
-        final NamedSampleCollection<?> that = (NamedSampleCollection<?>) o;
-        return sampleName.equals(that.sampleName) && records.equals(that.records);
+        final SampleRecordCollection<?> that = (SampleRecordCollection<?>) o;
+        return sampleMetadata.equals(that.sampleMetadata) && records.equals(that.records);
     }
 
     @Override
     public int hashCode() {
-        int result = sampleName.hashCode();
+        int result = sampleMetadata.hashCode();
         result = 31 * result + records.hashCode();
         return result;
     }
 
-    private final class TSVReader extends TableReader<T> implements NamedSampleFile {
+    private final class SampleTSVReader extends TableReader<T> {
         private final File file;
 
-        private TSVReader(final File file) throws IOException {
+        private SampleTSVReader(final File file) throws IOException {
             super(file);
             this.file = file;
         }
 
-        private String readSampleName() {
-            return readSampleName(file);
+        private SampleMetadata readSampleMetadata() {
+            return new SampleMetadata(new SAMFileHeader());
         }
 
         @Override
         protected T createRecord(final DataLine dataLine) {
             Utils.nonNull(dataLine);
+            Utils.validateArg(dataLine.get(0).startsWith(COMMENT_PREFIX),
+                    "The value of the first column cannot start with the comment prefix " +COMMENT_PREFIX);
             return dataLineToRecordFunction.apply(dataLine);
         }
     }
 
-    private final class TSVWriter extends TableWriter<T> {
-        private final String sampleName;
+    private final class SampleTSVWriter extends TableWriter<T> {
+        private final SampleMetadata sampleMetadata;
 
-        TSVWriter(final File file,
-                  final String sampleName) throws IOException {
-            super(file, mandatoryColumns);
-            this.sampleName = Utils.nonNull(sampleName);
+        SampleTSVWriter(final File file,
+                        final SampleMetadata sampleMetadata) throws IOException {
+            super(file, mandatoryColumns, COMMENT_PREFIX);
+            this.sampleMetadata = Utils.nonNull(sampleMetadata);
         }
 
-        void writeSampleName() {
+        void writeSampleMetadata() {
             try {
-                writeComment(NamedSampleFile.SAMPLE_NAME_COMMENT_TAG + sampleName);
+                writeComment();
             } catch (final IOException e) {
                 throw new UserException("Could not write sample name.");
             }

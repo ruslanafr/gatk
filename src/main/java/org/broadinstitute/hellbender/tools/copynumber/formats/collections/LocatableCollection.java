@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.copynumber.formats.collections;
 import com.google.common.collect.Ordering;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.samtools.util.OverlapDetector;
+import org.broadinstitute.hellbender.tools.copynumber.formats.SampleMetadata;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -21,31 +22,31 @@ import java.util.stream.IntStream;
 /**
  * Represents an immutable, coordinate-sorted (with no overlaps allowed) collection of records
  * that extend {@link Locatable} (although contigs are assumed to be non-null when writing to file)
- * associated with a sample name, a set of mandatory column headers given by a {@link TableColumnCollection},
+ * associated with a sample, a set of mandatory column headers given by a {@link TableColumnCollection},
  * and lambdas for reading and writing records. Records are sorted using
  * {@link IntervalUtils#LEXICOGRAPHICAL_ORDER_COMPARATOR}. See the unit test
  * for a simple example of a subclass.
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
-public abstract class LocatableCollection<T extends Locatable> extends NamedSampleCollection<T> {
+public abstract class LocatableCollection<T extends Locatable> extends SampleRecordCollection<T> {
     public static final Comparator<Locatable> LEXICOGRAPHICAL_ORDER_COMPARATOR = IntervalUtils.LEXICOGRAPHICAL_ORDER_COMPARATOR;
 
     /**
      * Records are sorted using {@code LEXICOGRAPHICAL_ORDER_COMPARATOR}.
      */
-    public LocatableCollection(final String sampleName,
+    public LocatableCollection(final SampleMetadata sampleMetadata,
                                final List<T> records,
                                final TableColumnCollection mandatoryColumns,
                                final Function<DataLine, T> dataLineToRecordFunction,
                                final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
         super(
-                sampleName,
+                sampleMetadata,
                 Utils.nonNull(records).stream().sorted(LEXICOGRAPHICAL_ORDER_COMPARATOR).collect(Collectors.toList()),
                 mandatoryColumns,
                 dataLineToRecordFunction,
                 recordAndDataLineBiConsumer);
-        validateIntervals(getSampleName(), getIntervals());
+        validateIntervals(getSampleMetadata().getSampleName(), getIntervals());
     }
 
     /**
@@ -56,7 +57,7 @@ public abstract class LocatableCollection<T extends Locatable> extends NamedSamp
                                final Function<DataLine, T> dataLineToRecordFunction,
                                final BiConsumer<T, DataLine> recordAndDataLineBiConsumer) {
         super(inputFile, mandatoryColumns, dataLineToRecordFunction, recordAndDataLineBiConsumer);
-        validateIntervals(getSampleName(), getIntervals());
+        validateIntervals(getSampleMetadata().getSampleName(), getIntervals());
     }
 
     //check for ordering, duplicates, and overlaps

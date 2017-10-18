@@ -17,6 +17,7 @@ import org.broadinstitute.hellbender.engine.filters.MappingQualityReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount.AllelicCountCollector;
+import org.broadinstitute.hellbender.tools.copynumber.formats.SampleMetadata;
 import org.broadinstitute.hellbender.utils.Nucleotide;
 
 import java.io.File;
@@ -122,8 +123,8 @@ public final class CollectAllelicCounts extends LocusWalker {
 
     @Override
     public void onTraversalStart() {
-        final String sampleName = getSampleName();
-        allelicCountCollector = new AllelicCountCollector(sampleName);
+        final SampleMetadata sampleMetadata = new SampleMetadata(getHeaderForReads());
+        allelicCountCollector = new AllelicCountCollector(sampleMetadata);
         logger.info("Collecting allelic counts...");
     }
 
@@ -146,20 +147,5 @@ public final class CollectAllelicCounts extends LocusWalker {
     public void apply(AlignmentContext alignmentContext, ReferenceContext referenceContext, FeatureContext featureContext) {
         final byte refAsByte = referenceContext.getBase();
         allelicCountCollector.collectAtLocus(Nucleotide.valueOf(refAsByte), alignmentContext.getBasePileup(), alignmentContext.getLocation(), minimumBaseQuality);
-    }
-
-    //TODO extract this code from GetSampleName
-    private String getSampleName() {
-        if ((getHeaderForReads() == null) || (getHeaderForReads().getReadGroups() == null)) {
-            throw new UserException.BadInput("The input BAM has no header or no read groups.  Cannot determine a sample name.");
-        }
-        final List<String> sampleNames = getHeaderForReads().getReadGroups().stream().map(SAMReadGroupRecord::getSample).distinct().collect(Collectors.toList());
-        if (sampleNames.size() > 1) {
-            throw new UserException.BadInput(String.format("The input BAM has more than one unique sample name: %s", StringUtils.join(sampleNames, ", ")));
-        }
-        if (sampleNames.isEmpty()) {
-            throw new UserException.BadInput("The input BAM has no sample names.");
-        }
-        return sampleNames.get(0);
     }
 }

@@ -125,15 +125,20 @@ public abstract class TableWriter<R> implements Closeable {
     private boolean headerWritten = false;
 
     /**
+     * The comment prefix used by this writer.
+     */
+    private final String commentPrefix;
+
+    /**
      * Creates a new table writer given the file and column names.
      *
-     * @param file         the destination file.
-     * @param tableColumns the table column names.
+     * @param file      the destination file.
+     * @param columns   the table column names.
      * @throws IllegalArgumentException if either {@code file} or {@code tableColumns} are {@code null}.
      * @throws IOException              if one was raised when opening the the destination file for writing.
      */
-    public TableWriter(final File file, final TableColumnCollection tableColumns) throws IOException {
-        this(new FileWriter(Utils.nonNull(file, "The file cannot be null.")), tableColumns);
+    public TableWriter(final File file, final TableColumnCollection columns) throws IOException {
+        this(file, columns, TableUtils.COMMENT_PREFIX);
     }
 
     /**
@@ -145,10 +150,38 @@ public abstract class TableWriter<R> implements Closeable {
      * @throws IOException              if one was raised when opening the the destination file for writing.
      */
     public TableWriter(final Writer writer, final TableColumnCollection columns) throws IOException {
+        this(writer, columns, TableUtils.COMMENT_PREFIX);
+    }
+
+    /**
+     * Creates a new table writer given the file, column names, and comment prefix.
+     *
+     * @param file      the destination file.
+     * @param columns   the table column names.
+     * @param commentPrefix the comment prefix
+     * @throws IllegalArgumentException if either {@code writer} or {@code columns} are {@code null}.
+     * @throws IOException              if one was raised when opening the the destination file for writing.
+     */
+    public TableWriter(final File file, final TableColumnCollection columns, final String commentPrefix) throws IOException {
+
+        this(new FileWriter(Utils.nonNull(file, "The file cannot be null.")), columns, commentPrefix);
+    }
+
+    /**
+     * Creates a new table writer given the destination writer, column names, and comment prefix.
+     *
+     * @param writer  the destination writer.
+     * @param columns the table column names.
+     * @param commentPrefix the comment prefix
+     * @throws IllegalArgumentException if either {@code writer} or {@code columns} are {@code null}.
+     * @throws IOException              if one was raised when opening the the destination file for writing.
+     */
+    public TableWriter(final Writer writer, final TableColumnCollection columns, final String commentPrefix) throws IOException {
 
         this.columns = Utils.nonNull(columns, "The columns cannot be null.");
-        this.writer = new CSVWriter(Utils.nonNull(writer, "the input writer cannot be null"),
+        this.writer = new CSVWriter(Utils.nonNull(writer, "The input writer cannot be null."),
                 TableUtils.COLUMN_SEPARATOR, TableUtils.QUOTE_CHARACTER, TableUtils.ESCAPE_CHARACTER);
+        this.commentPrefix = Utils.nonEmpty(commentPrefix);
     }
 
     /**
@@ -166,7 +199,7 @@ public abstract class TableWriter<R> implements Closeable {
      */
     public final void writeComment(final String comment) throws IOException {
         Utils.nonNull(comment, "The comment cannot be null.");
-        writer.writeNext(new String[]{TableUtils.COMMENT_PREFIX + comment}, false);
+        writer.writeNext(new String[]{commentPrefix + comment}, false);
         lineNumber++;
     }
 

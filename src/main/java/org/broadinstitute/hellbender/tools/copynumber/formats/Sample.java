@@ -1,5 +1,5 @@
 package org.broadinstitute.hellbender.tools.copynumber.formats;
 
-public interface NamedSample {
-    String getSampleName();
+public interface Sample {
+    SampleMetadata getSampleMetadata();
 }

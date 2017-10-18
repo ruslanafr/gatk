@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.copynumber.allelic.alleliccount;
 import htsjdk.samtools.util.Locatable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.broadinstitute.hellbender.tools.copynumber.formats.SampleMetadata;
 import org.broadinstitute.hellbender.utils.Nucleotide;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -27,11 +28,11 @@ public final class AllelicCountCollector {
 
     public static final List<Nucleotide> BASES = Collections.unmodifiableList(Arrays.asList(Nucleotide.A, Nucleotide.C, Nucleotide.G, Nucleotide.T));
 
-    private final String sampleName;
+    private final SampleMetadata sampleMetadata;
     private final List<AllelicCount> allelicCounts = new ArrayList<>();
 
-    public AllelicCountCollector(final String sampleName) {
-        this.sampleName = Utils.nonNull(sampleName);
+    public AllelicCountCollector(final SampleMetadata sampleMetadata) {
+        this.sampleMetadata = Utils.nonNull(sampleMetadata);
     }
 
     /**
@@ -77,7 +78,7 @@ public final class AllelicCountCollector {
      * @return a <em>reference</em> to the AllelicCountCollection
      */
     public AllelicCountCollection getAllelicCounts() {
-        return new AllelicCountCollection(sampleName, allelicCounts);
+        return new AllelicCountCollection(sampleMetadata, allelicCounts);
     }
 
     /**

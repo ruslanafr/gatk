@@ -188,7 +188,7 @@ public final class LocatableCollectionUnitTest extends BaseTest {
     private static void assertSimpleLocatableCollectionEqualsExpected(final SimpleLocatableCollection simpleLocatableCollection) {
         Assert.assertNotSame(simpleLocatableCollection, SIMPLE_LOCATABLE_COLLECTION_EXPECTED);
         Assert.assertEquals(simpleLocatableCollection, SIMPLE_LOCATABLE_COLLECTION_EXPECTED);
-        Assert.assertEquals(simpleLocatableCollection.getSampleName(), SIMPLE_LOCATABLE_COLLECTION_EXPECTED.getSampleName());
+        Assert.assertEquals(simpleLocatableCollection.getSampleMetadata(), SIMPLE_LOCATABLE_COLLECTION_EXPECTED.getSampleMetadata());
         Assert.assertNotSame(simpleLocatableCollection.getRecords(), SIMPLE_LOCATABLE_COLLECTION_EXPECTED.getRecords());
         Assert.assertEquals(simpleLocatableCollection.getRecords(), SIMPLE_LOCATABLE_COLLECTION_EXPECTED.getRecords());
     }

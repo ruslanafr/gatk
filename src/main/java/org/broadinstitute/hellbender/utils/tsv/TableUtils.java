@@ -33,7 +33,7 @@ public final class TableUtils {
     public static final String COLUMN_SEPARATOR_STRING = String.valueOf(COLUMN_SEPARATOR);
 
     /**
-     * Comment line prefix string {@value}.
+     * Default comment line prefix string {@value}.
      * <p>
      * Lines that start with this prefix (spaces are not ignored), will be considered comment
      * lines (neither a header line nor data line).

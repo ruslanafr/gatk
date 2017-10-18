@@ -124,6 +124,7 @@ public class ChimericAlignment {
             if (strandSwitch == StrandSwitch.NO_SWITCH) {
                 this.isForwardStrandRepresentation = regionWithLowerCoordOnContig.forwardStrand;
             } else {
+                // this definition is a bit arbitrary: it is defined to be forward strand representation if the 1st alignment is to a lower-indexed reference chromosome
                 this.isForwardStrandRepresentation = IntervalUtils.compareContigs(intervalWithLowerCoordOnContig.referenceSpan,
                         intervalWithHigherCoordOnContig.referenceSpan, referenceDictionary) < 0;
             }
@@ -145,10 +146,12 @@ public class ChimericAlignment {
      * @param alignedContig          made of (sorted {alignmentIntervals}, sequence) of a potentially-signalling locally-assembled contig
      * @param uniqueRefSpanThreshold for an alignment interval to be used to construct a ChimericAlignment,
      *                               how long a unique--i.e. the same ref span is not covered by other alignment intervals--alignment on the reference must it have
+     * @param referenceDictionary    reference sequence dictionary
      */
     @VisibleForTesting
     public static List<ChimericAlignment> parseOneContig(final AlignedContig alignedContig,
-                                                         final int uniqueRefSpanThreshold) {
+                                                         final int uniqueRefSpanThreshold,
+                                                         final SAMSequenceDictionary referenceDictionary) {
 
         if (alignedContig.alignmentIntervals.size() < 2) {
             return new ArrayList<>();
@@ -179,12 +182,14 @@ public class ChimericAlignment {
                 }
             }
 
-            final SAMSequenceDictionary referenceDictionary = null; // don't need this for its intended cases, which are all same CHR mapping
-            final ChimericAlignment chimericAlignment = new ChimericAlignment(current, next, insertionMappings, alignedContig.contigName, referenceDictionary);
-            if (!chimericAlignment.isNotSimpleTranslocation())
-                throw new GATKException.ShouldNeverReachHereException("Mapped assembled contigs are sent down the wrong path: " +
-                        "contig suggesting \"translocation\" is sent down the insert/deletion path.\n" + alignedContig.toString());
-            results.add(chimericAlignment);
+            // TODO: 10/18/17 this way of filtering CA based on not quality but alignment characteristics is
+            // an artifact of development and relies on the dark secret that this was initially developped for calling ins/del,
+            // and simple translocations travel through a different code path.
+            // ultimately we need to merge these two code paths
+            final ChimericAlignment chimericAlignment = new ChimericAlignment(current, next, insertionMappings,
+                    alignedContig.contigName, referenceDictionary);
+            if (chimericAlignment.isNotSimpleTranslocation())
+                results.add(chimericAlignment);
 
             current = next;
         }

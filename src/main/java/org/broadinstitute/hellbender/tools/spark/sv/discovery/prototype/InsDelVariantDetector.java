@@ -50,7 +50,7 @@ final class InsDelVariantDetector implements VariantDetectorFromLocalAssemblyCon
     }
 
     /**
-     * Very similar to {@link ChimericAlignment#parseOneContig(AlignedContig, int)}, except that
+     * Very similar to {@link ChimericAlignment#parseOneContig(AlignedContig, int, SAMSequenceDictionary)}, except that
      * badly mapped (MQ < 60) 1st alignment is no longer skipped.
      */
     private static Tuple2<byte[], List<ChimericAlignment>> convertAlignmentIntervalToChimericAlignment (final AlignedContig contig,

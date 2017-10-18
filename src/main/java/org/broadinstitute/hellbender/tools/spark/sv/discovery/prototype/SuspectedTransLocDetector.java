@@ -26,7 +26,6 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
                                    final Broadcast<ReferenceMultiSource> broadcastReference,
                                    final Broadcast<SAMSequenceDictionary> referenceDictionaryBroadcast,
                                    final Logger toolLogger) {
-        localAssemblyContigs.cache();
         toolLogger.info(localAssemblyContigs.count() + " chimeras indicating strand-switch-less breakpoints");
 
         final JavaPairRDD<ChimericAlignment, byte[]> chimeraAndSequence =
@@ -53,7 +52,6 @@ final class SuspectedTransLocDetector implements VariantDetectorFromLocalAssembl
 
     private static Tuple2<ChimericAlignment, byte[]> convertAlignmentIntervalsToChimericAlignment(final AlignedContig contig,
                                                                                                   final SAMSequenceDictionary referenceDictionary) {
-        // TODO: 9/9/17 this default empty insertion mapping treatment is temporary and should be fixed later
         return new Tuple2<>(new ChimericAlignment(contig.alignmentIntervals.get(0), contig.alignmentIntervals.get(1),
                 EMPTY_INSERTION_MAPPINGS, contig.contigName, referenceDictionary), contig.contigSequence);
     }

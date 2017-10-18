@@ -95,7 +95,7 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
 
         // filter alignments and split the gaps
         final JavaRDD<AlignedContig> contigsWithAlignmentsReconstructed =
-                FilterLongReadAlignmentsSAMSpark.filterByScore(reads, header, nonCanonicalChromosomeNamesFile, localLogger)
+                FilterLongReadAlignmentsSAMSpark.filterByScore(reads, header, nonCanonicalChromosomeNamesFile, localLogger, 0.0)
                         .filter(lr -> lr.alignmentIntervals.size()>1).cache();
 
         // divert the long reads by their possible type of SV

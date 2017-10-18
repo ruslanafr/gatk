@@ -63,6 +63,11 @@ public final class ContigAlignmentsModifier {
     /**
      * Given {@code clipLengthOnRead} to be clipped from an aligned contig's {@link AlignmentInterval} {@code input},
      * return a modified {@link AlignmentInterval} with the requested number of bases clipped away and ref span recomputed.
+     * <p>
+     *     Note that the returned AlignmentInterval will have its {@code NM} set to {@link AlignmentInterval#NO_NM}
+     *     whereas its {@code AS} and mapping quality are simply copied from the input alignment
+     *     (recalculating them doesn't payoff at this stage, and makes the alignment filtering step more complicated since they are used there)
+     * </p>
      * @param input                 alignment to be modified (record not modified in place)
      * @param clipLengthOnRead      number of read bases to be clipped away
      * @param clipFrom3PrimeEnd     to clip from the 3' end of the read or not
@@ -82,8 +87,7 @@ public final class ContigAlignmentsModifier {
             newTigEnd   = input.endInAssembledContig;
         }
         return new AlignmentInterval(result._1, newTigStart, newTigEnd, result._2, input.forwardStrand, input.mapQual,
-                StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection.MISSING_NM,
-                input.alnScore, input.alnModType);
+                AlignmentInterval.NO_NM, input.alnScore, input.alnModType);
     }
 
     /**

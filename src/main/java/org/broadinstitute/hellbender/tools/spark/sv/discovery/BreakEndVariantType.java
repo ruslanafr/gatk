@@ -62,6 +62,13 @@ public abstract class BreakEndVariantType extends SvType {
     }
 
     //==================================================================================================================
+
+    /**
+     * Breakend variant type for inversion suspects: those with novel adjacency between two reference locations
+     * on the same chromosome but the novel adjacency brings them together in a strand-switch fashion.
+     * This is to be distinguished from the more general "translocation" breakends, which are novel adjacency between
+     * reference locations without strand switch if the reference bases are from the same chromosome.
+     */
     public static final class InvSuspectBND extends BreakEndVariantType {
         /**
          * for breakends, there's a concept of partner (see VCF spec) relationship between two reference bases.
@@ -80,31 +87,25 @@ public abstract class BreakEndVariantType extends SvType {
         public static Tuple2<BreakEndVariantType, BreakEndVariantType> getOrderedMates(final NovelAdjacencyReferenceLocations narl,
                                                                                        final ReferenceMultiSource reference) {
 
-            final BreakEndVariantType bkpt_1, bkpt_2;
+            // inversion breakend formatted records have "bracketPointsLeft" "basesFirst" taking the same value (see spec)
+            final boolean isInv55Suspect;
             if (narl.strandSwitch == StrandSwitch.FORWARD_TO_REVERSE) { // INV55, leftHalfInPartnerPair
-                bkpt_1 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, true),
-                        extractBasesForAltAllele(narl, true, reference),
-                        getMateRefLoc(narl, true),
-                        true, true, true);
-                bkpt_2 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, false),
-                        extractBasesForAltAllele(narl, false, reference),
-                        getMateRefLoc(narl, false),
-                        true, true, false);
+                isInv55Suspect = true;
             } else if (narl.strandSwitch == StrandSwitch.REVERSE_TO_FORWARD){
-                bkpt_1 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, true),
-                        extractBasesForAltAllele(narl, true, reference),
-                        getMateRefLoc(narl, true),
-                        false, false, true);
-                bkpt_2 = new BreakEndVariantType.InvSuspectBND(getIDString(narl, false),
-                        extractBasesForAltAllele(narl, false, reference),
-                        getMateRefLoc(narl, false),
-                        false, false, false);
+                isInv55Suspect = false;
             } else {
-                throw new GATKException("Wrong type of novel adjacency sent to wrong analysis pathway: no strand-switch being sent to strand-switch path. \n" +
-                        narl.toString());
+                throw new GATKException("Wrong type of novel adjacency sent to wrong analysis pathway: " +
+                        "no strand-switch being sent to strand-switch path. \n" + narl.toString());
             }
-
-            return new Tuple2<>(bkpt_1, bkpt_2);
+            final BreakEndVariantType upstreamBreakpoint = new BreakEndVariantType.InvSuspectBND(getIDString(narl, true),
+                    extractBasesForAltAllele(narl, true, reference),
+                    getMateRefLoc(narl, true),
+                    isInv55Suspect, isInv55Suspect, true);
+            final BreakEndVariantType downstreamBreakpoint = new BreakEndVariantType.InvSuspectBND(getIDString(narl, false),
+                    extractBasesForAltAllele(narl, false, reference),
+                    getMateRefLoc(narl, false),
+                    isInv55Suspect, isInv55Suspect, false);
+            return new Tuple2<>(upstreamBreakpoint, downstreamBreakpoint);
         }
 
         static byte[] extractBasesForAltAllele(final NovelAdjacencyReferenceLocations narl, final boolean forUpstreamLoc,

@@ -76,13 +76,13 @@ public class FilterLongReadAlignmentsSAMSparkUnitTest extends BaseTest {
         final double equallyGoodOrBetterScore = FilterLongReadAlignmentsSAMSpark.computeScoreOfConfiguration(configurationEquallyGoodOrBetter, canonicalChromosomes, 60);
         assertTrue( scoreOne < equallyGoodOrBetterScore || scoreOne - equallyGoodOrBetterScore <= Math.ulp(equallyGoodOrBetterScore));
 
-        assertEquals(FilterLongReadAlignmentsSAMSpark.pickBestConfigurations(contig, canonicalChromosomes).size(), expectedConfigurationCount);
+        assertEquals(FilterLongReadAlignmentsSAMSpark.pickBestConfigurations(contig, canonicalChromosomes, 0.0).size(), expectedConfigurationCount);
 
         if (expectedConfigurationCount == 1) {
             final AlignedContig tig =
                     FilterLongReadAlignmentsSAMSpark.filterAndSplitGappedAI(
                             SparkContextFactory.getTestSparkContext().parallelize(Collections.singletonList(contig))
-                            , null, null).collect().get(0);
+                            , null, null, 0.0).collect().get(0);
             assertEquals(tig.alignmentIntervals.size(), expectedAICount,
                     tig.alignmentIntervals.stream().map(AlignmentInterval::toPackedString).collect(Collectors.toList()).toString());
         }

@@ -81,7 +81,6 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
         final AlignmentInterval intervalOne = contigWith2AIMappedToSameChrAndStrandSwitch.alignmentIntervals.get(0),
                                 intervalTwo = contigWith2AIMappedToSameChrAndStrandSwitch.alignmentIntervals.get(1);
 
-        // TODO: 8/28/17 this default empty insertion mapping treatment is temporary and should be fixed later
         return new Tuple2<>(new ChimericAlignment(intervalOne, intervalTwo, EMPTY_INSERTION_MAPPINGS,
                 contigWith2AIMappedToSameChrAndStrandSwitch.contigName, referenceDictionary), contigWith2AIMappedToSameChrAndStrandSwitch.contigSequence);
     }

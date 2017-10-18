@@ -17,8 +17,8 @@ public final class DataprocTestUtils {
      * @return the value of the GCLOUD environment variable if present, or "gcloud"
      */
     public static String getGCloudPath(){
-        final String gcloudEnv = System.getenv("GCLOUD");
-        return gcloudEnv == null ? "gcloud" : gcloudEnv;
+        final String gcloudBinDir = System.getenv("GCLOUD");
+        return gcloudBinDir == null ? "gcloud" : gcloudBinDir + "/gcloud";
     }
 
     /**

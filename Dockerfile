@@ -4,7 +4,7 @@ FROM broadinstitute/gatk:gatkbase-1.2
 ADD . /gatk
 
 WORKDIR /gatk
-RUN /gatk/gradlew clean compileTestJava installAll localJar
+RUN /gatk/gradlew clean compileTestJava installAll localJar -Drelease=true
 
 WORKDIR /root
 

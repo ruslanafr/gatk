@@ -167,7 +167,7 @@ public class CollectDataForReadOrientationFilter extends LocusWalker {
         final Nucleotide altBase = Nucleotide.valueOf(BaseUtils.baseIndexToSimpleBase(altBaseIndex));
 
         final int[] altF1R2Counts = new int[4];
-        for (Nucleotide base : Arrays.asList(Nucleotide.A, Nucleotide.C, Nucleotide.G, Nucleotide.G)){
+        for (Nucleotide base : Arrays.asList(Nucleotide.A, Nucleotide.C, Nucleotide.G, Nucleotide.T)){
             altF1R2Counts[base.ordinal()] = pileup.getNumberOfElements(pe ->
                     Nucleotide.valueOf(pe.getBase()) == base && ! ReadUtils.isF2R1(pe.getRead()));
         }

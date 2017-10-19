@@ -56,14 +56,15 @@ public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
     private final Set<String> expectedAssemblyQNames = loadExpectedQNames(asmQNamesFile);
     private final List<SVInterval> expectedIntervalList = Arrays.asList(testIntervals);
 
-    @Test(groups = "spark")
+    @Test(groups = "sv")
     public void getIntervalsTest() {
         final List<SVInterval> actualIntervals =
-                FindBreakpointEvidenceSpark.getIntervalsAndEvidenceTargetLinks(params,broadcastMetadata,broadcastExternalEvidence,header,reads,filter,logger)._1();
+                FindBreakpointEvidenceSpark.getIntervalsAndEvidenceTargetLinks(params,broadcastMetadata,
+                        broadcastExternalEvidence,header,reads,filter,logger)._1();
         Assert.assertEquals(actualIntervals, expectedIntervalList);
     }
 
-    @Test(groups = "spark")
+    @Test(groups = "sv")
     public void getQNamesTest() {
         final Set<String> actualQNames = new HashSet<>();
         FindBreakpointEvidenceSpark.getQNames(params, ctx, broadcastMetadata, expectedIntervalList, reads, filter)
@@ -73,7 +74,7 @@ public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
         Assert.assertEquals(actualQNames, expectedQNames);
     }
 
-    @Test(groups = "spark")
+    @Test(groups = "sv")
     public void getKmerIntervalsTest() {
         final SVKmer kmer = new SVKmerLong(params.kSize);
         final Set<SVKmer> killSet = new HashSet<>();
@@ -99,9 +100,10 @@ public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
                 .forEach(qNameMultiMap::add);
         final HopscotchUniqueMultiMap<SVKmer, Integer, KmerAndInterval> actualKmerAndIntervalSet =
                 new HopscotchUniqueMultiMap<>(
-                        FindBreakpointEvidenceSpark.getKmerIntervals(params, readMetadataExpected, ctx, qNameMultiMap, 1, new HopscotchSet<>(0),
+                        FindBreakpointEvidenceSpark.getKmerIntervals(params, readMetadataExpected, ctx, qNameMultiMap,
+                                1, new HopscotchSet<>(0),
                                 reads, filter, logger)._2());
-        final Set<SVKmer> actualKmers = new HashSet<SVKmer>(SVUtils.hashMapCapacity(actualKmerAndIntervalSet.size()));
+        final Set<SVKmer> actualKmers = new HashSet<>(SVUtils.hashMapCapacity(actualKmerAndIntervalSet.size()));
         for ( final KmerAndInterval kmerAndInterval : actualKmerAndIntervalSet ) {
             actualKmers.add(kmerAndInterval.getKey());
         }
@@ -109,7 +111,7 @@ public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
         Assert.assertEquals(actualKmers, expectedKmers);
     }
 
-    @Test(groups = "spark")
+    @Test(groups = "sv")
     public void getAssemblyQNamesTest() throws FileNotFoundException {
         final Set<SVKmer> expectedKmers = SVUtils.readKmersFile(params.kSize, kmersFile, new SVKmerLong(params.kSize));
         final HopscotchUniqueMultiMap<SVKmer, Integer, KmerAndInterval> kmerAndIntervalSet =
@@ -118,14 +120,14 @@ public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
                 map(kmer -> new KmerAndInterval(kmer, 0))
                 .forEach(kmerAndIntervalSet::add);
         final Set<String> actualAssemblyQNames = new HashSet<>();
-        FindBreakpointEvidenceSpark.getAssemblyQNames(params, ctx, kmerAndIntervalSet, reads, filter, logger)
+        FindBreakpointEvidenceSpark.getAssemblyQNames(params, ctx, kmerAndIntervalSet, reads, filter)
                 .stream()
                 .map(QNameAndInterval::getKey)
                 .forEach(actualAssemblyQNames::add);
         Assert.assertEquals(actualAssemblyQNames, expectedAssemblyQNames);
     }
 
-    @Test(groups = "spark")
+    @Test(groups = "sv")
     public void generateFastqsTest() {
         final HopscotchUniqueMultiMap<String, Integer, QNameAndInterval> qNameMultiMap =
                 new HopscotchUniqueMultiMap<>(expectedAssemblyQNames.size());
@@ -139,9 +141,9 @@ public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
     public void readExternalEvidenceTest() {
         final int evidenceWeight = params.externalEvidenceWeight;
         final int evidenceSlop = params.externalEvidenceUncertainty;
-        ReadMetadata.PartitionBounds bounds = readMetadataExpected.getPartitionBounds(0);
-        SVInterval interval1 = new SVInterval(bounds.getFirstContigID(), bounds.getFirstStart(), bounds.getFirstStart()+100);
-        SVInterval interval2 = new SVInterval(bounds.getLastContigID(), bounds.getLastStart(), bounds.getLastStart()+200);
+        final ReadMetadata.PartitionBounds bounds = readMetadataExpected.getPartitionBounds(0);
+        final SVInterval interval1 = new SVInterval(bounds.getFirstContigID(), bounds.getFirstStart(), bounds.getFirstStart()+100);
+        final SVInterval interval2 = new SVInterval(bounds.getLastContigID(), bounds.getLastStart(), bounds.getLastStart()+200);
         final File file = createTempFile("test", ".bed");
         try ( final FileWriter writer = new FileWriter(file) ) {
             writer.write(readMetadataExpected.getContigName(interval1.getContig()) + "\t" + (interval1.getStart()-1) + "\t" + interval1.getEnd() + "\n");
@@ -178,7 +180,7 @@ public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
         public AlignedAssemblyOrExcuse
                     apply( final Tuple2<Integer,List<SVFastqUtils.FastqRead>> intervalAndFastqBytes ) {
             final List<SVFastqUtils.FastqRead> fastqList = intervalAndFastqBytes._2();
-            Collections.sort(fastqList, Comparator.comparing(SVFastqUtils.FastqRead::getHeader));
+            fastqList.sort(Comparator.comparing(SVFastqUtils.FastqRead::getHeader));
             final File outputFile = createTempFile("output", ".fastq");
             try {
                 SVFastqUtils.writeFastqFile(outputFile.getAbsolutePath() , fastqList.iterator());

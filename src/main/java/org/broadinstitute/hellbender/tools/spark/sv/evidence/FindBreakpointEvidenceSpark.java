@@ -34,7 +34,6 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import org.broadinstitute.hellbender.utils.spark.SparkUtils;
 import scala.Tuple2;
-import scala.Tuple3;
 
 import java.io.*;
 import java.util.*;
@@ -121,6 +120,7 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
         final List<SVInterval> intervals = evidenceScanResults.intervals;
         if ( intervals.isEmpty() ) return new AssembledEvidenceResults(
                 evidenceScanResults.readMetadata,
+                intervals,
                 new ArrayList<>(),
                 evidenceScanResults.evidenceTargetLinks);
 
@@ -137,8 +137,7 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
 
         // write a FASTQ file for each interval
         final FermiLiteAssemblyHandler fermiLiteAssemblyHandler =
-                new FermiLiteAssemblyHandler(params.alignerIndexImageFile, params.maxFASTQSize,
-                                                params.fastqDir, params.gfaDir);
+                new FermiLiteAssemblyHandler(params.alignerIndexImageFile, params.maxFASTQSize, params.fastqDir, params.gfaDir);
         alignedAssemblyOrExcuseList.addAll(
                 handleAssemblies(ctx, qNamesMultiMap, unfilteredReads, filter, intervals.size(),
                         params.includeMappingLocation, fermiLiteAssemblyHandler));
@@ -158,16 +157,22 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
                 params.assembliesSortOrder == SAMFileHeader.SortOrder.queryname);
         log("Wrote SAM file of aligned contigs.", logger);
 
-        return new AssembledEvidenceResults(evidenceScanResults.readMetadata, alignedAssemblyOrExcuseList, evidenceScanResults.evidenceTargetLinks);
+        return new AssembledEvidenceResults(evidenceScanResults.readMetadata, intervals, alignedAssemblyOrExcuseList,
+                                            evidenceScanResults.evidenceTargetLinks);
     }
 
     public static final class AssembledEvidenceResults {
         final ReadMetadata readMetadata;
+        final List<SVInterval> assembledIntervals;
         final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList;
         final List<EvidenceTargetLink> evidenceTargetLinks;
 
-        public AssembledEvidenceResults(final ReadMetadata readMetadata, final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList, final List<EvidenceTargetLink> evidenceTargetLinks) {
+        public AssembledEvidenceResults(final ReadMetadata readMetadata,
+                                        final List<SVInterval> assembledIntervals,
+                                        final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList,
+                                        final List<EvidenceTargetLink> evidenceTargetLinks) {
             this.readMetadata = readMetadata;
+            this.assembledIntervals = assembledIntervals;
             this.alignedAssemblyOrExcuseList = alignedAssemblyOrExcuseList;
             this.evidenceTargetLinks = evidenceTargetLinks;
         }
@@ -175,6 +180,8 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
         public ReadMetadata getReadMetadata() {
             return readMetadata;
         }
+
+        public List<SVInterval> getAssembledIntervals() { return assembledIntervals; }
 
         public List<AlignedAssemblyOrExcuse> getAlignedAssemblyOrExcuseList() {
             return alignedAssemblyOrExcuseList;
@@ -378,7 +385,7 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
         final HopscotchUniqueMultiMap<SVKmer, Integer, KmerAndInterval> kmersAndIntervals =
                 removeUbiquitousKmers(params, readMetadata, ctx, kmerIntervalsAndDispositions._2(), unfilteredReads, filter, logger);
 
-        qNamesMultiMap.addAll(getAssemblyQNames(params, ctx, kmersAndIntervals, unfilteredReads, filter, logger));
+        qNamesMultiMap.addAll(getAssemblyQNames(params, ctx, kmersAndIntervals, unfilteredReads, filter));
 
         if ( params.qNamesAssemblyFile != null ) {
             QNameAndInterval.writeQNames(params.qNamesAssemblyFile, qNamesMultiMap);
@@ -493,16 +500,16 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
 
         @Override
         public AlignedAssemblyOrExcuse apply( final Tuple2<Integer, List<SVFastqUtils.FastqRead>> intervalAndReads ) {
+            final int intervalID = intervalAndReads._1();
             final List<SVFastqUtils.FastqRead> readsList = intervalAndReads._2();
 
             final int fastqSize = readsList.stream().mapToInt(FastqRead -> FastqRead.getBases().length).sum();
             if (fastqSize > maxFastqSize) {
-                return new AlignedAssemblyOrExcuse(intervalAndReads._1(),
-                        "no assembly -- too big (" + fastqSize + " bytes).");
+                return new AlignedAssemblyOrExcuse(intervalID, "no assembly -- too big (" + fastqSize + " bytes).");
             }
             if ( fastqDir != null ) {
-                final String fastqName = String.format("%s/%s.fastq",fastqDir, AlignedAssemblyOrExcuse.formatAssemblyID(intervalAndReads._1()));
-                final ArrayList<SVFastqUtils.FastqRead> sortedReads = new ArrayList<>(intervalAndReads._2());
+                final String fastqName = String.format("%s/%s.fastq",fastqDir, AlignedAssemblyOrExcuse.formatAssemblyID(intervalID));
+                final ArrayList<SVFastqUtils.FastqRead> sortedReads = new ArrayList<>(readsList);
                 sortedReads.sort(Comparator.comparing(SVFastqUtils.FastqRead::getHeader));
                 SVFastqUtils.writeFastqFile(fastqName, sortedReads.iterator());
             }
@@ -510,7 +517,7 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
             final FermiLiteAssembly assembly = new FermiLiteAssembler().createAssembly(readsList);
             final int secondsInAssembly = (int)((System.currentTimeMillis() - timeStart + 500)/1000);
             if ( gfaDir != null ) {
-                final String gfaName =  String.format("%s/%s.gfa",gfaDir, AlignedAssemblyOrExcuse.formatAssemblyID(intervalAndReads._1()));
+                final String gfaName =  String.format("%s/%s.gfa",gfaDir, AlignedAssemblyOrExcuse.formatAssemblyID(intervalID));
                 try ( final OutputStream os = BucketUtils.createFile(gfaName) ) {
                     assembly.writeGFA(os);
                 }
@@ -525,7 +532,7 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
             try ( final BwaMemAligner aligner = new BwaMemAligner(BwaMemIndexCache.getInstance(alignerIndexFile)) ) {
                 aligner.setIntraCtgOptions();
                 final List<List<BwaMemAlignment>> alignments = aligner.alignSeqs(tigSeqs);
-                return new AlignedAssemblyOrExcuse(intervalAndReads._1(), assembly, secondsInAssembly, alignments);
+                return new AlignedAssemblyOrExcuse(intervalID, assembly, secondsInAssembly, alignments);
             }
         }
     }
@@ -578,7 +585,7 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
                             final IntPair intPair = pair._2();
                             return intPair.int1() > maxPartitionCount || intPair.int2() > maxCount;
                         })
-                        .map(pair -> pair._1())
+                        .map(Tuple2::_1)
                         .collect();
 
         for ( final SVKmer kmer : ubiquitousKmers ) {
@@ -604,8 +611,7 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
             final JavaSparkContext ctx,
             final HopscotchUniqueMultiMap<SVKmer, Integer, KmerAndInterval> kmerMultiMap,
             final JavaRDD<GATKRead> unfilteredReads,
-            final SVReadFilter filter,
-            final Logger logger ) {
+            final SVReadFilter filter ) {
         final Broadcast<HopscotchUniqueMultiMap<SVKmer, Integer, KmerAndInterval>> broadcastKmersAndIntervals =
                 ctx.broadcast(kmerMultiMap);
 
@@ -674,10 +680,10 @@ public final class FindBreakpointEvidenceSpark extends GATKSparkTool {
         }
         final Set<Integer> intervalsToKill = new HashSet<>();
         final List<AlignedAssemblyOrExcuse> intervalDispositions = new ArrayList<>();
-        for ( int idx = 0; idx != nIntervals; ++idx ) {
+        for ( int idx = 0; idx != intervalKmerCounts.length; ++idx ) {
             if ( intervalKmerCounts[idx] < params.minKmersPerInterval ) {
                 intervalsToKill.add(idx);
-                intervalDispositions.add(new AlignedAssemblyOrExcuse(idx, "FASTQ not written -- too few kmers"));
+                intervalDispositions.add(new AlignedAssemblyOrExcuse(idx,"FASTQ not written -- too few kmers"));
             }
         }
 

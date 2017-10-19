@@ -123,7 +123,7 @@ public final class FilterLongReadAlignmentsSAMSpark extends GATKSparkTool {
 
         // parse SAM records transform to AlignmentInterval format and split gapped alignment
         final JavaRDD<AlignedContig> parsedContigAlignmentsWithGapSplit
-                = new SAMFormattedContigAlignmentParser(longReads, header, true, toolLogger).getAlignedContigs()
+                = new SAMFormattedContigAlignmentParser(longReads, header, true).getAlignedContigs()
                 .filter(contig -> contig.alignmentIntervals.size()>1).cache();
 
         // delegates to ChimericAlignment.parseOneContig()
@@ -159,7 +159,7 @@ public final class FilterLongReadAlignmentsSAMSpark extends GATKSparkTool {
         toolLogger.info( "Processing this many raw alignments: " + longReads.count() );
 
         final JavaRDD<AlignedContig> parsedContigAlignments
-                = new SAMFormattedContigAlignmentParser(longReads, header, false, toolLogger)
+                = new SAMFormattedContigAlignmentParser(longReads, header, false)
                 .getAlignedContigs()
                 .filter(FilterLongReadAlignmentsSAMSpark::contigFilter).cache();
 

@@ -7,6 +7,7 @@ import com.esotericsoftware.kryo.io.Output;
 import com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMReadGroupRecord;
+import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.SAMSequenceRecord;
 import org.apache.logging.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
@@ -51,7 +52,7 @@ public class ReadMetadata {
                          final SVReadFilter filter,
                          final Logger logger ) {
         this.crossContigIgnoreSet = crossContigIgnoreSet;
-        contigNameToID = buildContigNameToIDMap(header);
+        contigNameToID = buildContigNameToIDMap(header.getSequenceDictionary());
         contigIDToName = buildContigIDToNameArray(contigNameToID);
         readGroupToLibrary = buildGroupToLibMap(header);
         final Map<String, String> grpToLib = readGroupToLibrary;
@@ -102,7 +103,7 @@ public class ReadMetadata {
                   final LibraryStatistics stats, final PartitionBounds[] partitionBounds,
                   final long nReads, final long maxReadsInPartition, final int coverage ) {
         this.crossContigIgnoreSet = crossContigIgnoreSet;
-        contigNameToID = buildContigNameToIDMap(header);
+        contigNameToID = buildContigNameToIDMap(header.getSequenceDictionary());
         contigIDToName = buildContigIDToNameArray(contigNameToID);
         readGroupToLibrary = buildGroupToLibMap(header);
         this.nReads = nReads;
@@ -291,8 +292,8 @@ public class ReadMetadata {
         return accumulator;
     }
 
-    public static Map<String, Integer> buildContigNameToIDMap( final SAMFileHeader header ) {
-        final List<SAMSequenceRecord> contigs = header.getSequenceDictionary().getSequences();
+    public static Map<String, Integer> buildContigNameToIDMap( final SAMSequenceDictionary dictionary ) {
+        final List<SAMSequenceRecord> contigs = dictionary.getSequences();
         final Map<String, Integer> contigNameToID = new HashMap<>(SVUtils.hashMapCapacity(contigs.size()));
         final int nContigs = contigs.size();
         for ( int contigID = 0; contigID < nContigs; ++contigID ) {

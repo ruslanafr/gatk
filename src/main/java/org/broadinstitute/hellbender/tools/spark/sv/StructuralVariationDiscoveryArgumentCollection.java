@@ -179,6 +179,10 @@ public class StructuralVariationDiscoveryArgumentCollection implements Serializa
                 fullName = "fastaReference")
         public String fastaReference;
 
+        @Argument(doc = "vcf containing the true breakpoints used only for evaluation (not generation) of calls",
+                fullName = "truthVCF", optional = true)
+        public String truthVCF;
+
         @Argument(doc = "Minimum flanking alignment length", shortName = "minAlignLength",
                 fullName = "minAlignLength", optional = true)
         public Integer minAlignLength = DEFAULT_MIN_ALIGNMENT_LENGTH;
@@ -189,6 +193,8 @@ public class StructuralVariationDiscoveryArgumentCollection implements Serializa
         @Argument(doc = "Number of pieces of imprecise evidence necessary to call a variant in the absence of an assembled breakpoint.", fullName = "impreciseEvidenceVariantCallingThreshold")
         public int impreciseEvidenceVariantCallingThreshold = DEFAULT_IMPRECISE_EVIDENCE_VARIANT_CALLING_THRESHOLD;
 
+        @Argument(doc = "Breakpoint padding for evaluation against truth data.", fullName = "truthIntervalPadding", optional = true)
+        public int truthIntervalPadding = 50;
     }
 
 }

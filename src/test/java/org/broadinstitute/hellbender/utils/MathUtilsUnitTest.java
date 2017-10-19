@@ -1095,7 +1095,5 @@ public final class MathUtilsUnitTest extends BaseTest {
                                              final double expected){
         final double EPSILON = 1e-3;
         Assert.assertEquals(MathUtils.log10BetaBinomialDensity(k, n, alpha, beta), expected, EPSILON);
-
-
     }
 }

@@ -23,7 +23,7 @@ import java.util.*;
 public class CollectDataForReadOrientationFilterIntegrationTest extends CommandLineProgramTest {
 
     /**
-     * Test the tool on real bam to make sure that it does not crash
+     * Test the tool on a real bam to make sure that it does not crash
      */
     @Test
     public void testOnRealBam() {
@@ -38,8 +38,6 @@ public class CollectDataForReadOrientationFilterIntegrationTest extends CommandL
         };
 
         runCommandLine(args);
-
-
     }
 
     @Test
@@ -170,7 +168,6 @@ public class CollectDataForReadOrientationFilterIntegrationTest extends CommandL
                 ReadUtils.createCommonSAMWriter(samFile, null, samHeader, true, false, false));
         reads.forEach(r -> writer.addRead(r));
         writer.close(); // closing the writer writes to the file
-
 
         return samFile;
     }

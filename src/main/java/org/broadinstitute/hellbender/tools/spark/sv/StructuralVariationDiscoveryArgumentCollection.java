@@ -185,12 +185,18 @@ public class StructuralVariationDiscoveryArgumentCollection implements Serializa
                 fullName = "minAlignLength", optional = true)
         public Integer minAlignLength = DEFAULT_MIN_ALIGNMENT_LENGTH;
 
+        @Argument(doc = "vcf containing the true breakpoints used only for evaluation (not generation) of calls",
+                fullName = "truthVCF", optional = true)
+        public String truthVCF;
+
         @Argument(doc = "Uncertainty in overlap of assembled breakpoints and evidence target links.", fullName = "assemblyImpreciseEvidenceOverlapUncertainty")
         public int assemblyImpreciseEvidenceOverlapUncertainty = DEFAULT_ASSEMBLED_IMPRECISE_EVIDENCE_OVERLAP_UNCERTAINTY;
 
         @Argument(doc = "Number of pieces of imprecise evidence necessary to call a variant in the absence of an assembled breakpoint.", fullName = "impreciseEvidenceVariantCallingThreshold")
         public int impreciseEvidenceVariantCallingThreshold = DEFAULT_IMPRECISE_EVIDENCE_VARIANT_CALLING_THRESHOLD;
 
+        @Argument(doc = "Breakpoint padding for evaluation against truth data.", fullName = "truthIntervalPadding", optional = true)
+        public int truthIntervalPadding = 50;
     }
 
 }

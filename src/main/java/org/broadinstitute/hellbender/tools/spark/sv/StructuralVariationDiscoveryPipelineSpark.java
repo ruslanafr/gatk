@@ -53,11 +53,11 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
     private String vcfOutputFileName;
 
     @ArgumentCollection
-    private FindBreakpointEvidenceSparkArgumentCollection evidenceAndAssemblyArgs
+    private final FindBreakpointEvidenceSparkArgumentCollection evidenceAndAssemblyArgs
             = new FindBreakpointEvidenceSparkArgumentCollection();
 
     @ArgumentCollection
-    private DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection discoverStageArgs
+    private final DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection discoverStageArgs
             = new DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection();
 
     @Override
@@ -84,7 +84,7 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
 
         // parse the contig alignments and extract necessary information
         final JavaRDD<AlignedContig> parsedAlignments =
-                new InMemoryAlignmentParser(ctx, assembledEvidenceResults.getAlignedAssemblyOrExcuseList(), header, localLogger).getAlignedContigs();
+                new InMemoryAlignmentParser(ctx, assembledEvidenceResults.getAlignedAssemblyOrExcuseList(), header).getAlignedContigs();
         // todo: when we call imprecise variants don't return here
         if(parsedAlignments.isEmpty()) return;
 
@@ -95,6 +95,7 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
         DiscoverVariantsFromContigAlignmentsSAMSpark
                 .discoverVariantsAndWriteVCF(
                         parsedAlignments,
+                        assembledEvidenceResults.getAssembledIntervals(),
                         discoverStageArgs,
                         ctx.broadcast(getReference()),
                         vcfOutputFileName,
@@ -126,17 +127,14 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
         private final JavaSparkContext ctx;
         private final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList;
         private final SAMFileHeader header;
-        private final Logger toolLogger;
 
 
         InMemoryAlignmentParser(final JavaSparkContext ctx,
                                 final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList,
-                                final SAMFileHeader header,
-                                final Logger toolLogger) {
+                                final SAMFileHeader header) {
             this.ctx = ctx;
             this.alignedAssemblyOrExcuseList = alignedAssemblyOrExcuseList;
             this.header = header;
-            this.toolLogger = toolLogger;
         }
 
         @Override
@@ -146,7 +144,7 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
             //                           which is the route if the discovery pipeline is run by "FindBreakpointEvidenceSpark -> write sam file -> load sam file -> DiscoverVariantsFromContigAlignmentsSAMSpark"
             //                         , the other is to go directly "BwaMemAlignment -> AlignmentInterval" by calling into {@code filterAndConvertToAlignedContigDirect()}, which is faster but not used here.
             //                         ; the two routes are tested to be generating the same output via {@code AlignedContigGeneratorUnitTest#testConvertAlignedAssemblyOrExcuseToAlignedContigsDirectAndConcordanceWithSAMRoute()}
-            return filterAndConvertToAlignedContigViaSAM(alignedAssemblyOrExcuseList, header, ctx, toolLogger);
+            return filterAndConvertToAlignedContigViaSAM(alignedAssemblyOrExcuseList, header, ctx);
         }
 
         /**
@@ -158,8 +156,7 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
         @VisibleForTesting
         public static JavaRDD<AlignedContig> filterAndConvertToAlignedContigViaSAM(final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList,
                                                                                    final SAMFileHeader header,
-                                                                                   final JavaSparkContext ctx,
-                                                                                   final Logger toolLogger) {
+                                                                                   final JavaSparkContext ctx) {
 
             final SAMFileHeader cleanHeader = new SAMFileHeader(header.getSequenceDictionary());
             final List<String> refNames = AlignedAssemblyOrExcuse.getRefNames(header);
@@ -190,13 +187,13 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
                                             StructuralVariationDiscoveryArgumentCollection
                                                     .DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection
                                                     .GAPPED_ALIGNMENT_BREAK_DEFAULT_SENSITIVITY,
-                                            true, toolLogger));
+                                            true));
         }
 
         /**
          * Filter out "failed" assemblies, unmapped and secondary (i.e. "XA") alignments, and
          * turn the alignments of contigs into custom {@link AlignmentInterval} format.
-         * Should be generating the same output as {@link #filterAndConvertToAlignedContigViaSAM(List, SAMFileHeader, JavaSparkContext, Logger)};
+         * Should be generating the same output as {@link #filterAndConvertToAlignedContigViaSAM(List, SAMFileHeader, JavaSparkContext)};
          * and currently this assertion is tested in {@see AlignedContigGeneratorUnitTest#testConvertAlignedAssemblyOrExcuseToAlignedContigsDirectAndConcordanceWithSAMRoute()}
          */
         @VisibleForTesting

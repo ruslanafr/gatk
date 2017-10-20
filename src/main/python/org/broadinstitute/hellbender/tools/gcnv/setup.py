@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='gcnv',
-    version='0.1.0',
+    version='0.2dev',
     author='Mehrtash Babadi',
     author_email='mehrtash@broadinstitute.org',
     packages=['gcnv'],

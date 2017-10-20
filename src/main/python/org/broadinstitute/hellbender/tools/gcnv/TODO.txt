@@ -1,0 +1,136 @@
+=============
+High priority
+=============
+
+- [NOT GOOD] drop psi adjustment term in NB
+    * the term is not necessary; will be captured by mean bias
+    * on the other hand, it ruins the mean bias prior
+
+- multi-threading for forward-backward
+
+- write model params and sample posteriors to disk
+
+- read model params from disk
+
+- a case-sample denoising model
+
+- a case-sample InferenceTask
+
+- generate sample summary statistics output and plot
+    - hmm data likelihood
+      Q: how does this scale with read depth? we need to scale that out
+    - bias factor likelihood
+    - ?
+
+- generate learning plots
+
+- port notebook to pycharm
+    * [DONE] model and inference
+    * pre-processor
+
+- generate simulated data
+    * a fraction of low-coverage targets
+    * a fraction of correlated dropouts (bad baits)
+    * GC bias
+    * a fraction of bi-allelic regions
+    * a fraction of multi-allelic regions
+    * smearing due to binning
+    * throw in a fraction of samples with aneuploidy
+
+- validate calls on simulated data
+    * aneuploidy detection
+    * low-coverage targets are not called as deletion
+    * GC bias is modelled properly
+    * bi- and multi-allelic regions are called properly
+
+- prior optimization
+    * think about the interaction between coherence length and prior
+
+- wall-clock and copy number concordance for different learning rates (w/ the same convergence criterion)
+    * on real data
+
+- use diptest p-values to adjust initial copy number priors
+    * idea: \pi = \alpha \pi_ref + (1 - \alpha) \pi_flat
+            \alpha = (p_dip)^k for some k; run simulations to find optimum k?
+    * implementation:
+        1. the preprocessor compiles a list of "target summary statistics"
+        2. a function takes the summary statistics and produces copy number priors (or class probabilities)
+           as a first attempt, we can use a flat prior for all suspicious regions
+        3. the first round of denoising ADVI with what we get from the diptest
+        4. cycle forward-backward and Bayesian CN prior update rule
+        5. we can increase a representative "inventory" of copy number priors if needed, e.g. by analyzing posteriors
+
+- replace theano.function inputs w/ theano.function.In(..., borrow=True)
+
+- replace tt.stack and python lists in calculating log_emission_stc with properly dimshuffled tensors
+
+- compute on GPU
+
+- accumulate log emission during ADVI iterations instead of posterior sampling
+    * only useful when doing exact posterior expectation
+
+- create a genome-wide blacklist for all CNV tools
+    * non-diploid CN in reference (perhaps we can handle this properly instead of blacklisting?)
+    * very low mappability
+    * regions near centromeres
+
+- [DONE] copy number prior inventory and Bayesian update
+
+- [DONE] the HMM must directly write to the shared tensors
+
+- [DONE] use random draws from q(c) instead of summing over all c states during learning
+    * [SLOW] try choice and multinomial, check which is faster, or if either takes << 1s
+    * ended up using argmax[q(c)] seems to work well
+
+- [DONE] adaptive emission posterior sampling
+    * sample in batches, calculate sd of posterior mean, stop when sd of mean is below a threshold
+
+- [DONE] a convergence criterion useful for high learning rates:
+    * [NOT GOOD] look at the sign changes of ELBO in the past N iterations; if converged, it must follow a
+      binomial distribution. stop if the z-score is below a given threshold.
+    * [NOT GOOD] compare sign changes w.r.t. mean
+    * [WORKED] linear regression, calculate smoothed elbo drop, compared to variance
+
+- [DONE] investigate the issue with ARD coefficients not diverging
+    * the issue was with the optimizer: adam and adamax both give better results
+
+- [DONE] play with PyMC3 minibatch
+    * in practice, little is gained in memory footprint and a lot is lost in training time
+
+- [DONE] single-sample sampling from emission posterior to reduce memory footprint
+    * didn't work, too slow
+
+- [NOT NECESSARY] initialization of W with random PCA
+    * it may even bias the inference and pick the wrong solution
+
+- [DIFFICULT] posterior sampling can still be optimized, perhaps by combining the adaptive sampler and the HMM
+  into one theano function?
+
+=============
+Pre-processor
+=============
+
+- warn and/or remove samples with anomalously high over-dispersion
+
+- warn and/or remove samples with aneuploidy
+
+- [DONE] perform the dip/KS test after a naive GC correction to see if it helps
+    * helped a bit but not much
+
+
+================
+Ideas to explore
+================
+
+- effective emission to take into account coverage smearing
+
+- HMM prior optimization from data
+    * given the log emission probability, assume priors over (1) the copy number prior
+      and (2) coherence length of each copy number state. Perhaps we can optimize these?
+    * I expect this to be very slow in practice, given the complexity of the c-marginalized model.
+    * perhaps do this for a small region of the genome and use as "resource"?
+
+- L_p norm with 0 < p < 2 instead of L_2 norm for the bias factor term
+  the idea is that L_p norms with 0 < p < 2 tend to pick up bias factors that contribute
+  to _all_ samples and will make it robust to outliers (i.e. high-variance samples)
+

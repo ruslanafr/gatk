@@ -1,8 +1,6 @@
 package org.broadinstitute.hellbender.tools.spark.pipelines;
 
-//import java.util.StringJoiner;
 import htsjdk.samtools.SAMFileHeader;
-//import htsjdk.samtools.SAMRecord;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -30,11 +28,6 @@ public class RemoveSeqInfoSpark extends GATKSparkTool {
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME, fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             optional = false)
     public String output;
-
-    //@Argument(doc = "Should we output read names to a separate file?",
-    //        shortName = "ori", fullName = "outputReadSeqInfo",
-    //        optional = true)
-    //public Boolean outputReadSeqInfo = false;
 
 
     @Override
@@ -66,13 +59,4 @@ public class RemoveSeqInfoSpark extends GATKSparkTool {
     }
 
 
-    //private String returnReadSeqInfo(GATKRead read) {
-    //    final SAMRecord readSAM = read.convertToSAMRecord(getHeaderForReads());
-    //    final StringJoiner sj = new StringJoiner("\t");
-    //    sj.add(read.getName())
-    //            .add(Integer.toString(readSAM.getFlags()))
-    //            .add(read.getBasesString())
-    //            .add(readSAM.getBaseQualityString());
-    //    return sj.toString();
-    //}
 }

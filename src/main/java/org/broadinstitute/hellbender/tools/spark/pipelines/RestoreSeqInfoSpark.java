@@ -8,14 +8,13 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
-import org.broadinstitute.hellbender.cmdline.programgroups.TestSparkProgramGroup;
+import org.broadinstitute.hellbender.cmdline.programgroups.SparkProgramGroup;
 import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
 import org.broadinstitute.hellbender.engine.spark.datasources.ReadsSparkSource;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import scala.Tuple2;
-
-
 
 /**
  * The goal of this program is to load two BAMs belonging to the same sample but aligned to two different references.
@@ -23,7 +22,8 @@ import scala.Tuple2;
  * This tool uses the second BAM to restore the missing SEQ and QUAL info.
  */
 @CommandLineProgramProperties(summary = "Restores missing SEQ and QUAL info to the input BAM", oneLineSummary = "Restores missing SEQ and QUAL info to the input BAM",
-        programGroup = TestSparkProgramGroup.class)
+        programGroup = SparkProgramGroup.class)
+@DocumentedFeature
 @BetaFeature
 public final class RestoreSeqInfoSpark extends GATKSparkTool {
     private static final long serialVersionUID = 1L;
@@ -43,7 +43,7 @@ public final class RestoreSeqInfoSpark extends GATKSparkTool {
         final SAMRecord readSAM = read.convertToSAMRecord(header);
         final Integer readFlag = readSAM.getFlags();
 
-        final Integer mate_direction_flag_options = 0xc;
+        final Integer mate_direction_flag_options = 0x9f0;
         final Integer finalReadFlag = readFlag & mate_direction_flag_options;
 
         final Tuple2<String, Integer> nameTuple = new Tuple2<>(readName, finalReadFlag);
@@ -61,32 +61,35 @@ public final class RestoreSeqInfoSpark extends GATKSparkTool {
 
         final JavaRDD<GATKRead> ref_reads =  refReadsSource.getParallelReads(refBAM, null, null, bamPartitionSplitSize);
 
-
-
-        JavaPairRDD<Tuple2<String, Integer>, GATKRead> namedRefReads = ref_reads.mapToPair(read -> getNamedReadTuple(read, refReadsHeader)).groupByKey().mapValues(groupOfReads -> groupOfReads.iterator().next());
+        JavaPairRDD<Tuple2<String, Integer>, GATKRead> namedRefReads = ref_reads.mapToPair(read -> getNamedReadTuple(read, refReadsHeader))
+                .reduceByKey((x,y) -> x);
         JavaPairRDD<Tuple2<String, Integer>, GATKRead> namedReadsToFix = reads_to_fix.mapToPair(read -> getNamedReadTuple(read, getHeaderForReads()));
 
+        //put aside the reads that need to be in our final file but are not in the reference
+        JavaPairRDD<Tuple2<String, Integer>, GATKRead> namedReadsNotInReference = namedReadsToFix.subtractByKey(namedRefReads);
+        JavaRDD<GATKRead> readsNotInReference = namedReadsNotInReference.map((Tuple2<Tuple2<String, Integer>, GATKRead> pair) -> pair._2);
 
-        JavaPairRDD<Tuple2<String, Integer>, Tuple2<Iterable<GATKRead>, Iterable<GATKRead>>> cogroupedReads = namedRefReads.cogroup(namedReadsToFix, getRecommendedNumReducers());
 
-        JavaRDD<GATKRead> finalReads = cogroupedReads.mapValues((Tuple2<Iterable<GATKRead>, Iterable<GATKRead>> readPair) -> {
-            //there's no reference read for this read_to_fix, which means that the read_to_fix has lost it's info forever
-            if (!readPair._1.iterator().hasNext() && readPair._2.iterator().hasNext()) {
-                return readPair._2.iterator().next();
-            }
+        JavaPairRDD<Tuple2<String, Integer>, GATKRead> namedReadsThatAreInReference = namedReadsToFix.subtractByKey(namedReadsNotInReference);
+
+        JavaPairRDD<Tuple2<String, Integer>, Tuple2<GATKRead, GATKRead>> intersectionReads = namedReadsThatAreInReference.join(namedRefReads);
+
+        JavaRDD<GATKRead> finalFixedReads = intersectionReads.mapValues((Tuple2<GATKRead, GATKRead> readPair) -> {
             //we found a match
-            if (readPair._1.iterator().hasNext() && readPair._2.iterator().hasNext()){
-                GATKRead refRead = readPair._1.iterator().next();
-                GATKRead readToFix = readPair._2.iterator().next();
+            if (readPair._1.isSupplementaryAlignment()) {
+                return readPair._1;
+            }
+            else {
+                GATKRead refRead = readPair._2;
+                GATKRead readToFix = readPair._1;
 
                 readToFix.setBases(refRead.getBases());
-                readToFix.setBaseQualities(refRead.getBaseQualities());
-
+                //readToFix.setBaseQualities(refRead.getBaseQualities());
                 return readToFix;
             }
-            return null;
+        }).map((Tuple2<Tuple2<String, Integer>, GATKRead> pair) -> pair._2);
 
-        }).map((Tuple2<Tuple2<String, Integer>, GATKRead> pair) -> pair._2).distinct().filter(read -> {if (read==null){return false;} else{return true;}});
+        JavaRDD<GATKRead> finalReads = readsNotInReference.union(finalFixedReads);
 
         writeReads(ctx, output, finalReads);
 

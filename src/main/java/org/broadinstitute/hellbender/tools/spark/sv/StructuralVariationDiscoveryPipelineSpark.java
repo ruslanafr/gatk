@@ -14,6 +14,7 @@ import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariationSparkProgramGroup;
 import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
@@ -39,8 +40,10 @@ import static org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDi
 import static org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDiscoveryArgumentCollection.FindBreakpointEvidenceSparkArgumentCollection;
 
 /**
- * Tool to run the sv pipeline up to and including variant discovery
+ * Tool to run the sv pipeline up to and including variant discovery.
+ * Expected input is a BAM with around 30x coverage.  Coverage much lower than that probably won't work well.
  */
+@DocumentedFeature
 @CommandLineProgramProperties(summary="Master tool to run the structural variation discovery pipeline",
         oneLineSummary="Master tool to run the structural variation discovery pipeline",
         programGroup = StructuralVariationSparkProgramGroup.class)
@@ -205,7 +208,7 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
                             }
                     )
                     .map(forOneContig ->
-                            forOneContig.filter(sam -> !sam.getReadUnmappedFlag() && !sam.getNotPrimaryAlignmentFlag())
+                            forOneContig.filter(sam -> !sam.getReadUnmappedFlag() && !sam.isSecondaryAlignment())
                                     .collect(Collectors.toList()))
                     .filter(list -> !list.isEmpty())
                     .map(forOneContig ->
@@ -271,7 +274,7 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
 
             return contigAlignments.stream()
                     .filter( bwaMemAlignment ->  bwaMemAlignment.getRefId() >= 0
-                            && SAMFlag.NOT_PRIMARY_ALIGNMENT.isUnset(bwaMemAlignment.getSamFlag())) // mapped and not XA (i.e. not secondary)
+                            && SAMFlag.SECONDARY_ALIGNMENT.isUnset(bwaMemAlignment.getSamFlag())) // mapped and not XA (i.e. not secondary)
                     .map(bwaMemAlignment -> BwaMemAlignmentUtils.applyAlignment(contigName, contigSequence, null,
                             null, bwaMemAlignment, refNames, header, false, false))
                     .map(AlignmentInterval::new)

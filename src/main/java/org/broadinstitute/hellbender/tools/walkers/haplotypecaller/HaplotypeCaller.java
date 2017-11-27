@@ -185,6 +185,9 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
     protected int defaultMaxProbPropagationDistance() { return DEFAULT_MAX_PROB_PROPAGATION_DISTANCE; }
 
     @Override
+    protected boolean includeReadsWithDeletionsInIsActivePileups() { return true; }
+
+    @Override
     public List<ReadFilter> getDefaultReadFilters() {
         return HaplotypeCallerEngine.makeStandardHCReadFilters();
     }
@@ -201,7 +204,7 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
 
         // The HC engine will make the right kind (VCF or GVCF) of writer for us
         final SAMSequenceDictionary sequenceDictionary = getHeaderForReads().getSequenceDictionary();
-        vcfWriter = hcEngine.makeVCFWriter(outputVCF, sequenceDictionary);
+        vcfWriter = hcEngine.makeVCFWriter(outputVCF, sequenceDictionary, createOutputVariantIndex, createOutputVariantMD5);
         hcEngine.writeHeader(vcfWriter, sequenceDictionary, getDefaultToolVCFHeaderLines());
     }
 
